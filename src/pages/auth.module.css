@@ -1,0 +1,25 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.actions :global(button) {
+  width: 100%;
+}
+
+.google {
+  gap: var(--space-3);
+}
+
+.error {
+  color: var(--danger);
+  font-size: var(--text-md);
+  margin: 0;
+}

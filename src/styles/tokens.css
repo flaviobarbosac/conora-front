@@ -1,0 +1,102 @@
+:root {
+  --font: 'Be Vietnam Pro', system-ui, sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 36px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-14: 56px;
+
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-base: 15px;
+  --text-lg: 16px;
+  --text-xl: 17px;
+  --text-h3: 22px;
+  --text-h2: 26px;
+  --text-h1: 32px;
+  --text-display: 42px;
+
+  --leading-tight: 1.15;
+  --leading-body: 1.5;
+  --tracking-tight: -0.02em;
+  --tracking-wide: 0.08em;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-pill: 18px;
+  --radius-full: 999px;
+
+  --field-h: 52px;
+  --btn-h: 54px;
+  --btn-h-lg: 56px;
+  --fab-size: 52px;
+  --sidebar-w: 248px;
+  --rail-w: 72px;
+  --bottom-nav-h: 84px;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+}
+
+:root,
+[data-theme='light'] {
+  --bg-app: #f3f3f5;
+  --surface: #ffffff;
+  --text: #172638;
+  --text-muted: #5a6b80;
+  --text-secondary: #3e4f66;
+  --primary: #375984;
+  --primary-on: #ffffff;
+  --on-primary: #ffffff;
+  --accent: #6aacff;
+  --border: #c9cfd8;
+  --border-subtle: #e1e4e9;
+  --selected: #e3eefc;
+  --nav-active-bg: #e3eefc;
+  --splash-mark-opacity: 0.1;
+  --success: #1f7a4d;
+  --success-bg: #e6f3ec;
+  --danger: #c0392b;
+  --danger-bg: #fbeceb;
+  --warning: #c47d12;
+  --warning-bg: #fcf4e4;
+  --shadow: 0 20px 60px rgba(23, 38, 56, 0.12);
+  --login-panel: #ffffff;
+}
+
+[data-theme='dark'] {
+  --bg-app: #0e1826;
+  --surface: #172638;
+  --text: #eff0f2;
+  --text-muted: #a9b6c7;
+  --text-secondary: #a9b6c7;
+  --primary: #6aacff;
+  --primary-on: #172638;
+  --on-primary: #0e1826;
+  --accent: #6aacff;
+  --border: #3a5373;
+  --border-subtle: #2c4260;
+  --selected: #22344d;
+  --nav-active-bg: #22344d;
+  --splash-mark-opacity: 0.14;
+  --success: #3dba86;
+  --success-bg: #14301f;
+  --danger: #ff8a80;
+  --danger-bg: #3a1c1a;
+  --warning: #e09a1a;
+  --warning-bg: #2a2418;
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
+  --login-panel: #172638;
+}
