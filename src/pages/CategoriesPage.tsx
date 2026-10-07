@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { categoriesApi, type Category, type CategoryKind } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
+import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
+import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import styles from './page.module.css'
 
@@ -18,6 +20,8 @@ const KIND_LABEL: Record<CategoryKind, string> = {
 export function CategoriesPage() {
   const categories = useLoad(() => categoriesApi.list(undefined, true), [])
   const remove = useAction()
+  const list = categories.data ?? []
+  const pagination = useClientPagination(list, 20)
 
   async function removeCategory(category: Category) {
     if (window.confirm(`Excluir "${category.name}"?`) && (await remove.run(() => categoriesApi.remove(category.id)))) {
@@ -32,7 +36,7 @@ export function CategoriesPage() {
       {categories.loading && !categories.data ? <Loading /> : null}
       {categories.data && categories.data.length === 0 ? <Empty>Nenhuma categoria.</Empty> : null}
       {(Object.keys(KIND_LABEL) as CategoryKind[]).map((kind) => {
-        const items = (categories.data ?? []).filter((category) => category.kind === kind)
+        const items = pagination.pageItems.filter((category) => category.kind === kind)
         return items.length === 0 ? null : (
           <section key={kind} className={styles.section}>
             <h2 className={styles.sectionTitle}>{KIND_LABEL[kind]}</h2>
@@ -58,6 +62,13 @@ export function CategoriesPage() {
           </section>
         )
       })}
+      <Pager
+        page={pagination.page}
+        pageCount={pagination.pageCount}
+        total={pagination.total}
+        pageSize={pagination.pageSize}
+        onPageChange={pagination.setPage}
+      />
       <CategoryForm onSaved={categories.reload} />
     </div>
   )

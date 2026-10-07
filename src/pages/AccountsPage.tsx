@@ -10,11 +10,13 @@ import {
   type InvoiceStatus,
 } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
+import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
+import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
 import { confirmDestructive } from '../lib/confirm'
@@ -71,6 +73,10 @@ export function AccountsPage() {
   }
 
   const activeAccounts = (accounts.data ?? []).filter((account) => !account.isArchived)
+  const accountList = accounts.data ?? []
+  const cardList = cards.data ?? []
+  const accountsPage = useClientPagination(accountList, 10)
+  const cardsPage = useClientPagination(cardList, 10)
 
   const pageTitle = showCards ? 'Cartões' : 'Contas'
   const pageKicker = showCards ? 'Crédito' : 'Dinheiro'
@@ -87,23 +93,32 @@ export function AccountsPage() {
             {accounts.loading && !accounts.data ? <Loading /> : null}
             {accounts.data && accounts.data.length === 0 ? <Empty>Nenhuma conta cadastrada.</Empty> : null}
             {accounts.data && accounts.data.length > 0 ? (
-              <ul className={styles.list}>
-                {accounts.data.map((account) => (
-                  <li key={account.id} className={styles.row}>
-                    <span className={styles.rowMain}>
-                      <strong>{account.name}</strong>
-                      <span className={styles.rowSub}>{KIND_LABEL[account.kind]}</span>
-                    </span>
-                    <span className={styles.rowEnd}>
-                      {account.isArchived ? <Badge tone="warning">Arquivada</Badge> : null}
-                      <span className={styles.amount}>{formatMoney(account.balance)}</span>
-                      <Button variant="ghost" disabled={archive.busy} onClick={() => void toggleArchive(account)}>
-                        {account.isArchived ? 'Reativar' : 'Arquivar'}
-                      </Button>
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className={styles.list}>
+                  {accountsPage.pageItems.map((account) => (
+                    <li key={account.id} className={styles.row}>
+                      <span className={styles.rowMain}>
+                        <strong>{account.name}</strong>
+                        <span className={styles.rowSub}>{KIND_LABEL[account.kind]}</span>
+                      </span>
+                      <span className={styles.rowEnd}>
+                        {account.isArchived ? <Badge tone="warning">Arquivada</Badge> : null}
+                        <span className={styles.amount}>{formatMoney(account.balance)}</span>
+                        <Button variant="ghost" disabled={archive.busy} onClick={() => void toggleArchive(account)}>
+                          {account.isArchived ? 'Reativar' : 'Arquivar'}
+                        </Button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <Pager
+                  page={accountsPage.page}
+                  pageCount={accountsPage.pageCount}
+                  total={accountsPage.total}
+                  pageSize={accountsPage.pageSize}
+                  onPageChange={accountsPage.setPage}
+                />
+              </>
             ) : null}
           </section>
 
@@ -121,7 +136,7 @@ export function AccountsPage() {
             <ErrorText message={cards.error} />
             {cards.loading && !cards.data ? <Loading /> : null}
             {cards.data && cards.data.length === 0 ? <Empty>Nenhum cartão cadastrado.</Empty> : null}
-            {cards.data?.map((card) => (
+            {cardsPage.pageItems.map((card) => (
               <CardPanel
                 key={card.id}
                 card={card}
@@ -133,6 +148,13 @@ export function AccountsPage() {
                 }}
               />
             ))}
+            <Pager
+              page={cardsPage.page}
+              pageCount={cardsPage.pageCount}
+              total={cardsPage.total}
+              pageSize={cardsPage.pageSize}
+              onPageChange={cardsPage.setPage}
+            />
           </section>
 
           <CardForm accounts={activeAccounts} onSaved={cards.reload} />

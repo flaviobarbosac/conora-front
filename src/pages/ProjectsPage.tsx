@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { familyApi, projectsApi, type Account, type LifeProject, type LifeProjectScope } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
+import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
+import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
 import { dateToApi, formatDate, formatMoney, formatMoneyInput, formatPercent, parseMoney, todayInput } from '../lib/format'
@@ -15,6 +17,8 @@ export function ProjectsPage() {
   const projects = useLoad(() => projectsApi.list(), [])
   const lookups = useLookups()
   const remove = useAction()
+  const list = projects.data ?? []
+  const pagination = useClientPagination(list, 10)
 
   async function removeProject(project: LifeProject) {
     if (window.confirm(`Excluir o projeto "${project.name}"?`) && (await remove.run(() => projectsApi.remove(project.id)))) {
@@ -28,7 +32,7 @@ export function ProjectsPage() {
       <ErrorText message={projects.error ?? remove.error} />
       {projects.loading && !projects.data ? <Loading /> : null}
       {projects.data && projects.data.length === 0 ? <Empty>Nenhum projeto ainda. Crie o primeiro abaixo.</Empty> : null}
-      {projects.data?.map((project) => (
+      {pagination.pageItems.map((project) => (
         <ProjectCard
           key={project.id}
           project={project}
@@ -40,6 +44,13 @@ export function ProjectsPage() {
           onRemove={() => void removeProject(project)}
         />
       ))}
+      <Pager
+        page={pagination.page}
+        pageCount={pagination.pageCount}
+        total={pagination.total}
+        pageSize={pagination.pageSize}
+        onPageChange={pagination.setPage}
+      />
       <ProjectForm onSaved={projects.reload} />
     </div>
   )

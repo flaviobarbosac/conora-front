@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { patrimonyApi, type PatrimonyItem, type PatrimonyKind } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
+import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
+import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { formatMoney, parseMoney } from '../lib/format'
 import styles from './page.module.css'
@@ -17,6 +19,8 @@ export function PatrimonyPage() {
   const reserve = useLoad(() => patrimonyApi.reserve(), [])
   const remove = useAction()
   const data = summary.data
+  const items = data?.items ?? []
+  const pagination = useClientPagination(items, 10)
 
   async function removeItem(item: PatrimonyItem) {
     if (window.confirm(`Excluir "${item.name}"?`) && (await remove.run(() => patrimonyApi.remove(item.id)))) {
@@ -49,7 +53,7 @@ export function PatrimonyPage() {
             <h2 className={styles.sectionTitle}>Bens e dívidas</h2>
             {data.items.length === 0 ? <Empty>Nenhum item cadastrado.</Empty> : null}
             <ul className={styles.list}>
-              {data.items.map((item) => (
+              {pagination.pageItems.map((item) => (
                 <li key={item.id} className={styles.row}>
                   <span className={styles.rowMain}>
                     <strong>{item.name}</strong>
@@ -64,6 +68,13 @@ export function PatrimonyPage() {
                 </li>
               ))}
             </ul>
+            <Pager
+              page={pagination.page}
+              pageCount={pagination.pageCount}
+              total={pagination.total}
+              pageSize={pagination.pageSize}
+              onPageChange={pagination.setPage}
+            />
           </section>
         </>
       ) : null}
