@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { familyApi } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
 import { BrandLockup } from '../components/BrandLockup'
 import { Icon } from '../components/ui/Icon'
+import { useLoad } from '../hooks/useLoad'
 import { PREFERENCES_CHANGED, readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
 import { CADASTROS_ITEMS, NAV_ITEMS } from '../nav'
 import { useTheme } from '../theme/ThemeProvider'
 import styles from './AppShell.module.css'
 
-function initials(email: string): string {
-  const local = email.split('@')[0] ?? 'ON'
-  const parts = local.split(/[._-]/).filter(Boolean)
+function initialsFrom(name: string, email: string): string {
+  const source = name.trim() || email.split('@')[0] || 'ON'
+  const parts = source.split(/[\s._-]+/).filter(Boolean)
   if (parts.length >= 2) {
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
   }
-  return local.slice(0, 2).toUpperCase() || 'ON'
+  return source.slice(0, 2).toUpperCase() || 'ON'
 }
 
 function ThemeToggleButton({ className }: { className?: string }) {
@@ -35,6 +37,8 @@ export function AppShell() {
   const { session, logout } = useAuth()
   const { pathname } = useLocation()
   const email = session?.email || 'conta'
+  const profile = useLoad(() => familyApi.profile(), [session?.email])
+  const displayName = profile.data?.name?.trim() || email
   const [cadastrosOpen, setCadastrosOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed)
 
@@ -156,14 +160,13 @@ export function AppShell() {
             v{__APP_VERSION__}
           </span>
           <div className={styles.avatar} aria-hidden="true">
-            {initials(email)}
+            {initialsFrom(displayName, email)}
           </div>
           <div className={styles.profileMeta}>
-            <strong title={email}>{email}</strong>
-            <span>Família</span>
+            <strong title={displayName}>{displayName}</strong>
+            <span title={email}>{email}</span>
           </div>
           <div className={styles.profileActions}>
-            <ThemeToggleButton className={styles.iconBtn} />
             <button className={styles.iconBtn} type="button" onClick={() => void logout()} aria-label="Sair da conta">
               Sair
             </button>
