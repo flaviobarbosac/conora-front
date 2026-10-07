@@ -17,6 +17,7 @@ export type IconName =
   | 'wallet'
   | 'chevron'
   | 'settings'
+  | 'logout'
 
 type IconDef = {
   label: string
