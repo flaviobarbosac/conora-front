@@ -8,6 +8,7 @@ import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
+import { confirmDestructive } from '../lib/confirm'
 import { currentCompetence, downloadBlob, formatMoney } from '../lib/format'
 import styles from './page.module.css'
 
@@ -42,7 +43,10 @@ export function MorePage() {
   }
 
   async function deleteAccount() {
-    const confirmed = window.confirm('Excluir sua conta e todos os seus dados? Esta ação não pode ser desfeita.')
+    const confirmed = await confirmDestructive(
+      'Excluir sua conta e todos os seus dados? Esta ação não pode ser desfeita.',
+      { title: 'Excluir conta' },
+    )
     if (confirmed && (await privacy.run(() => lgpdApi.deleteAccount()))) {
       await logout()
     }

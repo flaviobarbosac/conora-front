@@ -11,6 +11,7 @@ import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
 import { scanReceipt } from '../camera/scanReceipt'
+import { confirmDestructive } from '../lib/confirm'
 import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
 import { peekPendingShare } from '../share/pendingShare'
 import styles from './page.module.css'
@@ -74,7 +75,10 @@ export function EntriesPage() {
   }
 
   async function remove(entry: Entry) {
-    if (window.confirm(`Excluir "${entry.description}"?`) && (await rowAction.run(() => entriesApi.remove(entry.id)))) {
+    if (!(await confirmDestructive(`Excluir "${entry.description}"?`, { title: 'Excluir lançamento' }))) {
+      return
+    }
+    if (await rowAction.run(() => entriesApi.remove(entry.id))) {
       entries.reload()
     }
   }

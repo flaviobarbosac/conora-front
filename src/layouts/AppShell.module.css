@@ -296,6 +296,11 @@
   color: var(--text-secondary);
 }
 
+.cadastrosToggle:hover {
+  background: var(--nav-active-bg);
+  color: var(--text);
+}
+
 .cadastrosToggleActive {
   background: var(--nav-active-bg);
   color: var(--text);
@@ -315,7 +320,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding-left: 0;
+  margin-top: 2px;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
 }
 
 .cadastrosLink,
@@ -333,6 +342,11 @@
 
 .cadastrosLink {
   color: var(--text-secondary);
+}
+
+.cadastrosLink:hover {
+  background: var(--surface);
+  color: var(--text);
 }
 
 .cadastrosLinkActive {

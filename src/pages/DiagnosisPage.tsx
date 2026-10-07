@@ -7,6 +7,7 @@ import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
+import { confirmDestructive } from '../lib/confirm'
 import { currentCompetence, formatMoney, parseMoney } from '../lib/format'
 import styles from './page.module.css'
 
@@ -21,7 +22,10 @@ export function DiagnosisPage() {
   const data = diagnosis.data
 
   async function removeSource(source: IncomeSource) {
-    if (window.confirm(`Excluir a fonte "${source.name}"?`) && (await remove.run(() => diagnosisApi.remove(source.id)))) {
+    if (!(await confirmDestructive(`Excluir a fonte "${source.name}"?`, { title: 'Excluir fonte' }))) {
+      return
+    }
+    if (await remove.run(() => diagnosisApi.remove(source.id))) {
       diagnosis.reload()
     }
   }

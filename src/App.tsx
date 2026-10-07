@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { listenNativeShare } from './share/receiveShare'
 import { useAuth } from './auth/AuthProvider'
+import { ConfirmDialogHost } from './components/ConfirmDialog'
 import { Splash } from './components/Splash'
 import { AppShell } from './layouts/AppShell'
 import { AccountsPage } from './pages/AccountsPage'
@@ -43,6 +44,7 @@ export default function App() {
   return (
     <>
       {splashDone ? null : <Splash onFinished={() => setSplashDone(true)} />}
+      <ConfirmDialogHost />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

@@ -10,6 +10,7 @@ import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
+import { confirmDestructive } from '../lib/confirm'
 import { dateToApi, formatDate, formatMoney, formatMoneyInput, formatPercent, parseMoney, todayInput } from '../lib/format'
 import styles from './page.module.css'
 
@@ -21,7 +22,10 @@ export function ProjectsPage() {
   const pagination = useClientPagination(list, 10)
 
   async function removeProject(project: LifeProject) {
-    if (window.confirm(`Excluir o projeto "${project.name}"?`) && (await remove.run(() => projectsApi.remove(project.id)))) {
+    if (!(await confirmDestructive(`Excluir o projeto "${project.name}"?`, { title: 'Excluir projeto' }))) {
+      return
+    }
+    if (await remove.run(() => projectsApi.remove(project.id))) {
       projects.reload()
     }
   }

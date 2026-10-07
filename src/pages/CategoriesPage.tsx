@@ -9,6 +9,7 @@ import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
+import { confirmDestructive } from '../lib/confirm'
 import styles from './page.module.css'
 
 const KIND_LABEL: Record<CategoryKind, string> = {
@@ -21,11 +22,19 @@ export function CategoriesPage() {
   const categories = useLoad(() => categoriesApi.list(undefined, true), [])
   const remove = useAction()
   const [editing, setEditing] = useState<Category | null>(null)
-  const list = categories.data ?? []
+  const list = [...(categories.data ?? [])].sort((a, b) =>
+    a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }),
+  )
   const pagination = useClientPagination(list, 10)
 
   async function removeCategory(category: Category) {
-    if (window.confirm(`Excluir "${category.name}"?`) && (await remove.run(() => categoriesApi.remove(category.id)))) {
+    const ok = await confirmDestructive(`Excluir "${category.name}"? Esta ação não pode ser desfeita.`, {
+      title: 'Excluir categoria',
+    })
+    if (!ok) {
+      return
+    }
+    if (await remove.run(() => categoriesApi.remove(category.id))) {
       if (editing?.id === category.id) {
         setEditing(null)
       }
@@ -111,6 +120,10 @@ function CategoryForm({
       setKind(editing.kind)
       setEssential(editing.isEssential)
       setActive(editing.isActive)
+      requestAnimationFrame(() => {
+        document.getElementById('categoria-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        document.querySelector<HTMLInputElement>('#categoria-form input[name="categoryName"]')?.focus()
+      })
       return
     }
     setName('')

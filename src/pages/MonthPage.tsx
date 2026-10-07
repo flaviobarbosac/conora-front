@@ -7,6 +7,7 @@ import { Badge, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
+import { confirmDestructive } from '../lib/confirm'
 import { currentCompetence, formatDateTime } from '../lib/format'
 import styles from './page.module.css'
 
@@ -18,7 +19,16 @@ export function MonthPage() {
   const data = status.data
 
   async function close() {
-    if (window.confirm(`Fechar ${ym}? Lançamentos ficam bloqueados até reabrir.`) && (await action.run(() => monthsApi.close(ym)))) {
+    if (
+      !(await confirmDestructive(`Fechar ${ym}? Lançamentos ficam bloqueados até reabrir.`, {
+        title: 'Fechar mês',
+        confirmLabel: 'Fechar',
+        danger: true,
+      }))
+    ) {
+      return
+    }
+    if (await action.run(() => monthsApi.close(ym))) {
       status.reload()
     }
   }

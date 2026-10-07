@@ -9,6 +9,7 @@ import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
+import { confirmDestructive } from '../lib/confirm'
 import { formatMoney, parseMoney } from '../lib/format'
 import styles from './page.module.css'
 
@@ -23,7 +24,10 @@ export function PatrimonyPage() {
   const pagination = useClientPagination(items, 10)
 
   async function removeItem(item: PatrimonyItem) {
-    if (window.confirm(`Excluir "${item.name}"?`) && (await remove.run(() => patrimonyApi.remove(item.id)))) {
+    if (!(await confirmDestructive(`Excluir "${item.name}"?`, { title: 'Excluir item' }))) {
+      return
+    }
+    if (await remove.run(() => patrimonyApi.remove(item.id))) {
       summary.reload()
     }
   }

@@ -64,7 +64,7 @@ export function AccountsPage() {
     const message = account.isArchived
       ? `Reativar a conta "${account.name}"?`
       : `Arquivar a conta "${account.name}"?`
-    if (!confirmDestructive(message)) {
+    if (!(await confirmDestructive(message, { title: account.isArchived ? 'Reativar conta' : 'Arquivar conta', confirmLabel: account.isArchived ? 'Reativar' : 'Arquivar' }))) {
       return
     }
     if (await archive.run(() => accountsApi.archive(account.id, !account.isArchived))) {

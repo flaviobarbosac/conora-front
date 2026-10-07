@@ -126,13 +126,15 @@ export function AppShell() {
           <div className={styles.cadastros}>
             <button
               type="button"
-              className={cadastrosActive ? styles.cadastrosToggleActive : styles.cadastrosToggle}
+              className={
+                cadastrosActive || cadastrosOpen ? styles.cadastrosToggleActive : styles.cadastrosToggle
+              }
               aria-expanded={cadastrosOpen}
               aria-controls="nav-cadastros"
               title={sidebarCollapsed ? 'Cadastros' : undefined}
               onClick={() => setCadastrosOpen((open) => !open)}
             >
-              <Icon name="folder" variant={cadastrosActive ? 'duo' : 'linear'} size={24} />
+              <Icon name="folder" variant={cadastrosActive || cadastrosOpen ? 'duo' : 'linear'} size={24} />
               <span className={styles.linkLabel}>Cadastros</span>
               <Icon
                 name="chevron"

@@ -51,7 +51,12 @@ export function MembersPage() {
   }
 
   async function cancelInvite(invite: FamilyInvite) {
-    if (!confirmDestructive(`Cancelar o convite para ${invite.email}?`)) {
+    if (
+      !(await confirmDestructive(`Cancelar o convite para ${invite.email}?`, {
+        title: 'Cancelar convite',
+        confirmLabel: 'Cancelar convite',
+      }))
+    ) {
       return
     }
     if (await rowAction.run(() => familyApi.cancelInvite(invite.id))) {
@@ -60,7 +65,12 @@ export function MembersPage() {
   }
 
   async function leaveGroup() {
-    if (!confirmDestructive('Sair do grupo familiar? Seu orçamento volta a ser só pessoal.')) {
+    if (
+      !(await confirmDestructive('Sair do grupo familiar? Seu orçamento volta a ser só pessoal.', {
+        title: 'Sair do grupo',
+        confirmLabel: 'Sair',
+      }))
+    ) {
       return
     }
     if (await rowAction.run(() => familyApi.leave())) {
@@ -69,7 +79,12 @@ export function MembersPage() {
   }
 
   async function removeMember(member: FamilyMemberUser) {
-    if (!confirmDestructive(`Remover ${member.name} do grupo?`)) {
+    if (
+      !(await confirmDestructive(`Remover ${member.name} do grupo?`, {
+        title: 'Remover membro',
+        confirmLabel: 'Remover',
+      }))
+    ) {
       return
     }
     if (await rowAction.run(() => familyApi.removeMember(member.usuarioId))) {
