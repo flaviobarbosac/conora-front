@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { familyApi } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -16,12 +16,6 @@ import {
 } from '../lib/preferences'
 import { ThemeName, useTheme } from '../theme/ThemeProvider'
 import styles from './page.module.css'
-
-const SHORTCUTS: ReadonlyArray<{ to: string; title: string; text: string }> = [
-  { to: '/membros', title: 'Grupo familiar', text: 'Convite, sair e membros' },
-  { to: '/plano', title: 'Plano', text: 'Assinatura e situação' },
-  { to: '/ajuda', title: 'Central de ajuda', text: 'Módulos, campos e glossário' },
-]
 
 export function SettingsPage() {
   const { theme, setTheme } = useTheme()
@@ -127,22 +121,6 @@ export function SettingsPage() {
             </Button>
           </div>
         </form>
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Atalhos</h2>
-        <ul className={styles.list}>
-          {SHORTCUTS.map((item) => (
-            <li key={item.to}>
-              <Link to={item.to} className={styles.rowLink}>
-                <span className={styles.rowMain}>
-                  <strong>{item.title}</strong>
-                  <span className={styles.rowSub}>{item.text}</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
       </section>
     </div>
   )

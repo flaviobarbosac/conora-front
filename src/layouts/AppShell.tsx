@@ -165,18 +165,6 @@ export function AppShell() {
           </div>
         </nav>
         <div className={styles.sidebarFoot}>
-          <NavLink
-            to="/configuracoes"
-            className={({ isActive }) => (isActive ? styles.settingsLinkActive : styles.settingsLink)}
-            title={sidebarCollapsed ? 'Configurações' : undefined}
-          >
-            {({ isActive }) => (
-              <>
-                <Icon name="settings" variant={isActive ? 'duo' : 'linear'} size={24} />
-                <span className={styles.linkLabel}>Configurações</span>
-              </>
-            )}
-          </NavLink>
           <span className={styles.appVersion} title={`Versão ${__APP_VERSION__}`}>
             v{__APP_VERSION__}
           </span>
@@ -228,6 +216,15 @@ export function AppShell() {
                   <Icon name={theme === ThemeName.Light ? 'moon' : 'sun'} size={20} />
                   {theme === ThemeName.Light ? 'Escuro' : 'Claro'}
                 </button>
+                <Link
+                  to="/plano"
+                  className={styles.profileMenuItem}
+                  role="menuitem"
+                  onClick={() => setProfileMenuOpen(false)}
+                >
+                  <Icon name="card" size={20} />
+                  Plano
+                </Link>
                 <Link
                   to="/ajuda"
                   className={styles.profileMenuItem}
