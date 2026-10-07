@@ -6,9 +6,9 @@ import { useTheme } from '../theme/ThemeProvider'
 import { Button } from './ui/Button'
 import styles from './Splash.module.css'
 
-const MIN_MS = 1600
-const SLOW_MS = 6000
-const FAIL_MS = 16000
+const MIN_MS = 3200
+const SLOW_MS = 12000
+const FAIL_MS = 32000
 const SEEN_KEY = 'conora.seenHome'
 
 function firstName(displayName: string): string {
@@ -52,7 +52,7 @@ export function Splash({ onFinished }: { onFinished: () => void }) {
     let frame = 0
     const tick = () => {
       const elapsed = Date.now() - start
-      const fake = Math.min(0.9, elapsed / 3200)
+      const fake = Math.min(0.9, elapsed / 6400)
       setProgress(fake)
       if (elapsed >= FAIL_MS) {
         setPhase('error')
@@ -88,7 +88,7 @@ export function Splash({ onFinished }: { onFinished: () => void }) {
     if (session) {
       localStorage.setItem(SEEN_KEY, '1')
     }
-    const hold = reduced ? 0 : 880
+    const hold = reduced ? 0 : 1760
     const timer = window.setTimeout(() => {
       setPhase('done')
       onFinished()

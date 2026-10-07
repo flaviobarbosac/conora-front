@@ -181,7 +181,7 @@ export function AppShell() {
             </div>
           </div>
           <div className={styles.appHeaderActions}>
-            <ThemeToggleButton className={styles.iconBtn} />
+            <ThemeToggleButton className={styles.themeBtn} />
             <button className={styles.iconBtn} type="button" onClick={() => void logout()} aria-label="Sair da conta">
               Sair
             </button>

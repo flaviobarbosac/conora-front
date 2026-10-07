@@ -4,6 +4,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Field } from '../components/ui/Field'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
+import help from './HelpPage.module.css'
 import styles from './page.module.css'
 
 function matchesQuery(module: HelpModule, query: string): boolean {
@@ -16,10 +17,10 @@ function matchesQuery(module: HelpModule, query: string): boolean {
 }
 
 export function HelpPage() {
-  const help = useLoad(() => helpApi.get(), [])
+  const helpData = useLoad(() => helpApi.get(), [])
   const [query, setQuery] = useState('')
   const [openKey, setOpenKey] = useState<string | null>(null)
-  const data = help.data
+  const data = helpData.data
 
   const modules = useMemo(() => {
     if (!data?.modules) return []
@@ -50,13 +51,13 @@ export function HelpPage() {
           />
         }
       />
-      <ErrorText message={help.error} />
-      {help.loading && !data ? <Loading /> : null}
+      <ErrorText message={helpData.error} />
+      {helpData.loading && !data ? <Loading /> : null}
       {data ? (
         <>
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Como o Conora funciona</h2>
-            <p className={styles.muted}>
+            <p className={help.lead}>
               Cada tela e cada campo está explicado abaixo. Use a busca para achar um módulo ou atributo sem precisar de
               suporte.
             </p>
@@ -64,17 +65,18 @@ export function HelpPage() {
 
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>7 passos para começar</h2>
-            <ol className={styles.list}>
+            <ol className={help.steps}>
               {[...data.steps]
                 .sort((a, b) => a.order - b.order)
                 .map((step) => (
-                  <li key={step.key} className={styles.row}>
-                    <span className={styles.rowMain}>
-                      <strong>
-                        {step.order}. {step.title}
-                      </strong>
-                      <span className={styles.rowSub}>{step.text}</span>
+                  <li key={step.key} className={help.step}>
+                    <span className={help.stepIndex} aria-hidden="true">
+                      {step.order}
                     </span>
+                    <div>
+                      <h3 className={help.stepTitle}>{step.title}</h3>
+                      <p className={help.stepBody}>{step.text}</p>
+                    </div>
                   </li>
                 ))}
             </ol>
@@ -82,48 +84,37 @@ export function HelpPage() {
 
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Módulos e campos</h2>
-            {modules.length === 0 ? <p className={styles.muted}>Nenhum módulo encontrado para essa busca.</p> : null}
-            <div className={styles.list}>
+            {modules.length === 0 ? <p className={help.empty}>Nenhum módulo encontrado para essa busca.</p> : null}
+            <div className={help.modules}>
               {modules.map((module) => {
                 const open = openKey === module.key || Boolean(query.trim())
                 return (
-                  <div key={module.key} className={styles.row} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                  <article key={module.key} className={help.module}>
                     <button
                       type="button"
-                      className={styles.sectionHead}
-                      style={{
-                        width: '100%',
-                        background: 'transparent',
-                        border: 0,
-                        padding: 0,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        color: 'inherit',
-                      }}
+                      className={help.moduleToggle}
                       aria-expanded={open}
                       onClick={() => setOpenKey((current) => (current === module.key ? null : module.key))}
                     >
-                      <span className={styles.rowMain}>
-                        <strong>{module.title}</strong>
-                        <span className={styles.rowSub}>{module.summary}</span>
+                      <span>
+                        <h3 className={help.moduleTitle}>{module.title}</h3>
+                        <p className={help.moduleSummary}>{module.summary}</p>
                       </span>
-                      <span className={styles.muted} aria-hidden>
+                      <span className={help.moduleChevron} aria-hidden="true">
                         {open ? '−' : '+'}
                       </span>
                     </button>
                     {open ? (
-                      <dl className={styles.list} style={{ marginTop: '0.75rem' }}>
+                      <dl className={help.fields}>
                         {module.fields.map((field) => (
-                          <div key={`${module.key}-${field.name}`} className={styles.row}>
-                            <span className={styles.rowMain}>
-                              <strong>{field.name}</strong>
-                              <span className={styles.rowSub}>{field.description}</span>
-                            </span>
+                          <div key={`${module.key}-${field.name}`} className={help.field}>
+                            <dt className={help.fieldName}>{field.name}</dt>
+                            <dd className={help.fieldBody}>{field.description}</dd>
                           </div>
                         ))}
                       </dl>
                     ) : null}
-                  </div>
+                  </article>
                 )
               })}
             </div>
@@ -131,14 +122,12 @@ export function HelpPage() {
 
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Glossário</h2>
-            {glossary.length === 0 ? <p className={styles.muted}>Nenhum termo encontrado para essa busca.</p> : null}
-            <dl className={styles.list}>
+            {glossary.length === 0 ? <p className={help.empty}>Nenhum termo encontrado para essa busca.</p> : null}
+            <dl className={help.glossary}>
               {glossary.map((term) => (
-                <div key={term.key} className={styles.row}>
-                  <span className={styles.rowMain}>
-                    <strong>{term.term}</strong>
-                    <span className={styles.rowSub}>{term.definition}</span>
-                  </span>
+                <div key={term.key} className={help.glossaryItem}>
+                  <dt className={help.glossaryTerm}>{term.term}</dt>
+                  <dd className={help.glossaryBody}>{term.definition}</dd>
                 </div>
               ))}
             </dl>

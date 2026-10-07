@@ -173,6 +173,27 @@
   padding: 0 var(--space-2);
 }
 
+.themeBtn {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.themeBtn:hover {
+  background: var(--nav-active-bg);
+  color: var(--text);
+}
+
 .sidebarHead {
   display: contents;
 }
@@ -352,10 +373,6 @@
   .appHeader {
     justify-content: flex-end;
     padding: var(--space-3) var(--space-6);
-  }
-
-  .appHeaderActions .iconBtn:first-child {
-    display: none;
   }
 
   .sidebar {

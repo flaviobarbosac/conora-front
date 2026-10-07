@@ -270,6 +270,26 @@
   border-bottom: 0;
 }
 
+.rowLink {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.rowLink:last-child {
+  border-bottom: 0;
+}
+
+.rowLink:hover strong {
+  color: var(--primary);
+}
+
 .rowMain {
   display: flex;
   flex-direction: column;

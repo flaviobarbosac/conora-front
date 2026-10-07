@@ -17,6 +17,12 @@ import {
 import { ThemeName, useTheme } from '../theme/ThemeProvider'
 import styles from './page.module.css'
 
+const SHORTCUTS: ReadonlyArray<{ to: string; title: string; text: string }> = [
+  { to: '/membros', title: 'Grupo familiar', text: 'Convite, sair e membros' },
+  { to: '/plano', title: 'Plano', text: 'Assinatura e situação' },
+  { to: '/ajuda', title: 'Central de ajuda', text: 'Módulos, campos e glossário' },
+]
+
 export function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const profile = useLoad(() => familyApi.profile(), [])
@@ -114,34 +120,16 @@ export function SettingsPage() {
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Atalhos</h2>
         <ul className={styles.list}>
-          <li className={styles.row}>
-            <span className={styles.rowMain}>
-              <strong>Grupo familiar</strong>
-              <span className={styles.rowSub}>Convite, sair e membros</span>
-            </span>
-            <Link to="/membros">Abrir</Link>
-          </li>
-          <li className={styles.row}>
-            <span className={styles.rowMain}>
-              <strong>WhatsApp</strong>
-              <span className={styles.rowSub}>Vincular número e rascunhos</span>
-            </span>
-            <Link to="/whatsapp">Abrir</Link>
-          </li>
-          <li className={styles.row}>
-            <span className={styles.rowMain}>
-              <strong>Plano</strong>
-              <span className={styles.rowSub}>Assinatura e situação</span>
-            </span>
-            <Link to="/plano">Abrir</Link>
-          </li>
-          <li className={styles.row}>
-            <span className={styles.rowMain}>
-              <strong>Central de ajuda</strong>
-              <span className={styles.rowSub}>Módulos, campos e glossário</span>
-            </span>
-            <Link to="/ajuda">Abrir</Link>
-          </li>
+          {SHORTCUTS.map((item) => (
+            <li key={item.to}>
+              <Link to={item.to} className={styles.rowLink}>
+                <span className={styles.rowMain}>
+                  <strong>{item.title}</strong>
+                  <span className={styles.rowSub}>{item.text}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
         </ul>
       </section>
     </div>
