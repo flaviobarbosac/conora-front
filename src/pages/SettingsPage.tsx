@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { familyApi } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -25,6 +25,7 @@ const SHORTCUTS: ReadonlyArray<{ to: string; title: string; text: string }> = [
 
 export function SettingsPage() {
   const { theme, setTheme } = useTheme()
+  const { hash } = useLocation()
   const profile = useLoad(() => familyApi.profile(), [])
   const saveProfile = useAction()
   const [name, setName] = useState('')
@@ -36,6 +37,17 @@ export function SettingsPage() {
       setName(profile.data.name)
     }
   }, [profile.data])
+
+  useEffect(() => {
+    const id = hash.replace(/^#/, '')
+    if (!id) {
+      return
+    }
+    const el = document.getElementById(id)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [hash, profile.loading])
 
   async function onSaveName(event: FormEvent) {
     event.preventDefault()
@@ -50,7 +62,7 @@ export function SettingsPage() {
       <ErrorText message={profile.error ?? saveProfile.error} />
       {profile.loading && !profile.data ? <Loading /> : null}
 
-      <section className={styles.section}>
+      <section className={styles.section} id="aparencia">
         <h2 className={styles.sectionTitle}>Aparência</h2>
         <Select
           label="Tema"
@@ -95,7 +107,7 @@ export function SettingsPage() {
         <p className={styles.muted}>Usado quando o mês ainda não tem orçamento gravado. Depois vale o que estiver salvo no mês.</p>
       </section>
 
-      <section className={styles.section}>
+      <section className={styles.section} id="perfil">
         <h2 className={styles.sectionTitle}>Perfil</h2>
         <form className={styles.form} onSubmit={(event) => void onSaveName(event)}>
           <div className={styles.formWide}>

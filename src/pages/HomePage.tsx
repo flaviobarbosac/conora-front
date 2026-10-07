@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { dashboardApi } from '../api/finance'
-import { useAuth } from '../auth/AuthProvider'
+import { dashboardApi, familyApi } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -13,24 +12,20 @@ import { scanReceipt } from '../camera/scanReceipt'
 import { currentCompetence, formatMoney } from '../lib/format'
 import styles from './page.module.css'
 
-function greetingName(email: string | undefined): string {
-  if (!email) {
+function firstName(fullName: string | undefined): string {
+  const trimmed = fullName?.trim()
+  if (!trimmed) {
     return ''
   }
-  const local = email.split('@')[0] ?? ''
-  const part = local.split(/[._-]/).find(Boolean) ?? local
-  if (!part) {
-    return ''
-  }
-  return part.charAt(0).toUpperCase() + part.slice(1)
+  return trimmed.split(/\s+/).find(Boolean) ?? trimmed
 }
 
 export function HomePage() {
-  const { session } = useAuth()
   const navigate = useNavigate()
   const [ym, setYm] = useState(currentCompetence)
   const dashboard = useLoad(() => dashboardApi.get(ym), [ym])
-  const name = greetingName(session?.email)
+  const profile = useLoad(() => familyApi.profile(), [])
+  const name = firstName(profile.data?.name)
   const data = dashboard.data
   const emptyMonth = data && data.incomeTotal === 0 && data.expenseTotal === 0
 

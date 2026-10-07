@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { familyApi } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
 import { BrandLockup } from '../components/BrandLockup'
@@ -7,7 +7,6 @@ import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
 import { PREFERENCES_CHANGED, readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
 import { CADASTROS_ITEMS, NAV_ITEMS } from '../nav'
-import { useTheme } from '../theme/ThemeProvider'
 import styles from './AppShell.module.css'
 
 function initialsFrom(name: string, email: string): string {
@@ -19,20 +18,6 @@ function initialsFrom(name: string, email: string): string {
   return source.slice(0, 2).toUpperCase() || 'ON'
 }
 
-function ThemeToggleButton({ className }: { className?: string }) {
-  const { theme, toggleTheme } = useTheme()
-  return (
-    <button
-      className={className}
-      type="button"
-      onClick={toggleTheme}
-      aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
-    >
-      <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={20} />
-    </button>
-  )
-}
-
 export function AppShell() {
   const { session, logout } = useAuth()
   const { pathname } = useLocation()
@@ -40,6 +25,8 @@ export function AppShell() {
   const profile = useLoad(() => familyApi.profile(), [session?.email])
   const displayName = profile.data?.name?.trim() || email
   const [cadastrosOpen, setCadastrosOpen] = useState(false)
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const profileMenuRef = useRef<HTMLDivElement>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed)
   const [railViewport, setRailViewport] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1199px)').matches,
@@ -64,6 +51,32 @@ export function AppShell() {
     media.addEventListener('change', apply)
     return () => media.removeEventListener('change', apply)
   }, [])
+
+  useEffect(() => {
+    setProfileMenuOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
+    if (!profileMenuOpen) {
+      return
+    }
+    function onPointerDown(event: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setProfileMenuOpen(false)
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setProfileMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [profileMenuOpen])
 
   const brandCompact = sidebarCollapsed || railViewport
 
@@ -171,20 +184,54 @@ export function AppShell() {
           <div className={styles.appHeaderBrand}>
             <BrandLockup size="nav" />
           </div>
-          <div className={styles.appHeaderUser}>
-            <div className={styles.avatar} aria-hidden="true">
-              {initialsFrom(displayName, email)}
-            </div>
+          <div className={styles.appHeaderUser} ref={profileMenuRef}>
+            <button
+              type="button"
+              className={styles.avatarBtn}
+              aria-label="Menu do perfil"
+              aria-haspopup="menu"
+              aria-expanded={profileMenuOpen}
+              onClick={() => setProfileMenuOpen((open) => !open)}
+            >
+              <span className={styles.avatar} aria-hidden="true">
+                {initialsFrom(displayName, email)}
+              </span>
+            </button>
             <div className={styles.profileMeta}>
               <strong title={displayName}>{displayName}</strong>
               <span title={email}>{email}</span>
             </div>
-          </div>
-          <div className={styles.appHeaderActions}>
-            <ThemeToggleButton className={styles.themeBtn} />
-            <button className={styles.iconBtn} type="button" onClick={() => void logout()} aria-label="Sair da conta">
-              Sair
-            </button>
+            {profileMenuOpen ? (
+              <div className={styles.profileMenu} role="menu" aria-label="Conta">
+                <Link
+                  to="/configuracoes#perfil"
+                  className={styles.profileMenuItem}
+                  role="menuitem"
+                  onClick={() => setProfileMenuOpen(false)}
+                >
+                  Perfil
+                </Link>
+                <Link
+                  to="/configuracoes#aparencia"
+                  className={styles.profileMenuItem}
+                  role="menuitem"
+                  onClick={() => setProfileMenuOpen(false)}
+                >
+                  Tema
+                </Link>
+                <button
+                  type="button"
+                  className={styles.profileMenuItemDanger}
+                  role="menuitem"
+                  onClick={() => {
+                    setProfileMenuOpen(false)
+                    void logout()
+                  }}
+                >
+                  Sair
+                </button>
+              </div>
+            ) : null}
           </div>
         </header>
 
