@@ -41,6 +41,9 @@ export function AppShell() {
   const displayName = profile.data?.name?.trim() || email
   const [cadastrosOpen, setCadastrosOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed)
+  const [railViewport, setRailViewport] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1199px)').matches,
+  )
 
   useEffect(() => {
     writeSidebarCollapsed(sidebarCollapsed)
@@ -54,6 +57,16 @@ export function AppShell() {
     return () => window.removeEventListener(PREFERENCES_CHANGED, onPreferences)
   }, [])
 
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1199px)')
+    const apply = () => setRailViewport(media.matches)
+    apply()
+    media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
+  }, [])
+
+  const brandCompact = sidebarCollapsed || railViewport
+
   const cadastrosActive = CADASTROS_ITEMS.some((item) => pathname === item.to || pathname.startsWith(`${item.to}/`))
 
   const shellClass = [styles.shell, sidebarCollapsed ? styles.shellCollapsed : ''].filter(Boolean).join(' ')
@@ -63,7 +76,7 @@ export function AppShell() {
     <div className={shellClass}>
       <aside className={sidebarClass}>
         <div className={styles.sidebarHead}>
-          <BrandLockup size="nav" />
+          <BrandLockup size="nav" compact={brandCompact} />
           <button
             type="button"
             className={styles.collapseBtn}

@@ -3,6 +3,18 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+  min-width: 0;
+}
+
+.compact {
+  align-items: center;
+  width: 100%;
+}
+
+.mark {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
 }
 
 .conora {
