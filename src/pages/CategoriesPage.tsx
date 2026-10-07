@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { categoriesApi, type Category, type CategoryKind } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Pager } from '../components/Pager'
@@ -20,11 +20,15 @@ const KIND_LABEL: Record<CategoryKind, string> = {
 export function CategoriesPage() {
   const categories = useLoad(() => categoriesApi.list(undefined, true), [])
   const remove = useAction()
+  const [editing, setEditing] = useState<Category | null>(null)
   const list = categories.data ?? []
   const pagination = useClientPagination(list, 10)
 
   async function removeCategory(category: Category) {
     if (window.confirm(`Excluir "${category.name}"?`) && (await remove.run(() => categoriesApi.remove(category.id)))) {
+      if (editing?.id === category.id) {
+        setEditing(null)
+      }
       categories.reload()
     }
   }
@@ -51,9 +55,14 @@ export function CategoriesPage() {
                     {category.isSystem ? <Badge>Do sistema</Badge> : <Badge tone="ok">Personalizada</Badge>}
                     {category.isActive ? null : <Badge tone="warning">Inativa</Badge>}
                     {category.isSystem ? null : (
-                      <Button variant="ghost" disabled={remove.busy} onClick={() => void removeCategory(category)}>
-                        Excluir
-                      </Button>
+                      <>
+                        <Button variant="ghost" onClick={() => setEditing(category)}>
+                          Editar
+                        </Button>
+                        <Button variant="ghost" disabled={remove.busy} onClick={() => void removeCategory(category)}>
+                          Excluir
+                        </Button>
+                      </>
                     )}
                   </span>
                 </li>
@@ -69,32 +78,76 @@ export function CategoriesPage() {
         pageSize={pagination.pageSize}
         onPageChange={pagination.setPage}
       />
-      <CategoryForm onSaved={categories.reload} />
+      <CategoryForm
+        editing={editing}
+        onCancel={() => setEditing(null)}
+        onSaved={() => {
+          setEditing(null)
+          categories.reload()
+        }}
+      />
     </div>
   )
 }
 
-function CategoryForm({ onSaved }: { onSaved: () => void }) {
+function CategoryForm({
+  editing,
+  onCancel,
+  onSaved,
+}: {
+  editing: Category | null
+  onCancel: () => void
+  onSaved: () => void
+}) {
   const [name, setName] = useState('')
   const [kind, setKind] = useState<CategoryKind>('Expense')
   const [essential, setEssential] = useState(false)
+  const [active, setActive] = useState(true)
   const action = useAction()
+
+  useEffect(() => {
+    if (editing) {
+      setName(editing.name)
+      setKind(editing.kind)
+      setEssential(editing.isEssential)
+      setActive(editing.isActive)
+      return
+    }
+    setName('')
+    setKind('Expense')
+    setEssential(false)
+    setActive(true)
+  }, [editing])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (await action.run(() => categoriesApi.create(name.trim(), kind, essential))) {
+    const trimmed = name.trim()
+    if (!trimmed) {
+      return
+    }
+    const ok = editing
+      ? await action.run(() => categoriesApi.update(editing.id, trimmed, essential, active))
+      : await action.run(() => categoriesApi.create(trimmed, kind, essential))
+    if (ok) {
       setName('')
       setEssential(false)
+      setActive(true)
       onSaved()
     }
   }
 
   return (
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Nova categoria</h2>
+    <section className={styles.section} id="categoria-form">
+      <h2 className={styles.sectionTitle}>{editing ? 'Editar categoria' : 'Nova categoria'}</h2>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
         <Field label="Nome" name="categoryName" required value={name} onChange={(event) => setName(event.target.value)} />
-        <Select label="Tipo" name="categoryKind" value={kind} onChange={(event) => setKind(event.target.value as CategoryKind)}>
+        <Select
+          label="Tipo"
+          name="categoryKind"
+          value={kind}
+          disabled={Boolean(editing)}
+          onChange={(event) => setKind(event.target.value as CategoryKind)}
+        >
           <option value="Expense">Despesa</option>
           <option value="Income">Receita</option>
         </Select>
@@ -102,12 +155,22 @@ function CategoryForm({ onSaved }: { onSaved: () => void }) {
           <input type="checkbox" checked={essential} onChange={(event) => setEssential(event.target.checked)} /> Gasto essencial
           (entra no cálculo da reserva)
         </label>
+        {editing ? (
+          <label className={styles.formWide}>
+            <input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} /> Ativa
+          </label>
+        ) : null}
         <div className={styles.formWide}>
           <ErrorText message={action.error} />
         </div>
         <div className={styles.formActions}>
-          <Button type="submit" disabled={action.busy}>
-            Criar categoria
+          {editing ? (
+            <Button type="button" variant="ghost" disabled={action.busy} onClick={onCancel}>
+              Cancelar
+            </Button>
+          ) : null}
+          <Button type="submit" disabled={action.busy || !name.trim()}>
+            {editing ? 'Salvar' : 'Criar categoria'}
           </Button>
         </div>
       </form>
