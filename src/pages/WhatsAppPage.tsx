@@ -14,6 +14,7 @@ import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
+import { confirmDestructive } from '../lib/confirm'
 import { formatDate, formatDateTime, formatMoney } from '../lib/format'
 import styles from './page.module.css'
 
@@ -41,6 +42,9 @@ export function WhatsAppPage() {
   }
 
   async function unlink() {
+    if (!confirmDestructive('Desvincular este número do WhatsApp?')) {
+      return
+    }
     if (await linkAction.run(() => whatsappApi.unlink())) {
       link.reload()
     }
@@ -126,6 +130,9 @@ function DraftRow({ draft, accounts, categories, onDone }: RowProps) {
   }
 
   async function discard() {
+    if (!confirmDestructive('Descartar este rascunho do WhatsApp?')) {
+      return
+    }
     if (await action.run(() => whatsappApi.discard(draft.id))) {
       onDone()
     }

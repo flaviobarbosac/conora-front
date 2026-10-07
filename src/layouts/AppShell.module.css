@@ -3,15 +3,26 @@
   min-height: 100dvh;
   display: grid;
   grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
   padding-bottom: var(--bottom-nav-h);
   padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
   background: var(--bg-app);
 }
 
-.topBar {
+.sidebar {
+  display: none;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.appHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
   position: sticky;
   top: 0;
@@ -22,14 +33,25 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.topBarActions {
+.appHeaderBrand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.appHeaderUser {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  min-width: 0;
+  margin-left: auto;
 }
 
-.sidebar {
-  display: none;
+.appHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 .logo {
@@ -66,12 +88,11 @@
   font-weight: var(--weight-semibold);
 }
 
-.profile {
+.sidebarFoot {
   margin-top: auto;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-2);
   padding: var(--space-3);
   border-top: 1px solid var(--border-subtle);
   padding-top: 18px;
@@ -79,7 +100,6 @@
 
 .settingsLink,
 .settingsLinkActive {
-  flex: 1 1 100%;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -87,7 +107,6 @@
   padding: 8px var(--space-3);
   border-radius: var(--radius-sm);
   text-decoration: none;
-  order: -1;
 }
 
 .settingsLink {
@@ -101,8 +120,9 @@
 }
 
 .appVersion {
-  flex: 1 1 100%;
-  order: 10;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  display: none;
 }
 
 .avatar {
@@ -116,6 +136,7 @@
   justify-content: center;
   font-weight: var(--weight-semibold);
   font-size: var(--text-md);
+  flex-shrink: 0;
 }
 
 .profileMeta {
@@ -130,19 +151,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 140px;
+  max-width: 160px;
 }
 
 .profileMeta span {
   color: var(--text-muted);
   font-size: var(--text-sm);
-}
-
-.profileActions {
-  margin-left: auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
 }
 
 .iconBtn {
@@ -156,6 +170,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0 var(--space-2);
 }
 
 .sidebarHead {
@@ -238,12 +253,6 @@
   font-weight: var(--weight-semibold);
 }
 
-.appVersion {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  display: none;
-}
-
 .chevronExpanded {
   transform: rotate(180deg);
 }
@@ -255,6 +264,7 @@
 .main {
   padding: var(--space-5);
   min-width: 0;
+  flex: 1;
 }
 
 .bottomNav {
@@ -322,12 +332,29 @@
 @media (min-width: 768px) {
   .shell {
     grid-template-columns: var(--rail-w) 1fr;
+    grid-template-rows: 1fr;
     padding-bottom: 0;
   }
 
-  .topBar,
   .bottomNav,
   .fab {
+    display: none;
+  }
+
+  .appHeaderBrand {
+    display: none;
+  }
+
+  .appHeaderUser {
+    margin-left: 0;
+  }
+
+  .appHeader {
+    justify-content: flex-end;
+    padding: var(--space-3) var(--space-6);
+  }
+
+  .appHeaderActions .iconBtn:first-child {
     display: none;
   }
 
@@ -339,6 +366,7 @@
     border-right: 1px solid var(--border-subtle);
     padding: var(--space-6) var(--space-2);
     gap: var(--space-8);
+    grid-row: 1 / -1;
   }
 
   .logo {
@@ -349,7 +377,9 @@
   .link,
   .linkActive,
   .cadastrosToggle,
-  .cadastrosToggleActive {
+  .cadastrosToggleActive,
+  .settingsLink,
+  .settingsLinkActive {
     width: 64px;
     min-height: 56px;
     height: auto;
@@ -384,9 +414,9 @@
     text-align: center;
   }
 
-  .profileMeta,
-  .profileActions {
-    display: none;
+  .sidebarFoot {
+    align-items: center;
+    padding: var(--space-2) 0 0;
   }
 
   .main {
@@ -442,7 +472,9 @@
   .link,
   .linkActive,
   .cadastrosToggle,
-  .cadastrosToggleActive {
+  .cadastrosToggleActive,
+  .settingsLink,
+  .settingsLinkActive {
     width: auto;
     min-height: 44px;
     padding: 11px var(--space-3);
@@ -452,6 +484,12 @@
     font-size: var(--text-base);
     text-align: left;
     line-height: inherit;
+  }
+
+  .settingsLink,
+  .settingsLinkActive {
+    min-height: 40px;
+    padding: 8px var(--space-3);
   }
 
   .cadastrosChevron {
@@ -483,7 +521,9 @@
   .sidebarCollapsed .link,
   .sidebarCollapsed .linkActive,
   .sidebarCollapsed .cadastrosToggle,
-  .sidebarCollapsed .cadastrosToggleActive {
+  .sidebarCollapsed .cadastrosToggleActive,
+  .sidebarCollapsed .settingsLink,
+  .sidebarCollapsed .settingsLinkActive {
     width: 64px;
     min-height: 56px;
     padding: var(--space-1) 0;
@@ -509,29 +549,35 @@
     text-align: center;
   }
 
-  .sidebarCollapsed .profileMeta,
-  .sidebarCollapsed .profileActions {
-    display: none;
-  }
-
   .sidebarCollapsed .sidebarHead :global([class*='signature']) {
     display: none;
   }
 
-  .profileMeta,
-  .profileActions {
-    display: flex;
+  .sidebarFoot {
+    align-items: stretch;
   }
 
   .appVersion {
     display: block;
-    margin-bottom: var(--space-1);
+    margin-top: var(--space-1);
   }
 
   .sidebarCollapsed .appVersion {
     text-align: center;
     font-size: 9px;
-    margin-bottom: var(--space-2);
+  }
+
+  .sidebarCollapsed .sidebarFoot {
+    align-items: center;
+  }
+
+  .appHeader {
+    padding: var(--space-3) var(--space-12);
+  }
+
+  .profileMeta strong,
+  .profileMeta span {
+    max-width: 220px;
   }
 
   .main {

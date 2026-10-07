@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
+import { familyApi } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
+import { useLoad } from '../hooks/useLoad'
 import { useTheme } from '../theme/ThemeProvider'
 import { Button } from './ui/Button'
 import styles from './Splash.module.css'
 
-const MIN_MS = 800
-const SLOW_MS = 3000
-const FAIL_MS = 8000
+const MIN_MS = 1600
+const SLOW_MS = 6000
+const FAIL_MS = 16000
 const SEEN_KEY = 'conora.seenHome'
 
-function firstName(email: string): string {
-  const local = email.split('@')[0] ?? ''
-  const part = local.split(/[._-]/).find(Boolean) ?? local
+function firstName(displayName: string): string {
+  const part = displayName.trim().split(/\s+/).find(Boolean) ?? ''
   if (!part) {
     return ''
   }
@@ -31,16 +32,19 @@ type Phase = 'loading' | 'slow' | 'error' | 'leaving' | 'done'
 export function Splash({ onFinished }: { onFinished: () => void }) {
   const { session } = useAuth()
   const { theme } = useTheme()
+  const profile = useLoad(() => familyApi.profile(), [session?.email])
   const reduced = prefersReducedMotion()
   const [phase, setPhase] = useState<Phase>('loading')
   const [progress, setProgress] = useState(reduced ? 1 : 0)
+  const [animationDone, setAnimationDone] = useState(reduced)
   const onraLogo = `${import.meta.env.BASE_URL}brand/${theme === 'dark' ? 'logo-escuro' : 'logo-claro'}.png`
-  const name = session ? firstName(session.email) : ''
+  const name = session ? firstName(profile.data?.name ?? '') : ''
   const firstVisit = !hasSeenHome()
+  const profileReady = !session || !profile.loading
 
   useEffect(() => {
     if (reduced) {
-      const wait = window.setTimeout(() => setPhase('leaving'), MIN_MS)
+      const wait = window.setTimeout(() => setAnimationDone(true), MIN_MS)
       return () => window.clearTimeout(wait)
     }
 
@@ -48,7 +52,7 @@ export function Splash({ onFinished }: { onFinished: () => void }) {
     let frame = 0
     const tick = () => {
       const elapsed = Date.now() - start
-      const fake = Math.min(0.9, elapsed / 1600)
+      const fake = Math.min(0.9, elapsed / 3200)
       setProgress(fake)
       if (elapsed >= FAIL_MS) {
         setPhase('error')
@@ -59,7 +63,7 @@ export function Splash({ onFinished }: { onFinished: () => void }) {
       }
       if (elapsed >= MIN_MS && fake >= 0.9) {
         setProgress(1)
-        setPhase('leaving')
+        setAnimationDone(true)
         return
       }
       frame = window.requestAnimationFrame(tick)
@@ -69,13 +73,22 @@ export function Splash({ onFinished }: { onFinished: () => void }) {
   }, [reduced])
 
   useEffect(() => {
+    if (phase === 'error' || phase === 'leaving' || phase === 'done') {
+      return
+    }
+    if (animationDone && profileReady) {
+      setPhase('leaving')
+    }
+  }, [animationDone, profileReady, phase])
+
+  useEffect(() => {
     if (phase !== 'leaving') {
       return
     }
     if (session) {
       localStorage.setItem(SEEN_KEY, '1')
     }
-    const hold = reduced ? 0 : 440
+    const hold = reduced ? 0 : 880
     const timer = window.setTimeout(() => {
       setPhase('done')
       onFinished()

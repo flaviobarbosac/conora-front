@@ -6,6 +6,7 @@ import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
+import { confirmDestructive } from '../lib/confirm'
 import { formatDateTime } from '../lib/format'
 import styles from './page.module.css'
 
@@ -50,13 +51,16 @@ export function MembersPage() {
   }
 
   async function cancelInvite(invite: FamilyInvite) {
+    if (!confirmDestructive(`Cancelar o convite para ${invite.email}?`)) {
+      return
+    }
     if (await rowAction.run(() => familyApi.cancelInvite(invite.id))) {
       group.reload()
     }
   }
 
   async function leaveGroup() {
-    if (!window.confirm('Sair do grupo familiar? Seu orçamento volta a ser só pessoal.')) {
+    if (!confirmDestructive('Sair do grupo familiar? Seu orçamento volta a ser só pessoal.')) {
       return
     }
     if (await rowAction.run(() => familyApi.leave())) {
@@ -65,7 +69,7 @@ export function MembersPage() {
   }
 
   async function removeMember(member: FamilyMemberUser) {
-    if (!window.confirm(`Remover ${member.name} do grupo?`)) {
+    if (!confirmDestructive(`Remover ${member.name} do grupo?`)) {
       return
     }
     if (await rowAction.run(() => familyApi.removeMember(member.usuarioId))) {

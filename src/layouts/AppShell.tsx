@@ -61,15 +61,6 @@ export function AppShell() {
 
   return (
     <div className={shellClass}>
-      <header className={styles.topBar}>
-        <BrandLockup size="nav" />
-        <div className={styles.topBarActions}>
-          <ThemeToggleButton className={styles.iconBtn} />
-          <button className={styles.iconBtn} type="button" onClick={() => void logout()} aria-label="Sair da conta">
-            Sair
-          </button>
-        </div>
-      </header>
       <aside className={sidebarClass}>
         <div className={styles.sidebarHead}>
           <BrandLockup size="nav" />
@@ -143,7 +134,7 @@ export function AppShell() {
             ) : null}
           </div>
         </nav>
-        <div className={styles.profile}>
+        <div className={styles.sidebarFoot}>
           <NavLink
             to="/configuracoes"
             className={({ isActive }) => (isActive ? styles.settingsLinkActive : styles.settingsLink)}
@@ -159,23 +150,36 @@ export function AppShell() {
           <span className={styles.appVersion} title={`Versão ${__APP_VERSION__}`}>
             v{__APP_VERSION__}
           </span>
-          <div className={styles.avatar} aria-hidden="true">
-            {initialsFrom(displayName, email)}
+        </div>
+      </aside>
+
+      <div className={styles.content}>
+        <header className={styles.appHeader}>
+          <div className={styles.appHeaderBrand}>
+            <BrandLockup size="nav" />
           </div>
-          <div className={styles.profileMeta}>
-            <strong title={displayName}>{displayName}</strong>
-            <span title={email}>{email}</span>
+          <div className={styles.appHeaderUser}>
+            <div className={styles.avatar} aria-hidden="true">
+              {initialsFrom(displayName, email)}
+            </div>
+            <div className={styles.profileMeta}>
+              <strong title={displayName}>{displayName}</strong>
+              <span title={email}>{email}</span>
+            </div>
           </div>
-          <div className={styles.profileActions}>
+          <div className={styles.appHeaderActions}>
+            <ThemeToggleButton className={styles.iconBtn} />
             <button className={styles.iconBtn} type="button" onClick={() => void logout()} aria-label="Sair da conta">
               Sair
             </button>
           </div>
-        </div>
-      </aside>
-      <main className={styles.main} id="conteudo-principal">
-        <Outlet />
-      </main>
+        </header>
+
+        <main className={styles.main} id="conteudo-principal">
+          <Outlet />
+        </main>
+      </div>
+
       <nav className={styles.bottomNav} aria-label="Atalhos">
         <NavLink to="/" end className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
           {({ isActive }) => (

@@ -17,6 +17,7 @@ import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
+import { confirmDestructive } from '../lib/confirm'
 import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
 import styles from './page.module.css'
 
@@ -58,6 +59,12 @@ export function AccountsPage() {
   }
 
   async function toggleArchive(account: Account) {
+    const message = account.isArchived
+      ? `Reativar a conta "${account.name}"?`
+      : `Arquivar a conta "${account.name}"?`
+    if (!confirmDestructive(message)) {
+      return
+    }
     if (await archive.run(() => accountsApi.archive(account.id, !account.isArchived))) {
       refresh()
     }
