@@ -218,30 +218,25 @@ export function AppShell() {
                 </Link>
                 <button
                   type="button"
-                  className={theme === ThemeName.Light ? styles.profileMenuItemActive : styles.profileMenuItem}
+                  className={styles.profileMenuItem}
                   role="menuitem"
-                  aria-checked={theme === ThemeName.Light}
                   onClick={() => {
-                    setTheme(ThemeName.Light)
+                    setTheme(theme === ThemeName.Light ? ThemeName.Dark : ThemeName.Light)
                     setProfileMenuOpen(false)
                   }}
                 >
-                  <Icon name="sun" size={20} />
-                  Tema — Claro
+                  <Icon name={theme === ThemeName.Light ? 'moon' : 'sun'} size={20} />
+                  {theme === ThemeName.Light ? 'Escuro' : 'Claro'}
                 </button>
-                <button
-                  type="button"
-                  className={theme === ThemeName.Dark ? styles.profileMenuItemActive : styles.profileMenuItem}
+                <Link
+                  to="/ajuda"
+                  className={styles.profileMenuItem}
                   role="menuitem"
-                  aria-checked={theme === ThemeName.Dark}
-                  onClick={() => {
-                    setTheme(ThemeName.Dark)
-                    setProfileMenuOpen(false)
-                  }}
+                  onClick={() => setProfileMenuOpen(false)}
                 >
-                  <Icon name="moon" size={20} />
-                  Tema — Escuro
-                </button>
+                  <Icon name="help" size={20} />
+                  Central de ajuda
+                </Link>
                 <button
                   type="button"
                   className={styles.profileMenuItemDanger}
