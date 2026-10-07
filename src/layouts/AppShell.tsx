@@ -7,6 +7,7 @@ import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
 import { PREFERENCES_CHANGED, readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
 import { CADASTROS_ITEMS, NAV_ITEMS } from '../nav'
+import { ThemeName, useTheme } from '../theme/ThemeProvider'
 import styles from './AppShell.module.css'
 
 function initialsFrom(name: string, email: string): string {
@@ -20,6 +21,7 @@ function initialsFrom(name: string, email: string): string {
 
 export function AppShell() {
   const { session, logout } = useAuth()
+  const { theme, setTheme } = useTheme()
   const { pathname } = useLocation()
   const email = session?.email || 'conta'
   const profile = useLoad(() => familyApi.profile(), [session?.email])
@@ -209,16 +211,35 @@ export function AppShell() {
                   role="menuitem"
                   onClick={() => setProfileMenuOpen(false)}
                 >
+                  <Icon name="user" size={20} />
                   Perfil
                 </Link>
-                <Link
-                  to="/configuracoes#aparencia"
-                  className={styles.profileMenuItem}
+                <button
+                  type="button"
+                  className={theme === ThemeName.Light ? styles.profileMenuItemActive : styles.profileMenuItem}
                   role="menuitem"
-                  onClick={() => setProfileMenuOpen(false)}
+                  aria-checked={theme === ThemeName.Light}
+                  onClick={() => {
+                    setTheme(ThemeName.Light)
+                    setProfileMenuOpen(false)
+                  }}
                 >
-                  Tema
-                </Link>
+                  <Icon name="sun" size={20} />
+                  Tema — Claro
+                </button>
+                <button
+                  type="button"
+                  className={theme === ThemeName.Dark ? styles.profileMenuItemActive : styles.profileMenuItem}
+                  role="menuitem"
+                  aria-checked={theme === ThemeName.Dark}
+                  onClick={() => {
+                    setTheme(ThemeName.Dark)
+                    setProfileMenuOpen(false)
+                  }}
+                >
+                  <Icon name="moon" size={20} />
+                  Tema — Escuro
+                </button>
                 <button
                   type="button"
                   className={styles.profileMenuItemDanger}
@@ -228,6 +249,7 @@ export function AppShell() {
                     void logout()
                   }}
                 >
+                  <Icon name="logout" size={20} />
                   Sair
                 </button>
               </div>

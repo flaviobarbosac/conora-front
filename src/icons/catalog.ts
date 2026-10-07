@@ -118,4 +118,9 @@ export const ICON_CATALOG: Record<IconName, IconDef> = {
     ],
     accent: [],
   },
+  logout: {
+    label: 'Sair',
+    base: ['M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4'],
+    accent: ['M15 16l4-4-4-4', 'M19 12H10'],
+  },
 }
