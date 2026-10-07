@@ -21,7 +21,7 @@ export function CategoriesPage() {
   const categories = useLoad(() => categoriesApi.list(undefined, true), [])
   const remove = useAction()
   const list = categories.data ?? []
-  const pagination = useClientPagination(list, 20)
+  const pagination = useClientPagination(list, 10)
 
   async function removeCategory(category: Category) {
     if (window.confirm(`Excluir "${category.name}"?`) && (await remove.run(() => categoriesApi.remove(category.id)))) {
