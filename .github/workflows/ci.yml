@@ -20,7 +20,7 @@ jobs:
 
       - name: Install and build
         env:
-          VITE_API_URL: ${{ github.ref == 'refs/heads/main' && 'https://api.conora.app' || 'https://api.dev.conora.app' }}
+          VITE_API_URL: https://api.conora.com.br
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
         run: |
           npm ci

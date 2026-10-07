@@ -12,7 +12,7 @@ type Props = {
 
 export function AuthLayout({ title, subtitle, children, footer }: Props) {
   const { theme } = useTheme()
-  const illustration = theme === 'dark' ? '/brand/ilustracao-escura.jpg' : '/brand/ilustracao-login.jpg'
+  const illustration = `${import.meta.env.BASE_URL}brand/${theme === 'dark' ? 'ilustracao-escura' : 'ilustracao-login'}.jpg`
 
   return (
     <div className={styles.shell}>
@@ -20,7 +20,7 @@ export function AuthLayout({ title, subtitle, children, footer }: Props) {
         <img src={illustration} alt="" />
         <div className={styles.heroCopy}>
           <span className={styles.kicker}>Conora</span>
-          <span className={styles.headline}>Seu dinheiro organizado pelo método que você aprendeu.</span>
+          <span className={styles.headline}>Organize o dinheiro da família com clareza — mês a mês.</span>
         </div>
       </div>
       <div className={styles.panel}>

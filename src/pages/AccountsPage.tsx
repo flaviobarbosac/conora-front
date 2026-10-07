@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   accountsApi,
   cardsApi,
@@ -31,7 +32,21 @@ const INVOICE_LABEL: Record<InvoiceStatus, string> = {
   Paid: 'Paga',
 }
 
+type AccountsView = 'accounts' | 'cards'
+
+function viewFromPath(pathname: string): AccountsView {
+  if (pathname === '/cartoes' || pathname.startsWith('/cartoes/')) {
+    return 'cards'
+  }
+  return 'accounts'
+}
+
 export function AccountsPage() {
+  const { pathname } = useLocation()
+  const view = viewFromPath(pathname)
+  const showAccounts = view === 'accounts'
+  const showCards = view === 'cards'
+
   const lookups = useLookups()
   const accounts = useLoad(() => accountsApi.list(true), [])
   const cards = useLoad(() => cardsApi.list(), [])
@@ -50,61 +65,72 @@ export function AccountsPage() {
 
   const activeAccounts = (accounts.data ?? []).filter((account) => !account.isArchived)
 
+  const pageTitle = showCards ? 'Cartões' : 'Contas'
+  const pageKicker = showCards ? 'Crédito' : 'Dinheiro'
+
   return (
     <div className={styles.page}>
-      <PageHeader kicker="Dinheiro" title="Contas e cartões" />
+      <PageHeader kicker={pageKicker} title={pageTitle} />
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Contas</h2>
-        <ErrorText message={accounts.error ?? archive.error} />
-        {accounts.loading && !accounts.data ? <Loading /> : null}
-        {accounts.data && accounts.data.length === 0 ? <Empty>Nenhuma conta cadastrada.</Empty> : null}
-        {accounts.data && accounts.data.length > 0 ? (
-          <ul className={styles.list}>
-            {accounts.data.map((account) => (
-              <li key={account.id} className={styles.row}>
-                <span className={styles.rowMain}>
-                  <strong>{account.name}</strong>
-                  <span className={styles.rowSub}>{KIND_LABEL[account.kind]}</span>
-                </span>
-                <span className={styles.rowEnd}>
-                  {account.isArchived ? <Badge tone="warning">Arquivada</Badge> : null}
-                  <span className={styles.amount}>{formatMoney(account.balance)}</span>
-                  <Button variant="ghost" disabled={archive.busy} onClick={() => void toggleArchive(account)}>
-                    {account.isArchived ? 'Reativar' : 'Arquivar'}
-                  </Button>
-                </span>
-              </li>
+      {showAccounts ? (
+        <>
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Contas</h2>
+            <ErrorText message={accounts.error ?? archive.error} />
+            {accounts.loading && !accounts.data ? <Loading /> : null}
+            {accounts.data && accounts.data.length === 0 ? <Empty>Nenhuma conta cadastrada.</Empty> : null}
+            {accounts.data && accounts.data.length > 0 ? (
+              <ul className={styles.list}>
+                {accounts.data.map((account) => (
+                  <li key={account.id} className={styles.row}>
+                    <span className={styles.rowMain}>
+                      <strong>{account.name}</strong>
+                      <span className={styles.rowSub}>{KIND_LABEL[account.kind]}</span>
+                    </span>
+                    <span className={styles.rowEnd}>
+                      {account.isArchived ? <Badge tone="warning">Arquivada</Badge> : null}
+                      <span className={styles.amount}>{formatMoney(account.balance)}</span>
+                      <Button variant="ghost" disabled={archive.busy} onClick={() => void toggleArchive(account)}>
+                        {account.isArchived ? 'Reativar' : 'Arquivar'}
+                      </Button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+
+          <div className={styles.grid2}>
+            <AccountForm onSaved={refresh} />
+            <TransferForm accounts={activeAccounts} onSaved={refresh} />
+          </div>
+        </>
+      ) : null}
+
+      {showCards ? (
+        <>
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Cartões de crédito</h2>
+            <ErrorText message={cards.error} />
+            {cards.loading && !cards.data ? <Loading /> : null}
+            {cards.data && cards.data.length === 0 ? <Empty>Nenhum cartão cadastrado.</Empty> : null}
+            {cards.data?.map((card) => (
+              <CardPanel
+                key={card.id}
+                card={card}
+                accounts={activeAccounts}
+                categories={lookups.categories.filter((category) => category.kind === 'Expense')}
+                onChanged={() => {
+                  cards.reload()
+                  refresh()
+                }}
+              />
             ))}
-          </ul>
-        ) : null}
-      </section>
+          </section>
 
-      <div className={styles.grid2}>
-        <AccountForm onSaved={refresh} />
-        <TransferForm accounts={activeAccounts} onSaved={refresh} />
-      </div>
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Cartões de crédito</h2>
-        <ErrorText message={cards.error} />
-        {cards.loading && !cards.data ? <Loading /> : null}
-        {cards.data && cards.data.length === 0 ? <Empty>Nenhum cartão cadastrado.</Empty> : null}
-        {cards.data?.map((card) => (
-          <CardPanel
-            key={card.id}
-            card={card}
-            accounts={activeAccounts}
-            categories={lookups.categories.filter((category) => category.kind === 'Expense')}
-            onChanged={() => {
-              cards.reload()
-              refresh()
-            }}
-          />
-        ))}
-      </section>
-
-      <CardForm accounts={activeAccounts} onSaved={cards.reload} />
+          <CardForm accounts={activeAccounts} onSaved={cards.reload} />
+        </>
+      ) : null}
     </div>
   )
 }

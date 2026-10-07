@@ -59,6 +59,17 @@ export async function requestGoogleIdToken(): Promise<string> {
     throw new Error('Google ainda não está configurado neste ambiente.')
   }
 
+  const { Capacitor } = await import('@capacitor/core')
+  if (Capacitor.isNativePlatform()) {
+    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
+    const user = await GoogleAuth.signIn()
+    const token = user.authentication?.idToken
+    if (!token) {
+      throw new Error('Token Google ausente.')
+    }
+    return token
+  }
+
   await loadScript()
   if (!window.google) {
     throw new Error('Google Identity não disponível.')

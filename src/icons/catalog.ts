@@ -11,6 +11,12 @@ export type IconName =
   | 'calendar'
   | 'search'
   | 'user'
+  | 'sun'
+  | 'moon'
+  | 'folder'
+  | 'wallet'
+  | 'chevron'
+  | 'settings'
 
 type IconDef = {
   label: string
@@ -78,5 +84,35 @@ export const ICON_CATALOG: Record<IconName, IconDef> = {
     label: 'Perfil',
     base: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
     accent: ['M4 21a8 8 0 0 1 16 0'],
+  },
+  sun: {
+    label: 'Tema claro',
+    base: ['M12 4v2', 'M12 18v2', 'M4.93 4.93l1.41 1.41', 'M17.66 17.66l1.41 1.41', 'M4 12h2', 'M18 12h2', 'M4.93 19.07l1.41-1.41', 'M17.66 6.34l1.41-1.41'],
+    accent: ['M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'],
+  },
+  moon: {
+    label: 'Tema escuro',
+    base: ['M12 3a7 7 0 1 0 7 7 5 5 0 0 1-7-7z'],
+    accent: [],
+  },
+  folder: {
+    label: 'Cadastros',
+    base: ['M4 7h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z'],
+    accent: ['M3 7V6a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v1'],
+  },
+  wallet: {
+    label: 'Patrimônio',
+    base: ['M5 7h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z'],
+    accent: ['M3 11h18', 'M16 15h.01'],
+  },
+  chevron: {
+    label: 'Expandir',
+    base: ['M9 6l6 6-6 6'],
+    accent: [],
+  },
+  settings: {
+    label: 'Configurações',
+    base: ['M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', 'M12 2v2', 'M12 20v2', 'M4.93 4.93l1.41 1.41', 'M17.66 17.66l1.41 1.41', 'M2 12h2', 'M20 12h2', 'M4.93 19.07l1.41-1.41', 'M17.66 6.34l1.41-1.41'],
+    accent: ['M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'],
   },
 }

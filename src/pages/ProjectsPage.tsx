@@ -1,14 +1,14 @@
 import { useState, type FormEvent } from 'react'
-import { projectsApi, type Account, type LifeProject } from '../api/finance'
+import { familyApi, projectsApi, type Account, type LifeProject, type LifeProjectScope } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
-import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
+import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
-import { dateToApi, formatDate, formatMoney, formatPercent, parseMoney, todayInput } from '../lib/format'
+import { dateToApi, formatDate, formatMoney, formatMoneyInput, formatPercent, parseMoney, todayInput } from '../lib/format'
 import styles from './page.module.css'
 
 export function ProjectsPage() {
@@ -77,7 +77,12 @@ function ProjectCard({ project, accounts, onChanged, onRemove }: CardProps) {
     <section className={styles.section}>
       <div className={styles.sectionHead}>
         <span className={styles.rowMain}>
-          <strong>{project.name}</strong>
+          <strong>
+            {project.name}{' '}
+            <Badge tone={project.scope === 'Group' ? 'info' : 'ok'}>
+              {project.scope === 'Group' ? 'Família' : 'Pessoal'}
+            </Badge>
+          </strong>
           <span className={styles.rowSub}>
             {formatMoney(project.accumulatedAmount)} de {formatMoney(project.goalAmount)}
             {project.dueDate ? ` · até ${formatDate(project.dueDate)}` : ''}
@@ -98,7 +103,20 @@ function ProjectCard({ project, accounts, onChanged, onRemove }: CardProps) {
       </span>
       {open ? (
         <form className={styles.form} onSubmit={(event) => void contribute(event)}>
-          <Field label="Valor (R$)" name={`contribAmount-${project.id}`} inputMode="decimal" required value={amount} onChange={(event) => setAmount(event.target.value)} />
+          <Field
+            label="Valor (R$)"
+            name={`contribAmount-${project.id}`}
+            inputMode="decimal"
+            required
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            onBlur={() => {
+              const parsed = parseMoney(amount)
+              if (Number.isFinite(parsed)) {
+                setAmount(formatMoneyInput(parsed))
+              }
+            }}
+          />
           <Field label="Data" name={`contribDate-${project.id}`} type="date" required value={date} onChange={(event) => setDate(event.target.value)} />
           <Select label="Conta de origem" name={`contribAccount-${project.id}`} required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
             <option value="">Selecione</option>
@@ -123,10 +141,13 @@ function ProjectCard({ project, accounts, onChanged, onRemove }: CardProps) {
 }
 
 function ProjectForm({ onSaved }: { onSaved: () => void }) {
+  const family = useLoad(() => familyApi.group(), [])
   const [name, setName] = useState('')
   const [goal, setGoal] = useState('')
   const [dueDate, setDueDate] = useState('')
+  const [scope, setScope] = useState<LifeProjectScope>('Personal')
   const action = useAction()
+  const hasFamilyGroup = Boolean(family.data?.groupId)
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -135,10 +156,16 @@ function ProjectForm({ onSaved }: { onSaved: () => void }) {
       action.setError('Informe uma meta maior que zero.')
       return
     }
-    if (await action.run(() => projectsApi.create(name.trim(), goalAmount, dueDate ? dateToApi(dueDate) : undefined))) {
+    const projectScope = scope === 'Group' && hasFamilyGroup ? 'Group' : 'Personal'
+    if (
+      await action.run(() =>
+        projectsApi.create(name.trim(), goalAmount, dueDate ? dateToApi(dueDate) : undefined, projectScope),
+      )
+    ) {
       setName('')
       setGoal('')
       setDueDate('')
+      setScope('Personal')
       onSaved()
     }
   }
@@ -150,7 +177,31 @@ function ProjectForm({ onSaved }: { onSaved: () => void }) {
         <div className={styles.formWide}>
           <Field label="Nome" name="projectName" required value={name} onChange={(event) => setName(event.target.value)} />
         </div>
-        <Field label="Meta (R$)" name="projectGoal" inputMode="decimal" required value={goal} onChange={(event) => setGoal(event.target.value)} />
+        <Select
+          label="Escopo"
+          name="projectScope"
+          value={scope}
+          onChange={(event) => setScope(event.target.value as LifeProjectScope)}
+        >
+          <option value="Personal">Pessoal</option>
+          <option value="Group" disabled={!hasFamilyGroup}>
+            Família{hasFamilyGroup ? '' : ' (entre no grupo primeiro)'}
+          </option>
+        </Select>
+        <Field
+          label="Meta (R$)"
+          name="projectGoal"
+          inputMode="decimal"
+          required
+          value={goal}
+          onChange={(event) => setGoal(event.target.value)}
+          onBlur={() => {
+            const parsed = parseMoney(goal)
+            if (Number.isFinite(parsed)) {
+              setGoal(formatMoneyInput(parsed))
+            }
+          }}
+        />
         <Field label="Prazo (opcional)" name="projectDue" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
         <div className={styles.formWide}>
           <ErrorText message={action.error} />

@@ -39,6 +39,8 @@ const json = (method: string, body?: unknown) => ({ method, body })
 
 /* ---------- Categories ---------- */
 
+export type BudgetBlockKind = 'Investment' | 'Essential' | 'Social'
+
 export type Category = {
   id: string
   name: string
@@ -47,6 +49,8 @@ export type Category = {
   isSystem: boolean
   isActive: boolean
   isEssential: boolean
+  budgetBlock?: BudgetBlockKind | null
+  groupName?: string | null
 }
 
 export const categoriesApi = {
@@ -227,13 +231,31 @@ export const exportApi = {
 /* ---------- Budgets ---------- */
 
 export type BudgetLine = {
-  categoryId: string
+  categoryId: string | null
   categoryName: string
+  groupName: string
+  block: BudgetBlockKind
   plannedAmount: number
   actualAmount: number
   remaining: number
   percent: number | null
   status: string
+  isGroup: boolean
+}
+
+export type BudgetBlock = {
+  block: BudgetBlockKind
+  name: string
+  plannedAmount: number
+  actualAmount: number
+  percentOfSpendable: number | null
+  lines: BudgetLine[]
+}
+
+export type BudgetIncomeSource = {
+  id: string
+  name: string
+  netSpendable: number
 }
 
 export type Budget = {
@@ -242,11 +264,37 @@ export type Budget = {
   totalPlanned: number
   totalActual: number
   projectedExpense: number
+  spendableIncome: number
+  monthResult: number
+  incomeSources: BudgetIncomeSource[]
+  blocks: BudgetBlock[]
   lines: BudgetLine[]
+}
+
+export type BudgetYearMonthCell = {
+  competenceYm: string
+  plannedAmount: number
+  actualAmount: number
+}
+
+export type BudgetYearLine = {
+  categoryId: string | null
+  categoryName: string
+  groupName: string
+  block: BudgetBlockKind
+  months: BudgetYearMonthCell[]
+}
+
+export type BudgetYear = {
+  year: number
+  months: string[]
+  lines: BudgetYearLine[]
+  totals: BudgetYearMonthCell[]
 }
 
 export const budgetsApi = {
   get: (ym: string) => apiFetch<Budget>(`/budgets/${ym}`),
+  getYear: (year: number) => apiFetch<BudgetYear>(`/budgets/year/${year}`),
   upsert: (ym: string, mode: BudgetMode, lines: { categoryId: string; plannedAmount: number }[]) =>
     apiFetch<Budget>(`/budgets/${ym}`, json('PUT', { mode, lines })),
   copyPrevious: (ym: string) => apiFetch<Budget>(`/budgets/${ym}/copy-previous`, json('POST')),
@@ -294,6 +342,8 @@ export const diagnosisApi = {
 
 /* ---------- Life projects ---------- */
 
+export type LifeProjectScope = 'Personal' | 'Group'
+
 export type LifeProject = {
   id: string
   name: string
@@ -301,12 +351,14 @@ export type LifeProject = {
   dueDate: string | null
   accumulatedAmount: number
   progressPercent: number
+  scope: LifeProjectScope
+  isOwner: boolean
 }
 
 export const projectsApi = {
   list: () => apiFetch<LifeProject[]>('/life-projects'),
-  create: (name: string, goalAmount: number, dueDate?: string) =>
-    apiFetch<LifeProject>('/life-projects', json('POST', { name, goalAmount, dueDate })),
+  create: (name: string, goalAmount: number, dueDate?: string, scope: LifeProjectScope = 'Personal') =>
+    apiFetch<LifeProject>('/life-projects', json('POST', { name, goalAmount, dueDate, scope })),
   remove: (id: string) => apiFetch<void>(`/life-projects/${id}`, json('DELETE')),
   contribute: (id: string, amount: number, occurredAt: string, accountId?: string, description?: string) =>
     apiFetch<unknown>(`/life-projects/${id}/contributions`, json('POST', { amount, occurredAt, accountId, description })),
@@ -352,6 +404,66 @@ export const membersApi = {
   remove: (id: string) => apiFetch<void>(`/members/${id}`, json('DELETE')),
 }
 
+/* ---------- Family group ---------- */
+
+export type FamilyProfile = {
+  usuarioId: string
+  name: string
+  email: string
+}
+
+export type FamilyMemberUser = {
+  usuarioId: string
+  name: string
+  email: string
+  isSelf: boolean
+}
+
+export type FamilyInvite = {
+  id: string
+  email: string
+  expiresAt: string
+  acceptedAt: string | null
+  cancelledAt: string | null
+  isOpen: boolean
+}
+
+export type FamilyInvitePreview = {
+  status: string
+  inviterName: string
+  email: string
+  expiresAt: string | null
+}
+
+export type FamilyNotice = {
+  id: string
+  kind: string
+  message: string
+  createdAt: string
+  isRead: boolean
+}
+
+export type FamilyGroupResponse = {
+  groupId: string | null
+  members: FamilyMemberUser[]
+  pendingInvites: FamilyInvite[]
+  notices: FamilyNotice[]
+}
+
+export const familyApi = {
+  profile: () => apiFetch<FamilyProfile>('/family/profile'),
+  updateProfile: (name: string) => apiFetch<FamilyProfile>('/family/profile', json('PUT', { name })),
+  group: () => apiFetch<FamilyGroupResponse>('/family/group'),
+  invite: (email: string) => apiFetch<FamilyInvite>('/family/invites', json('POST', { email })),
+  cancelInvite: (id: string) => apiFetch<void>(`/family/invites/${id}`, json('DELETE')),
+  previewInvite: (token: string) =>
+    apiFetch<FamilyInvitePreview>(`/family/invites/${token}/preview`, { auth: false }),
+  acceptInvite: (token: string) => apiFetch<FamilyGroupResponse>(`/family/invites/${token}/accept`, json('POST')),
+  leave: () => apiFetch<FamilyGroupResponse>('/family/leave', json('POST')),
+  removeMember: (usuarioId: string) => apiFetch<FamilyGroupResponse>(`/family/members/${usuarioId}`, json('DELETE')),
+  readNotice: (id: string) => apiFetch<void>(`/family/notices/${id}/read`, json('POST')),
+}
+
 /* ---------- Plan ---------- */
 
 export type Plan = {
@@ -369,12 +481,18 @@ export const planApi = {
 
 /* ---------- Help / AI ---------- */
 
+export type HelpField = { name: string; description: string }
+export type HelpModule = { key: string; title: string; summary: string; fields: HelpField[] }
 export type Help = {
   steps: { order: number; key: string; title: string; text: string }[]
   glossary: { key: string; term: string; definition: string }[]
+  modules: HelpModule[]
 }
 
-export const helpApi = { get: () => apiFetch<Help>('/help') }
+export const helpApi = {
+  get: () => apiFetch<Help>('/help'),
+  module: (key: string) => apiFetch<HelpModule>(`/help/modules/${key}`),
+}
 
 export type AiAnswer = { available: boolean; answer: string }
 

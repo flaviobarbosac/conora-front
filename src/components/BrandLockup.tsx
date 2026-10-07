@@ -10,8 +10,8 @@ type Props = {
 export function BrandLockup({ size = 'nav' }: Props) {
   const { theme } = useTheme()
   const suffix = theme === 'dark' ? 'escuro' : 'claro'
-  const conoraLogo = `/brand/conora-${suffix}.png`
-  const onraLogo = `/brand/logo-${suffix}.png`
+  const conoraLogo = `${import.meta.env.BASE_URL}brand/conora-${suffix}.png`
+  const onraLogo = `${import.meta.env.BASE_URL}brand/logo-${suffix}.png`
   const [logoReady, setLogoReady] = useState(false)
 
   useEffect(() => {

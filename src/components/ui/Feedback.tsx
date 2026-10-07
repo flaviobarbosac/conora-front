@@ -11,7 +11,15 @@ export function ErrorText({ message }: { message: string | null }) {
 }
 
 export function Loading({ label = 'Carregando…' }: { label?: string }) {
-  return <p className={styles.muted}>{label}</p>
+  return (
+    <p className={styles.muted} aria-live="polite">
+      {label}
+    </p>
+  )
+}
+
+export function Skeleton({ height = 80 }: { height?: number }) {
+  return <div className={styles.skeleton} style={{ minHeight: height }} aria-hidden="true" />
 }
 
 export function Empty({ children }: { children: ReactNode }) {

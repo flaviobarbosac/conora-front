@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { formatCpfInput } from '../auth/loginIdentifier'
 import { useAuth } from '../auth/AuthProvider'
 import { Button } from '../components/ui/Button'
@@ -7,8 +7,18 @@ import { Field } from '../components/ui/Field'
 import { AuthLayout } from '../layouts/AuthLayout'
 import styles from './auth.module.css'
 
+function safeReturnTo(raw: string | null): string {
+  if (raw && raw.startsWith('/') && !raw.startsWith('//')) {
+    return raw
+  }
+  return '/'
+}
+
 export function RegisterPage() {
   const { session, register } = useAuth()
+  const [searchParams] = useSearchParams()
+  const afterRegister = safeReturnTo(searchParams.get('returnTo'))
+  const loginTo = afterRegister === '/' ? '/login' : `/login?returnTo=${encodeURIComponent(afterRegister)}`
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [cpf, setCpf] = useState('')
@@ -17,7 +27,7 @@ export function RegisterPage() {
   const [busy, setBusy] = useState(false)
 
   if (session) {
-    return <Navigate to="/" replace />
+    return <Navigate to={afterRegister} replace />
   }
 
   async function onSubmit(event: FormEvent) {
@@ -35,11 +45,11 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
-      title="Liberar acesso"
-      subtitle="Crie a conta da família com CPF, e-mail e senha — ou entre depois com Google."
+      title="Criar conta"
+      subtitle="Cadastre a família com nome, CPF, e-mail e senha. Depois você já entra no painel."
       footer={
         <>
-          Já tem acesso? <Link to="/login">Entrar</Link>
+          Já tem conta? <Link to={loginTo}>Entrar</Link>
         </>
       }
     >
@@ -73,10 +83,14 @@ export function RegisterPage() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />
-        {error ? <p className={styles.error}>{error}</p> : null}
+        {error ? (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        ) : null}
         <div className={styles.actions}>
-          <Button type="submit" disabled={busy}>
-            Criar acesso
+          <Button type="submit" disabled={busy} aria-busy={busy}>
+            {busy ? 'Criando…' : 'Criar conta'}
           </Button>
         </div>
       </form>

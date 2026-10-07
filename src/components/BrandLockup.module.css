@@ -28,7 +28,7 @@
   height: 40px;
 }
 
-@media (max-width: 1199px) and (min-width: 768px) {
+@media (min-width: 768px) and (max-width: 1199px) {
   .nav .conora {
     font-size: 16px;
   }

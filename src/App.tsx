@@ -1,5 +1,6 @@
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
-import { useState } from 'react'
+import { Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { listenNativeShare } from './share/receiveShare'
 import { useAuth } from './auth/AuthProvider'
 import { Splash } from './components/Splash'
 import { AppShell } from './layouts/AppShell'
@@ -20,7 +21,10 @@ import { PatrimonyPage } from './pages/PatrimonyPage'
 import { PlanPage } from './pages/PlanPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { SettingsPage } from './pages/SettingsPage'
+import { ShareTargetPage } from './pages/ShareTargetPage'
 import { WhatsAppPage } from './pages/WhatsAppPage'
+import { GroupInvitePage } from './pages/GroupInvitePage'
 
 function RequireAuth() {
   const { session } = useAuth()
@@ -32,6 +36,9 @@ function RequireAuth() {
 
 export default function App() {
   const [splashDone, setSplashDone] = useState(false)
+  const navigate = useNavigate()
+
+  useEffect(() => listenNativeShare(() => navigate('/compartilhar')), [navigate])
 
   return (
     <>
@@ -39,12 +46,16 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/compartilhar" element={<ShareTargetPage />} />
+        <Route path="/grupo/convite/:token" element={<GroupInvitePage />} />
+        <Route path="/grupo/bem-vindo" element={<Navigate to="/membros" replace />} />
         <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/lancamentos" element={<EntriesPage />} />
             <Route path="/orcamento" element={<BudgetPage />} />
             <Route path="/contas" element={<AccountsPage />} />
+            <Route path="/cartoes" element={<AccountsPage />} />
             <Route path="/projetos" element={<ProjectsPage />} />
             <Route path="/relatorios" element={<MorePage />} />
             <Route path="/diagnostico" element={<DiagnosisPage />} />
@@ -53,6 +64,7 @@ export default function App() {
             <Route path="/membros" element={<MembersPage />} />
             <Route path="/plano" element={<PlanPage />} />
             <Route path="/ajuda" element={<HelpPage />} />
+            <Route path="/configuracoes" element={<SettingsPage />} />
             <Route path="/ia" element={<AiPage />} />
             <Route path="/whatsapp" element={<WhatsAppPage />} />
             <Route path="/importar" element={<ImportPage />} />

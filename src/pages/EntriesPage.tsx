@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { entriesApi, type Entry, type EntryInput, type EntryType } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
@@ -9,7 +10,9 @@ import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
+import { scanReceipt } from '../camera/scanReceipt'
 import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
+import { peekPendingShare } from '../share/pendingShare'
 import styles from './page.module.css'
 
 type FormType = Extract<EntryType, 'Expense' | 'Income' | 'Transfer'>
@@ -33,12 +36,22 @@ function amountClass(type: EntryType): string | undefined {
 }
 
 export function EntriesPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [ym, setYm] = useState(currentCompetence)
   const [typeFilter, setTypeFilter] = useState<EntryType | ''>('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [search, setSearch] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('novo') === '1') {
+      setShowForm(true)
+      const next = new URLSearchParams(searchParams)
+      next.delete('novo')
+      setSearchParams(next, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const lookups = useLookups()
   const entries = useLoad(
@@ -85,6 +98,16 @@ export function EntriesPage() {
           <>
             <CompetencePicker value={ym} onChange={setYm} />
             <Button onClick={() => setShowForm((value) => !value)}>{showForm ? 'Fechar' : '+ Novo lançamento'}</Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                void scanReceipt()
+                  .then(() => setShowForm(true))
+                  .catch(() => undefined)
+              }}
+            >
+              Escanear recibo
+            </Button>
           </>
         }
       />
@@ -182,7 +205,9 @@ function EntryForm({ accounts, categories, onSaved }: FormProps) {
   const [type, setType] = useState<FormType>('Expense')
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayInput)
-  const [description, setDescription] = useState('')
+  const pendingReceipt = peekPendingShare()
+  const [description, setDescription] = useState(pendingReceipt ? pendingReceipt.fileName.replace(/\.[^.]+$/, '') : '')
+  const [receiptPreview] = useState(pendingReceipt?.dataUrl ?? '')
   const [accountId, setAccountId] = useState('')
   const [contraAccountId, setContraAccountId] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -257,6 +282,7 @@ function EntryForm({ accounts, categories, onSaved }: FormProps) {
         ))}
       </div>
       <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+        {receiptPreview ? <img className={styles.sharePreview} src={receiptPreview} alt="Recibo anexado" /> : null}
         <Field label="Valor (R$)" name="amount" inputMode="decimal" required value={amount} onChange={(event) => setAmount(event.target.value)} />
         <Field label="Data" name="date" type="date" required value={date} onChange={(event) => setDate(event.target.value)} />
         <div className={styles.formWide}>
@@ -299,10 +325,28 @@ function EntryForm({ accounts, categories, onSaved }: FormProps) {
           </Select>
         )}
         {type === 'Expense' ? (
-          <Field label="Parcelas (opcional)" name="installments" type="number" min={1} max={60} value={installments} onChange={(event) => setInstallments(event.target.value)} />
+          <Field
+            label="Parcelas (opcional)"
+            hint="Divide o valor, uma parte por mês."
+            name="installments"
+            type="number"
+            min={1}
+            max={60}
+            value={installments}
+            onChange={(event) => setInstallments(event.target.value)}
+          />
         ) : null}
         {type !== 'Transfer' ? (
-          <Field label="Repetir por meses (opcional)" name="repeat" type="number" min={1} max={60} value={repeat} onChange={(event) => setRepeat(event.target.value)} />
+          <Field
+            label="Repetir por meses (opcional)"
+            hint="Repete o valor cheio a cada mês."
+            name="repeat"
+            type="number"
+            min={1}
+            max={60}
+            value={repeat}
+            onChange={(event) => setRepeat(event.target.value)}
+          />
         ) : null}
         <div className={styles.formWide}>
           <ErrorText message={action.error} />

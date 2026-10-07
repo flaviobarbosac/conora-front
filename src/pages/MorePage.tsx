@@ -13,11 +13,8 @@ import styles from './page.module.css'
 
 const TILES: ReadonlyArray<{ to: string; title: string; text: string }> = [
   { to: '/diagnostico', title: 'Diagnóstico', text: 'Fontes de renda e valor líquido' },
-  { to: '/categorias', title: 'Categorias', text: 'Do sistema e personalizadas' },
-  { to: '/patrimonio', title: 'Patrimônio', text: 'Bens, dívidas e reserva' },
-  { to: '/membros', title: 'Membros', text: 'Quem divide as finanças' },
   { to: '/plano', title: 'Plano', text: 'Assinatura e situação' },
-  { to: '/ajuda', title: 'Ajuda', text: 'Glossário e 7 passos' },
+  { to: '/ajuda', title: 'Central de ajuda', text: 'Módulos, campos e glossário' },
   { to: '/ia', title: 'Perguntar à IA', text: 'Dúvidas sobre seu mês' },
   { to: '/whatsapp', title: 'WhatsApp', text: 'Vincular número e rascunhos' },
   { to: '/importar', title: 'Importar extrato', text: 'CSV ou OFX' },

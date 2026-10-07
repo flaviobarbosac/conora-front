@@ -34,7 +34,7 @@ export function Splash({ onFinished }: { onFinished: () => void }) {
   const reduced = prefersReducedMotion()
   const [phase, setPhase] = useState<Phase>('loading')
   const [progress, setProgress] = useState(reduced ? 1 : 0)
-  const onraLogo = theme === 'dark' ? '/brand/logo-escuro.png' : '/brand/logo-claro.png'
+  const onraLogo = `${import.meta.env.BASE_URL}brand/${theme === 'dark' ? 'logo-escuro' : 'logo-claro'}.png`
   const name = session ? firstName(session.email) : ''
   const firstVisit = !hasSeenHome()
 
@@ -90,7 +90,7 @@ export function Splash({ onFinished }: { onFinished: () => void }) {
   let caption = 'Carregando…'
   let hello = ''
   if (session && name) {
-    hello = firstVisit ? `Bem-vinda(o), ${name}` : `Olá, ${name}`
+    hello = firstVisit ? `Bem-vindo, ${name}` : `Olá, ${name}`
     caption = phase === 'slow' ? 'Quase lá…' : 'Preparando seu mês…'
   } else if (phase === 'slow') {
     caption = 'Quase lá…'
@@ -99,7 +99,7 @@ export function Splash({ onFinished }: { onFinished: () => void }) {
   return (
     <div className={styles.overlay} data-leaving={phase === 'leaving' ? 'true' : 'false'}>
       <div className={styles.mark} aria-hidden="true">
-        <img src="/brand/simbolo.png" alt="" />
+        <img src={`${import.meta.env.BASE_URL}brand/simbolo.png`} alt="" />
       </div>
       <div className={styles.stage}>
         <p className={styles.brand}>Conora</p>

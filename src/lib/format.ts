@@ -1,7 +1,22 @@
-const moneyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+const moneyFormatter = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+const moneyInputFormatter = new Intl.NumberFormat('pt-BR', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
 
 export function formatMoney(value: number | null | undefined): string {
   return moneyFormatter.format(value ?? 0)
+}
+
+/** pt-BR amount with two decimals, without currency symbol (for inputs). */
+export function formatMoneyInput(value: number | null | undefined): string {
+  return moneyInputFormatter.format(value ?? 0)
 }
 
 /** Parses pt-BR user input ("1.234,56" or "1234.56") into a number; NaN when invalid. */
@@ -15,7 +30,7 @@ export function parseMoney(text: string): number {
 }
 
 export function formatPercent(value: number | null | undefined): string {
-  return `${Math.round(value ?? 0)}%`
+  return `${(value ?? 0).toFixed(1).replace('.', ',')}%`
 }
 
 /* ---------- Competence (yyyy-MM) ---------- */
