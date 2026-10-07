@@ -2,7 +2,7 @@ import { apiBlob, apiFetch } from './client'
 
 /* ---------- Enums (serialized as strings by the API) ---------- */
 
-export type AccountKind = 'Checking' | 'Cash' | 'Other'
+export type AccountKind = 'Checking' | 'Cash' | 'Other' | 'Savings' | 'Investment'
 export type BudgetMode = 'Simple' | 'Detailed'
 export type CategoryKind = 'Expense' | 'Income' | 'Transfer'
 export type EntryType =
@@ -71,12 +71,29 @@ export type Account = {
   kind: AccountKind
   balance: number
   isArchived: boolean
+  bankCode: string | null
+  agency: string | null
+  accountNumber: string | null
+  checkDigit: string | null
+  bankName: string | null
+}
+
+export type BankOption = { code: string; name: string }
+
+export type CreateAccountInput = {
+  name: string
+  kind: AccountKind
+  openingBalance: number
+  bankCode?: string
+  agency?: string
+  accountNumber?: string
+  checkDigit?: string
 }
 
 export const accountsApi = {
   list: (includeArchived = false) => apiFetch<Account[]>(`/accounts${query({ includeArchived })}`),
-  create: (name: string, kind: AccountKind, openingBalance: number) =>
-    apiFetch<Account>('/accounts', json('POST', { name, kind, openingBalance })),
+  banks: () => apiFetch<BankOption[]>('/accounts/banks'),
+  create: (input: CreateAccountInput) => apiFetch<Account>('/accounts', json('POST', input)),
   archive: (id: string, archived: boolean) =>
     apiFetch<Account>(`/accounts/${id}/archive`, json('POST', { archived })),
   transfer: (fromAccountId: string, toAccountId: string, amount: number, occurredAt: string, description?: string) =>

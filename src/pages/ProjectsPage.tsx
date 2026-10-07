@@ -5,13 +5,14 @@ import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
+import { MoneyField } from '../components/ui/MoneyField'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
 import { confirmDestructive } from '../lib/confirm'
-import { dateToApi, formatDate, formatMoney, formatMoneyInput, formatPercent, parseMoney, todayInput } from '../lib/format'
+import { dateToApi, formatDate, formatMoney, formatPercent, parseMoney, todayInput } from '../lib/format'
 import styles from './page.module.css'
 
 export function ProjectsPage() {
@@ -118,20 +119,7 @@ function ProjectCard({ project, accounts, onChanged, onRemove }: CardProps) {
       </span>
       {open ? (
         <form className={styles.form} onSubmit={(event) => void contribute(event)}>
-          <Field
-            label="Valor (R$)"
-            name={`contribAmount-${project.id}`}
-            inputMode="decimal"
-            required
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            onBlur={() => {
-              const parsed = parseMoney(amount)
-              if (Number.isFinite(parsed)) {
-                setAmount(formatMoneyInput(parsed))
-              }
-            }}
-          />
+          <MoneyField label="Valor (R$)" name={`contribAmount-${project.id}`} required value={amount} onChange={setAmount} />
           <Field label="Data" name={`contribDate-${project.id}`} type="date" required value={date} onChange={(event) => setDate(event.target.value)} />
           <Select label="Conta de origem" name={`contribAccount-${project.id}`} required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
             <option value="">Selecione</option>
@@ -203,20 +191,7 @@ function ProjectForm({ onSaved }: { onSaved: () => void }) {
             Família{hasFamilyGroup ? '' : ' (entre no grupo primeiro)'}
           </option>
         </Select>
-        <Field
-          label="Meta (R$)"
-          name="projectGoal"
-          inputMode="decimal"
-          required
-          value={goal}
-          onChange={(event) => setGoal(event.target.value)}
-          onBlur={() => {
-            const parsed = parseMoney(goal)
-            if (Number.isFinite(parsed)) {
-              setGoal(formatMoneyInput(parsed))
-            }
-          }}
-        />
+        <MoneyField label="Meta (R$)" name="projectGoal" required value={goal} onChange={setGoal} />
         <Field label="Prazo (opcional)" name="projectDue" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
         <div className={styles.formWide}>
           <ErrorText message={action.error} />

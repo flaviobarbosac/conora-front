@@ -6,6 +6,8 @@ import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
+import { IntegerField } from '../components/ui/IntegerField'
+import { MoneyField } from '../components/ui/MoneyField'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
@@ -287,7 +289,7 @@ function EntryForm({ accounts, categories, onSaved }: FormProps) {
       </div>
       <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
         {receiptPreview ? <img className={styles.sharePreview} src={receiptPreview} alt="Recibo anexado" /> : null}
-        <Field label="Valor (R$)" name="amount" inputMode="decimal" required value={amount} onChange={(event) => setAmount(event.target.value)} />
+        <MoneyField label="Valor (R$)" name="amount" required value={amount} onChange={setAmount} />
         <Field label="Data" name="date" type="date" required value={date} onChange={(event) => setDate(event.target.value)} />
         <div className={styles.formWide}>
           <Field
@@ -329,27 +331,23 @@ function EntryForm({ accounts, categories, onSaved }: FormProps) {
           </Select>
         )}
         {type === 'Expense' ? (
-          <Field
+          <IntegerField
             label="Parcelas (opcional)"
             hint="Divide o valor, uma parte por mês."
             name="installments"
-            type="number"
-            min={1}
-            max={60}
+            maxLength={2}
             value={installments}
-            onChange={(event) => setInstallments(event.target.value)}
+            onChange={setInstallments}
           />
         ) : null}
         {type !== 'Transfer' ? (
-          <Field
+          <IntegerField
             label="Repetir por meses (opcional)"
             hint="Repete o valor cheio a cada mês."
             name="repeat"
-            type="number"
-            min={1}
-            max={60}
+            maxLength={2}
             value={repeat}
-            onChange={(event) => setRepeat(event.target.value)}
+            onChange={setRepeat}
           />
         ) : null}
         <div className={styles.formWide}>

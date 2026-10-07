@@ -65,6 +65,23 @@
   overflow: hidden;
 }
 
+.moduleFeatured {
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-lg);
+  background: var(--selected);
+  overflow: hidden;
+}
+
+.featuredBadge {
+  margin: 0;
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--primary);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface);
+}
+
 .moduleToggle {
   width: 100%;
   display: grid;

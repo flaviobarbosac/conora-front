@@ -7,6 +7,8 @@ import { useLoad } from '../hooks/useLoad'
 import help from './HelpPage.module.css'
 import styles from './page.module.css'
 
+const FEATURED_MODULE_KEY = 'membros'
+
 function matchesQuery(module: HelpModule, query: string): boolean {
   if (!query) return true
   const q = query.toLowerCase()
@@ -16,25 +18,77 @@ function matchesQuery(module: HelpModule, query: string): boolean {
   )
 }
 
+function ModuleCard({
+  module,
+  open,
+  onToggle,
+  featured = false,
+}: {
+  module: HelpModule
+  open: boolean
+  onToggle: () => void
+  featured?: boolean
+}) {
+  return (
+    <article className={featured ? help.moduleFeatured : help.module}>
+      {featured ? <p className={help.featuredBadge}>Destaque — leia primeiro</p> : null}
+      <button
+        type="button"
+        className={help.moduleToggle}
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <span>
+          <h3 className={help.moduleTitle}>{module.title}</h3>
+          <p className={help.moduleSummary}>{module.summary}</p>
+        </span>
+        <span className={help.moduleChevron} aria-hidden="true">
+          {open ? '−' : '+'}
+        </span>
+      </button>
+      {open ? (
+        <dl className={help.fields}>
+          {module.fields.map((field) => (
+            <div key={`${module.key}-${field.name}`} className={help.field}>
+              <dt className={help.fieldName}>{field.name}</dt>
+              <dd className={help.fieldBody}>{field.description}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+    </article>
+  )
+}
+
 export function HelpPage() {
   const helpData = useLoad(() => helpApi.get(), [])
   const [query, setQuery] = useState('')
-  const [openKey, setOpenKey] = useState<string | null>(null)
+  const [openKey, setOpenKey] = useState<string | null>(FEATURED_MODULE_KEY)
   const data = helpData.data
+  const q = query.trim()
+
+  const featured = useMemo(() => {
+    if (!data?.modules) return null
+    const module = data.modules.find((item) => item.key === FEATURED_MODULE_KEY)
+    if (!module) return null
+    return matchesQuery(module, q) ? module : null
+  }, [data, q])
 
   const modules = useMemo(() => {
     if (!data?.modules) return []
-    return data.modules.filter((module) => matchesQuery(module, query.trim()))
-  }, [data, query])
+    return data.modules
+      .filter((module) => module.key !== FEATURED_MODULE_KEY)
+      .filter((module) => matchesQuery(module, q))
+  }, [data, q])
 
   const glossary = useMemo(() => {
     if (!data?.glossary) return []
-    const q = query.trim().toLowerCase()
-    if (!q) return data.glossary
+    const lower = q.toLowerCase()
+    if (!lower) return data.glossary
     return data.glossary.filter(
-      (term) => term.term.toLowerCase().includes(q) || term.definition.toLowerCase().includes(q),
+      (term) => term.term.toLowerCase().includes(lower) || term.definition.toLowerCase().includes(lower),
     )
-  }, [data, query])
+  }, [data, q])
 
   return (
     <div className={styles.page}>
@@ -58,10 +112,23 @@ export function HelpPage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Como o Conora funciona</h2>
             <p className={help.lead}>
-              Cada tela e cada campo está explicado abaixo. Use a busca para achar um módulo ou atributo sem precisar de
-              suporte.
+              Cada pessoa tem a própria conta e os próprios lançamentos. Se vocês formarem um grupo familiar, algumas
+              telas mostram a soma dos dois — sem misturar o dinheiro de cada um. Veja o destaque abaixo sobre como
+              vincular e desvincular.
             </p>
           </section>
+
+          {featured ? (
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>Grupo familiar</h2>
+              <ModuleCard
+                module={featured}
+                featured
+                open={openKey === featured.key || Boolean(q)}
+                onToggle={() => setOpenKey((current) => (current === featured.key ? null : featured.key))}
+              />
+            </section>
+          ) : null}
 
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>7 passos para começar</h2>
@@ -84,37 +151,17 @@ export function HelpPage() {
 
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Módulos e campos</h2>
-            {modules.length === 0 ? <p className={help.empty}>Nenhum módulo encontrado para essa busca.</p> : null}
+            {modules.length === 0 && !featured ? <p className={help.empty}>Nenhum módulo encontrado para essa busca.</p> : null}
             <div className={help.modules}>
               {modules.map((module) => {
-                const open = openKey === module.key || Boolean(query.trim())
+                const open = openKey === module.key || Boolean(q)
                 return (
-                  <article key={module.key} className={help.module}>
-                    <button
-                      type="button"
-                      className={help.moduleToggle}
-                      aria-expanded={open}
-                      onClick={() => setOpenKey((current) => (current === module.key ? null : module.key))}
-                    >
-                      <span>
-                        <h3 className={help.moduleTitle}>{module.title}</h3>
-                        <p className={help.moduleSummary}>{module.summary}</p>
-                      </span>
-                      <span className={help.moduleChevron} aria-hidden="true">
-                        {open ? '−' : '+'}
-                      </span>
-                    </button>
-                    {open ? (
-                      <dl className={help.fields}>
-                        {module.fields.map((field) => (
-                          <div key={`${module.key}-${field.name}`} className={help.field}>
-                            <dt className={help.fieldName}>{field.name}</dt>
-                            <dd className={help.fieldBody}>{field.description}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    ) : null}
-                  </article>
+                  <ModuleCard
+                    key={module.key}
+                    module={module}
+                    open={open}
+                    onToggle={() => setOpenKey((current) => (current === module.key ? null : module.key))}
+                  />
                 )
               })}
             </div>

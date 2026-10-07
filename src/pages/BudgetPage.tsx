@@ -11,7 +11,7 @@ import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { Badge, ErrorText, Loading } from '../components/ui/Feedback'
-import { Field } from '../components/ui/Field'
+import { MoneyField } from '../components/ui/MoneyField'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { toneFromSeverity } from '../lib/severity'
@@ -317,16 +317,6 @@ function BudgetEditor({ ym, budget, categories, onSaved }: EditorProps) {
   })
   const action = useAction()
 
-  function normalizeDraft(categoryId: string) {
-    setDrafts((current) => {
-      const parsed = parseMoney(current[categoryId] ?? '')
-      if (!Number.isFinite(parsed)) {
-        return current
-      }
-      return { ...current, [categoryId]: formatMoneyInput(parsed) }
-    })
-  }
-
   async function save() {
     const lines: { categoryId: string; plannedAmount: number }[] = []
     for (const category of editableCategories) {
@@ -365,15 +355,12 @@ function BudgetEditor({ ym, budget, categories, onSaved }: EditorProps) {
       ) : null}
       <div className={styles.form}>
         {editableCategories.map((category) => (
-          <Field
+          <MoneyField
             key={category.id}
             label={category.name}
             name={`budget-${category.id}`}
-            inputMode="decimal"
-            placeholder="0,00"
             value={drafts[category.id] ?? ''}
-            onChange={(event) => setDrafts((current) => ({ ...current, [category.id]: event.target.value }))}
-            onBlur={() => normalizeDraft(category.id)}
+            onChange={(value) => setDrafts((current) => ({ ...current, [category.id]: value }))}
           />
         ))}
       </div>

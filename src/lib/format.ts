@@ -29,6 +29,18 @@ export function parseMoney(text: string): number {
   return Number(normalized)
 }
 
+/** Strips letters/symbols while typing; keeps digits and one decimal separator (max 2 fraction digits). */
+export function sanitizeMoneyTyping(raw: string): string {
+  let text = raw.replace(/[^\d.,]/g, '').replace(/\./g, ',')
+  const comma = text.indexOf(',')
+  if (comma === -1) {
+    return text
+  }
+  const intPart = text.slice(0, comma).replace(/,/g, '')
+  const frac = text.slice(comma + 1).replace(/,/g, '').slice(0, 2)
+  return `${intPart},${frac}`
+}
+
 export function formatPercent(value: number | null | undefined): string {
   return `${(value ?? 0).toFixed(1).replace('.', ',')}%`
 }

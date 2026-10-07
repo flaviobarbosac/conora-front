@@ -5,6 +5,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
+import { MoneyField } from '../components/ui/MoneyField'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { confirmDestructive } from '../lib/confirm'
@@ -109,10 +110,10 @@ function SourceForm({ ym, onSaved }: { ym: string; onSaved: () => void }) {
         <div className={styles.formWide}>
           <Field label="Nome" name="sourceName" required value={name} onChange={(event) => setName(event.target.value)} />
         </div>
-        <Field label="Bruto (R$)" name="gross" inputMode="decimal" required value={gross} onChange={(event) => setGross(event.target.value)} />
-        <Field label="INSS (R$)" name="inss" inputMode="decimal" value={inss} onChange={(event) => setInss(event.target.value)} />
-        <Field label="IR (R$)" name="ir" inputMode="decimal" value={ir} onChange={(event) => setIr(event.target.value)} />
-        <Field label="Dízimo (R$)" name="tithe" inputMode="decimal" value={tithe} onChange={(event) => setTithe(event.target.value)} />
+        <MoneyField label="Bruto (R$)" name="gross" required value={gross} onChange={setGross} />
+        <MoneyField label="INSS (R$)" name="inss" value={inss} onChange={setInss} />
+        <MoneyField label="IR (R$)" name="ir" value={ir} onChange={setIr} />
+        <MoneyField label="Dízimo (R$)" name="tithe" value={tithe} onChange={setTithe} />
         <p className={`${styles.formWide} ${styles.muted}`}>
           Líquido: <strong>{formatMoney(Number.isFinite(net) ? net : 0)}</strong> (bruto − INSS − IR). O dízimo não reduz a renda.
         </p>

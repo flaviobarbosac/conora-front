@@ -5,6 +5,7 @@ import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
+import { MoneyField } from '../components/ui/MoneyField'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
@@ -121,7 +122,7 @@ function ItemForm({ onSaved }: { onSaved: () => void }) {
           <option value="Liability">{KIND_LABEL.Liability}</option>
         </Select>
         <Field label="Nome" name="patrimonyName" required value={name} onChange={(event) => setName(event.target.value)} />
-        <Field label="Valor (R$)" name="patrimonyAmount" inputMode="decimal" required value={amount} onChange={(event) => setAmount(event.target.value)} />
+        <MoneyField label="Valor (R$)" name="patrimonyAmount" required value={amount} onChange={setAmount} />
         <div className={styles.formWide}>
           <ErrorText message={action.error} />
         </div>

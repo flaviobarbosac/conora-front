@@ -14,6 +14,8 @@ import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
+import { IntegerField } from '../components/ui/IntegerField'
+import { MoneyField } from '../components/ui/MoneyField'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
@@ -25,9 +27,13 @@ import styles from './page.module.css'
 
 const KIND_LABEL: Record<AccountKind, string> = {
   Checking: 'Conta corrente',
+  Savings: 'Conta poupança',
+  Investment: 'Conta investimento',
   Cash: 'Dinheiro',
   Other: 'Outra',
 }
+
+const ACCOUNT_KIND_OPTIONS: AccountKind[] = ['Checking', 'Savings', 'Investment', 'Cash']
 
 const INVOICE_LABEL: Record<InvoiceStatus, string> = {
   Open: 'Aberta',
@@ -99,7 +105,16 @@ export function AccountsPage() {
                     <li key={account.id} className={styles.row}>
                       <span className={styles.rowMain}>
                         <strong>{account.name}</strong>
-                        <span className={styles.rowSub}>{KIND_LABEL[account.kind]}</span>
+                        <span className={styles.rowSub}>
+                          {KIND_LABEL[account.kind]}
+                          {account.bankCode
+                            ? ` · ${account.bankCode}${account.bankName ? ` ${account.bankName}` : ''}`
+                            : ''}
+                          {account.agency ? ` · Ag ${account.agency}` : ''}
+                          {account.accountNumber
+                            ? ` · Conta ${account.accountNumber}${account.checkDigit ? `-${account.checkDigit}` : ''}`
+                            : ''}
+                        </span>
                       </span>
                       <span className={styles.rowEnd}>
                         {account.isArchived ? <Badge tone="warning">Arquivada</Badge> : null}
@@ -165,10 +180,16 @@ export function AccountsPage() {
 }
 
 function AccountForm({ onSaved }: { onSaved: () => void }) {
+  const banks = useLoad(() => accountsApi.banks(), [])
   const [name, setName] = useState('')
   const [kind, setKind] = useState<AccountKind>('Checking')
+  const [bankCode, setBankCode] = useState('021')
+  const [agency, setAgency] = useState('')
+  const [accountNumber, setAccountNumber] = useState('')
+  const [checkDigit, setCheckDigit] = useState('')
   const [balance, setBalance] = useState('')
   const action = useAction()
+  const needsBank = kind !== 'Cash'
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -177,8 +198,25 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
       action.setError('Saldo inicial inválido.')
       return
     }
-    if (await action.run(() => accountsApi.create(name.trim(), kind, opening))) {
+    if (
+      await action.run(() =>
+        accountsApi.create({
+          name: name.trim(),
+          kind,
+          openingBalance: opening,
+          bankCode: needsBank ? bankCode || undefined : undefined,
+          agency: needsBank ? agency.trim() || undefined : undefined,
+          accountNumber: needsBank ? accountNumber.trim() || undefined : undefined,
+          checkDigit: needsBank ? checkDigit.trim() || undefined : undefined,
+        }),
+      )
+    ) {
       setName('')
+      setKind('Checking')
+      setBankCode('021')
+      setAgency('')
+      setAccountNumber('')
+      setCheckDigit('')
       setBalance('')
       onSaved()
     }
@@ -189,21 +227,68 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
       <h2 className={styles.sectionTitle}>Nova conta</h2>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
         <div className={styles.formWide}>
-          <Field label="Nome" name="accountName" required value={name} onChange={(event) => setName(event.target.value)} />
+          <Field
+            label="Descrição"
+            name="accountName"
+            required
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            hint="Nome para identificar a conta no app."
+          />
         </div>
-        <Select label="Tipo" name="accountKind" value={kind} onChange={(event) => setKind(event.target.value as AccountKind)}>
-          {(Object.keys(KIND_LABEL) as AccountKind[]).map((option) => (
+        <Select label="Tipo de conta" name="accountKind" value={kind} onChange={(event) => setKind(event.target.value as AccountKind)}>
+          {ACCOUNT_KIND_OPTIONS.map((option) => (
             <option key={option} value={option}>
               {KIND_LABEL[option]}
             </option>
           ))}
         </Select>
-        <Field label="Saldo inicial (R$)" name="openingBalance" inputMode="decimal" value={balance} onChange={(event) => setBalance(event.target.value)} />
+        {needsBank ? (
+          <>
+            <Select
+              label="Banco"
+              name="bankCode"
+              required
+              value={bankCode}
+              onChange={(event) => setBankCode(event.target.value)}
+            >
+              <option value="">Selecione</option>
+              {(banks.data ?? []).map((bank) => (
+                <option key={bank.code} value={bank.code}>
+                  {bank.code} — {bank.name}
+                </option>
+              ))}
+            </Select>
+            <Field
+              label="Agência"
+              name="agency"
+              required
+              value={agency}
+              onChange={(event) => setAgency(event.target.value.replace(/[^\d-]/g, ''))}
+            />
+            <Field
+              label="Número da conta"
+              name="accountNumber"
+              required
+              value={accountNumber}
+              onChange={(event) => setAccountNumber(event.target.value.replace(/[^\d]/g, ''))}
+            />
+            <IntegerField
+              label="Dígito verificador"
+              name="checkDigit"
+              required
+              maxLength={2}
+              value={checkDigit}
+              onChange={setCheckDigit}
+            />
+          </>
+        ) : null}
+        <MoneyField label="Saldo inicial (R$)" name="openingBalance" value={balance} onChange={setBalance} />
         <div className={styles.formWide}>
-          <ErrorText message={action.error} />
+          <ErrorText message={action.error ?? banks.error} />
         </div>
         <div className={styles.formActions}>
-          <Button type="submit" disabled={action.busy}>
+          <Button type="submit" disabled={action.busy || (needsBank && banks.loading)}>
             Criar conta
           </Button>
         </div>
@@ -254,7 +339,7 @@ function TransferForm({ accounts, onSaved }: { accounts: Account[]; onSaved: () 
               </option>
             ))}
         </Select>
-        <Field label="Valor (R$)" name="transferAmount" inputMode="decimal" required value={amount} onChange={(event) => setAmount(event.target.value)} />
+        <MoneyField label="Valor (R$)" name="transferAmount" required value={amount} onChange={setAmount} />
         <Field label="Data" name="transferDate" type="date" required value={date} onChange={(event) => setDate(event.target.value)} />
         <div className={styles.formWide}>
           <ErrorText message={action.error} />
@@ -301,9 +386,9 @@ function CardForm({ accounts, onSaved }: { accounts: Account[]; onSaved: () => v
       <h2 className={styles.sectionTitle}>Novo cartão</h2>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
         <Field label="Nome" name="cardName" required value={name} onChange={(event) => setName(event.target.value)} />
-        <Field label="Limite (R$)" name="cardLimit" inputMode="decimal" required value={limit} onChange={(event) => setLimit(event.target.value)} />
-        <Field label="Dia de fechamento" name="closingDay" type="number" min={1} max={31} required value={closing} onChange={(event) => setClosing(event.target.value)} />
-        <Field label="Dia de vencimento" name="dueDay" type="number" min={1} max={31} required value={due} onChange={(event) => setDue(event.target.value)} />
+        <MoneyField label="Limite (R$)" name="cardLimit" required value={limit} onChange={setLimit} />
+        <IntegerField label="Dia de fechamento" name="closingDay" required maxLength={2} value={closing} onChange={setClosing} />
+        <IntegerField label="Dia de vencimento" name="dueDay" required maxLength={2} value={due} onChange={setDue} />
         <Select label="Conta de pagamento" name="paymentAccount" value={paymentAccountId} onChange={(event) => setPaymentAccountId(event.target.value)}>
           <option value="">Escolher ao pagar</option>
           {accounts.map((account) => (
@@ -402,9 +487,15 @@ function PurchaseForm({ card, categories, onSaved }: { card: Card; categories: C
 
   return (
     <form className={styles.form} onSubmit={(event) => void submit(event)}>
-      <Field label="Valor (R$)" name={`purchaseAmount-${card.id}`} inputMode="decimal" required value={amount} onChange={(event) => setAmount(event.target.value)} />
+      <MoneyField label="Valor (R$)" name={`purchaseAmount-${card.id}`} required value={amount} onChange={setAmount} />
       <Field label="Data da compra" name={`purchaseDate-${card.id}`} type="date" required value={date} onChange={(event) => setDate(event.target.value)} />
-      <Field label="Parcelas" name={`purchaseInstallments-${card.id}`} type="number" min={1} max={60} value={installments} onChange={(event) => setInstallments(event.target.value)} />
+      <IntegerField
+        label="Parcelas"
+        name={`purchaseInstallments-${card.id}`}
+        maxLength={2}
+        value={installments}
+        onChange={setInstallments}
+      />
       <Select label="Categoria" name={`purchaseCategory-${card.id}`} required value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
         <option value="">Selecione</option>
         {categories.map((category) => (
