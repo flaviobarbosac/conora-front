@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import {
   whatsappApi,
+  type ChartAccount,
   type WhatsAppDraft,
   type WhatsAppDraftPayload,
 } from '../api/finance'
@@ -8,6 +9,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
+import { ChartAccountSelect } from '../components/ChartAccountSelect'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
@@ -129,6 +131,7 @@ export function WhatsAppPage() {
               accounts={lookups.accounts}
               expenseAccounts={lookups.expenseAccounts}
               incomeAccounts={lookups.incomeAccounts}
+              tree={lookups.chartAccounts}
               busy={draftAction.busy}
               onConfirm={confirmDraft}
               onDiscard={discardDraft}
@@ -145,14 +148,16 @@ function DraftRow({
   accounts,
   expenseAccounts,
   incomeAccounts,
+  tree,
   busy,
   onConfirm,
   onDiscard,
 }: {
   draft: WhatsAppDraft
   accounts: { id: string; name: string }[]
-  expenseAccounts: { id: string; name: string }[]
-  incomeAccounts: { id: string; name: string }[]
+  expenseAccounts: ChartAccount[]
+  incomeAccounts: ChartAccount[]
+  tree: ChartAccount[]
   busy: boolean
   onConfirm: (draft: WhatsAppDraft, accountId: string, chartAccountId: string) => Promise<void>
   onDiscard: (draft: WhatsAppDraft) => Promise<void>
@@ -201,19 +206,15 @@ function DraftRow({
             </option>
           ))}
         </Select>
-        <Select
+        <ChartAccountSelect
           label="Conta do plano"
           name={`wa-chart-${draft.id}`}
           value={chartAccountId}
-          onChange={(event) => setChartAccountId(event.target.value)}
-        >
-          <option value="">Opcional</option>
-          {chartOptions.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name}
-            </option>
-          ))}
-        </Select>
+          onChange={setChartAccountId}
+          options={chartOptions}
+          tree={tree}
+          emptyLabel="Opcional"
+        />
         <div className={styles.formActions}>
           <Button disabled={busy} onClick={() => void onConfirm(draft, accountId, chartAccountId)}>
             Confirmar e gravar

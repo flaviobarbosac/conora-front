@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { entriesApi, type Entry, type EntryInput, type EntryType } from '../api/finance'
+import { entriesApi, type ChartAccount, type Entry, type EntryInput, type EntryType } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -8,6 +8,7 @@ import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { IntegerField } from '../components/ui/IntegerField'
 import { MoneyField } from '../components/ui/MoneyField'
+import { ChartAccountSelect } from '../components/ChartAccountSelect'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
@@ -142,6 +143,7 @@ export function EntriesPage() {
         <EntryForm
           accounts={lookups.accounts.map((account) => ({ id: account.id, name: account.name }))}
           categories={lookups.cashFlowAccounts}
+          tree={lookups.chartAccounts}
           onSaved={() => {
             setShowForm(false)
             entries.reload()
@@ -167,14 +169,15 @@ export function EntriesPage() {
               </option>
             ))}
           </Select>
-          <Select label="Conta" name="categoryFilter" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
-            <option value="">Todas</option>
-            {lookups.cashFlowAccounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </Select>
+          <ChartAccountSelect
+            label="Conta"
+            name="categoryFilter"
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            options={lookups.cashFlowAccounts}
+            tree={lookups.chartAccounts}
+            emptyLabel="Todas"
+          />
           <Button type="submit" variant="secondary">
             Buscar
           </Button>
@@ -223,7 +226,8 @@ export function EntriesPage() {
 
 type FormProps = {
   accounts: { id: string; name: string }[]
-  categories: { id: string; name: string; section: string }[]
+  categories: ChartAccount[]
+  tree: ChartAccount[]
   onSaved: () => void
 }
 
@@ -237,7 +241,7 @@ function matchesEntryType(section: string, type: FormType): boolean {
   return section === 'Discount' || section === 'LifeProject' || section === 'Essential' || section === 'Social'
 }
 
-function EntryForm({ accounts, categories, onSaved }: FormProps) {
+function EntryForm({ accounts, categories, tree, onSaved }: FormProps) {
   const [type, setType] = useState<FormType>('Expense')
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayInput)
@@ -351,14 +355,15 @@ function EntryForm({ accounts, categories, onSaved }: FormProps) {
               ))}
           </Select>
         ) : (
-          <Select label="Conta" name="chartAccountId" value={chartAccountId} onChange={(event) => setChartAccountId(event.target.value)}>
-            <option value="">Sem conta</option>
-            {kindCategories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </Select>
+          <ChartAccountSelect
+            label="Conta"
+            name="chartAccountId"
+            value={chartAccountId}
+            onChange={setChartAccountId}
+            options={kindCategories}
+            tree={tree}
+            emptyLabel="Sem conta"
+          />
         )}
         {type === 'Expense' ? (
           <IntegerField

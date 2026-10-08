@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
+import { ChartAccountSelect } from '../components/ChartAccountSelect'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
@@ -195,20 +196,16 @@ function ProjectForm({ onSaved }: { onSaved: () => void }) {
         <div className={styles.formWide}>
           <Field label="Nome" name="projectName" required value={name} onChange={(event) => setName(event.target.value)} />
         </div>
-        <Select
+        <ChartAccountSelect
           label="Conta do plano"
           name="projectChartAccount"
           required
           value={chartAccountId}
-          onChange={(event) => setChartAccountId(event.target.value)}
-        >
-          <option value="">Selecione</option>
-          {lifeAccounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name}
-            </option>
-          ))}
-        </Select>
+          onChange={setChartAccountId}
+          options={lifeAccounts}
+          tree={lookups.chartAccounts}
+          emptyLabel="Selecione"
+        />
         <Select
           label="Escopo"
           name="projectScope"

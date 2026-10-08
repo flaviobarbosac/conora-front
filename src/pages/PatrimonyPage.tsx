@@ -1,12 +1,12 @@
 ﻿import { useState, type FormEvent } from 'react'
-import { patrimonyApi, type ChartAccount, type PatrimonyItem } from '../api/finance'
+import { patrimonyApi, type PatrimonyItem } from '../api/finance'
+import { ChartAccountSelect } from '../components/ChartAccountSelect'
 import { PageHeader } from '../components/PageHeader'
 import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
-import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
@@ -149,24 +149,16 @@ function ItemForm({ onSaved }: { onSaved: () => void }) {
     <section className={styles.section}>
       <h2 className={styles.sectionTitle}>Novo item</h2>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
-        <Select
+        <ChartAccountSelect
           label="Conta do plano"
           name="patrimonyAccount"
           required
           value={chartAccountId}
-          onChange={(event) => setChartAccountId(event.target.value)}
-        >
-          <option value="">Selecione</option>
-          {groupOptions(options).map((group) => (
-            <optgroup key={group.label} label={group.label}>
-              {group.items.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </Select>
+          onChange={setChartAccountId}
+          options={options}
+          tree={lookups.chartAccounts}
+          emptyLabel="Selecione"
+        />
         <Field
           label="Nome do item"
           name="patrimonyName"
@@ -187,20 +179,4 @@ function ItemForm({ onSaved }: { onSaved: () => void }) {
       </form>
     </section>
   )
-}
-
-function groupOptions(accounts: ChartAccount[]) {
-  const byParent = new Map<string, ChartAccount[]>()
-  const parents = new Map<string, string>()
-  for (const account of accounts) {
-    const key = account.parentId ?? account.section
-    parents.set(key, account.section === 'Asset' ? 'Ativo' : 'Passivo')
-    const bucket = byParent.get(key) ?? []
-    bucket.push(account)
-    byParent.set(key, bucket)
-  }
-  return [...byParent.entries()].map(([key, items]) => ({
-    label: parents.get(key) ?? key,
-    items,
-  }))
 }

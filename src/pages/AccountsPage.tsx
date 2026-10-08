@@ -6,9 +6,10 @@ import {
   type Account,
   type AccountKind,
   type Card,
-  type Category,
+  type ChartAccount,
   type InvoiceStatus,
 } from '../api/finance'
+import { ChartAccountSelect } from '../components/ChartAccountSelect'
 import { PageHeader } from '../components/PageHeader'
 import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
@@ -157,6 +158,7 @@ export function AccountsPage() {
                 card={card}
                 accounts={activeAccounts}
                 categories={lookups.expenseAccounts}
+                tree={lookups.chartAccounts}
                 onChanged={() => {
                   cards.reload()
                   refresh()
@@ -413,11 +415,12 @@ function CardForm({ accounts, onSaved }: { accounts: Account[]; onSaved: () => v
 type PanelProps = {
   card: Card
   accounts: Account[]
-  categories: Category[]
+  categories: ChartAccount[]
+  tree: ChartAccount[]
   onChanged: () => void
 }
 
-function CardPanel({ card, accounts, categories, onChanged }: PanelProps) {
+function CardPanel({ card, accounts, categories, tree, onChanged }: PanelProps) {
   const [panel, setPanel] = useState<'none' | 'purchase' | 'invoices'>('none')
 
   return (
@@ -445,6 +448,7 @@ function CardPanel({ card, accounts, categories, onChanged }: PanelProps) {
         <PurchaseForm
           card={card}
           categories={categories}
+          tree={tree}
           onSaved={() => {
             setPanel('none')
             onChanged()
@@ -456,7 +460,17 @@ function CardPanel({ card, accounts, categories, onChanged }: PanelProps) {
   )
 }
 
-function PurchaseForm({ card, categories, onSaved }: { card: Card; categories: Category[]; onSaved: () => void }) {
+function PurchaseForm({
+  card,
+  categories,
+  tree,
+  onSaved,
+}: {
+  card: Card
+  categories: ChartAccount[]
+  tree: ChartAccount[]
+  onSaved: () => void
+}) {
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayInput)
   const [installments, setInstallments] = useState('1')
@@ -496,14 +510,16 @@ function PurchaseForm({ card, categories, onSaved }: { card: Card; categories: C
         value={installments}
         onChange={setInstallments}
       />
-      <Select label="Conta" name={`purchaseAccount-${card.id}`} required value={chartAccountId} onChange={(event) => setChartAccountId(event.target.value)}>
-        <option value="">Selecione</option>
-        {categories.map((category) => (
-          <option key={category.id} value={category.id}>
-            {category.name}
-          </option>
-        ))}
-      </Select>
+      <ChartAccountSelect
+        label="Conta"
+        name={`purchaseAccount-${card.id}`}
+        required
+        value={chartAccountId}
+        onChange={setChartAccountId}
+        options={categories}
+        tree={tree}
+        emptyLabel="Selecione"
+      />
       <div className={styles.formWide}>
         <Field label="Descrição" name={`purchaseDescription-${card.id}`} required value={description} onChange={(event) => setDescription(event.target.value)} />
       </div>

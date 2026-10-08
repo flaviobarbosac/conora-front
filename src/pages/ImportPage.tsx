@@ -3,6 +3,7 @@ import { importsApi, type ImportFormat, type ImportPreview } from '../api/financ
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { Badge, ErrorText } from '../components/ui/Feedback'
+import { ChartAccountSelect } from '../components/ChartAccountSelect'
 import { Select } from '../components/ui/Select'
 import { TextArea } from '../components/ui/TextArea'
 import { useAction } from '../hooks/useAction'
@@ -121,22 +122,24 @@ export function ImportPage() {
               ))}
             </Select>
             <span />
-            <Select label="Conta padrão de despesa" name="importExpenseAccount" value={expenseChartAccountId} onChange={(event) => setExpenseChartAccountId(event.target.value)}>
-              <option value="">Automática</option>
-              {lookups.expenseAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </Select>
-            <Select label="Conta padrão de receita" name="importIncomeAccount" value={incomeChartAccountId} onChange={(event) => setIncomeChartAccountId(event.target.value)}>
-              <option value="">Automática</option>
-              {lookups.incomeAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </Select>
+            <ChartAccountSelect
+              label="Conta padrão de despesa"
+              name="importExpenseAccount"
+              value={expenseChartAccountId}
+              onChange={setExpenseChartAccountId}
+              options={lookups.expenseAccounts}
+              tree={lookups.chartAccounts}
+              emptyLabel="Automática"
+            />
+            <ChartAccountSelect
+              label="Conta padrão de receita"
+              name="importIncomeAccount"
+              value={incomeChartAccountId}
+              onChange={setIncomeChartAccountId}
+              options={lookups.incomeAccounts}
+              tree={lookups.chartAccounts}
+              emptyLabel="Automática"
+            />
           </div>
           <ErrorText message={commitAction.error} />
           <div className={styles.actions}>
