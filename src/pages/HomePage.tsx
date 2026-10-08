@@ -1,14 +1,6 @@
 ﻿import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import {
-  budgetsApi,
-  chartAccountsApi,
-  dashboardApi,
-  familyApi,
-  projectsApi,
-  type ChartAccount,
-  type LifeProject,
-} from '../api/finance'
+import { budgetsApi, dashboardApi, familyApi, projectsApi, type LifeProject } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -17,7 +9,7 @@ import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
 import { toneFromSeverity } from '../lib/severity'
 import { currentCompetence, formatMoney, formatPercent } from '../lib/format'
-import { LIFE_HORIZONS, horizonCodeOf } from '../lib/lifeHorizon'
+import { LIFE_HORIZONS } from '../lib/lifeHorizon'
 import styles from './page.module.css'
 
 function firstName(fullName: string | undefined): string {
@@ -34,7 +26,6 @@ export function HomePage() {
   const dashboard = useLoad(() => dashboardApi.get(ym), [ym])
   const budget = useLoad(() => budgetsApi.get(ym), [ym])
   const projects = useLoad(() => projectsApi.list(), [])
-  const chartAccounts = useLoad(() => chartAccountsApi.list('LifeProject', true, false), [])
   const profile = useLoad(() => familyApi.profile(), [])
   const name = firstName(profile.data?.name)
   const data = dashboard.data
@@ -54,7 +45,7 @@ export function HomePage() {
         }
       />
 
-      <ErrorText message={dashboard.error ?? budget.error} />
+      <ErrorText message={dashboard.error ?? budget.error ?? projects.error} />
 
       {dashboard.loading && !data ? (
         <div className={styles.skeletonStack} aria-busy="true" aria-live="polite">
@@ -112,7 +103,7 @@ export function HomePage() {
             <Link className={styles.homeBlock} to="/projetos">
               <Icon name="goal" size={24} />
               <strong>Projetos de vida</strong>
-              <span>Metas por horizonte</span>
+              <span>Dashboard das metas</span>
             </Link>
             <Link className={styles.homeBlock} to="/lancamentos?novo=1">
               <Icon name="add" size={24} />
@@ -120,6 +111,8 @@ export function HomePage() {
               <span>Registrar receita ou despesa</span>
             </Link>
           </nav>
+
+          <LifeHorizonBars projects={projects.data ?? []} loading={projects.loading && !projects.data} />
 
           {emptyMonth ? (
             <section className={styles.emptyCard}>
@@ -150,8 +143,6 @@ export function HomePage() {
               </div>
             </div>
           )}
-
-          <LifeHorizonBars projects={projects.data ?? []} accounts={chartAccounts.data ?? []} />
 
           <section className={styles.section} aria-labelledby="alerts-title">
             <div className={styles.sectionHead}>
@@ -188,19 +179,27 @@ export function HomePage() {
             )}
           </section>
         </>
-      ) : null}
+      ) : (
+        <LifeHorizonBars projects={projects.data ?? []} loading={projects.loading && !projects.data} />
+      )}
     </div>
   )
 }
 
-function LifeHorizonBars({ projects, accounts }: { projects: LifeProject[]; accounts: ChartAccount[] }) {
+function LifeHorizonBars({ projects, loading }: { projects: LifeProject[]; loading: boolean }) {
   return (
     <section className={styles.horizonBlock} aria-labelledby="life-horizons">
-      <h2 id="life-horizons" className={styles.sectionTitle}>
-        Projetos de vida
-      </h2>
+      <div className={styles.sectionHead}>
+        <h2 id="life-horizons" className={styles.sectionTitle}>
+          Projetos de vida
+        </h2>
+        <Link to="/projetos" className={styles.sectionLink}>
+          Ver dashboard
+        </Link>
+      </div>
+      {loading ? <Skeleton height={96} /> : null}
       {LIFE_HORIZONS.map((horizon) => {
-        const items = projects.filter((project) => horizonCodeOf(project.chartAccountId, accounts) === horizon.code)
+        const items = projects.filter((project) => project.horizon === horizon.key)
         const goal = items.reduce((sum, project) => sum + project.goalAmount, 0)
         const accumulated = items.reduce((sum, project) => sum + project.accumulatedAmount, 0)
         const percent = goal <= 0 ? 0 : Math.min(100, (accumulated / goal) * 100)

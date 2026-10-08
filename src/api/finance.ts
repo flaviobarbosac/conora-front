@@ -375,9 +375,12 @@ export const diagnosisApi = {
 
 export type LifeProjectScope = 'Personal' | 'Group'
 
+export type LifeProjectHorizon = 'short' | 'mid' | 'long'
+
 export type LifeProject = {
   id: string
   name: string
+  detailedDescription: string | null
   goalAmount: number
   dueDate: string
   contributionStartYm: string
@@ -387,22 +390,26 @@ export type LifeProject = {
   isOwner: boolean
   chartAccountId: string | null
   chartAccountName: string | null
+  horizon: LifeProjectHorizon | null
+}
+
+export type LifeProjectInput = {
+  name: string
+  goalAmount: number
+  dueDate: string
+  contributionStartYm: string
+  scope: LifeProjectScope
+  chartAccountId: string
+  detailedDescription?: string
 }
 
 export const projectsApi = {
   list: () => apiFetch<LifeProject[]>('/life-projects'),
-  create: (
-    name: string,
-    goalAmount: number,
-    dueDate: string,
-    contributionStartYm: string,
-    scope: LifeProjectScope,
-    chartAccountId: string,
-  ) =>
-    apiFetch<LifeProject>(
-      '/life-projects',
-      json('POST', { name, goalAmount, dueDate, contributionStartYm, scope, chartAccountId }),
-    ),
+  get: (id: string) => apiFetch<LifeProject>(`/life-projects/${id}`),
+  create: (input: LifeProjectInput) =>
+    apiFetch<LifeProject>('/life-projects', json('POST', input)),
+  update: (id: string, input: LifeProjectInput) =>
+    apiFetch<LifeProject>(`/life-projects/${id}`, json('PUT', input)),
   remove: (id: string) => apiFetch<void>(`/life-projects/${id}`, json('DELETE')),
   contribute: (id: string, amount: number, occurredAt: string, accountId?: string, description?: string) =>
     apiFetch<unknown>(`/life-projects/${id}/contributions`, json('POST', { amount, occurredAt, accountId, description })),

@@ -21,6 +21,7 @@ import { MonthPage } from './pages/MonthPage'
 import { MorePage } from './pages/MorePage'
 import { PatrimonyPage } from './pages/PatrimonyPage'
 import { PlanPage } from './pages/PlanPage'
+import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="/contas" element={<AccountsPage />} />
             <Route path="/cartoes" element={<AccountsPage />} />
             <Route path="/projetos" element={<ProjectsPage />} />
+            <Route path="/projetos/:id" element={<ProjectDetailPage />} />
             <Route path="/relatorios" element={<MorePage />} />
             <Route path="/diagnostico" element={<DiagnosisPage />} />
             <Route path="/plano-de-contas" element={<ChartAccountsPage />} />
