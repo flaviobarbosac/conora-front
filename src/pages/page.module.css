@@ -188,6 +188,58 @@
   font-size: var(--text-base);
 }
 
+.homeBlockProjects {
+  min-height: 168px;
+  gap: var(--space-3);
+}
+
+.homeBlockProjectsHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: inherit;
+  text-decoration: none;
+}
+
+.homeBlockProjectsHead:hover strong {
+  color: var(--primary);
+}
+
+.homeHorizonList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.homeHorizonRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.homeHorizonRow:hover strong {
+  color: var(--primary);
+}
+
+.homeHorizonMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.homeHorizonMeta strong {
+  font-size: var(--text-sm);
+}
+
+.homeHorizonAmounts {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
 .quickChip {
   height: 40px;
   padding: 0 var(--space-4);
@@ -833,5 +885,64 @@ button.compact {
 
   .rowEnd {
     justify-content: flex-end;
+  }
+}
+
+.budgetAccountName {
+  display: block;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.budgetAccountName:hover strong {
+  color: var(--primary);
+}
+
+.budgetAmountWrap {
+  width: 8.5rem;
+  flex-shrink: 0;
+}
+
+.budgetAmountWrap :global(input) {
+  width: 100%;
+  text-align: right;
+}
+
+.sheetOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: end center;
+  padding: var(--space-5);
+  background: rgb(0 0 0 / 45%);
+}
+
+.sheet {
+  width: min(100%, 420px);
+  max-height: min(85vh, 640px);
+  overflow: auto;
+  padding: var(--space-6);
+  border-radius: var(--radius-xl) var(--radius-xl) var(--radius-md) var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+  box-shadow: var(--shadow-md, 0 16px 40px rgb(0 0 0 / 18%));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+@media (min-width: 900px) {
+  .sheetOverlay {
+    place-items: center;
+  }
+
+  .sheet {
+    border-radius: var(--radius-md);
   }
 }

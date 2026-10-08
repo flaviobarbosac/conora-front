@@ -100,19 +100,13 @@ export function HomePage() {
               <strong>Patrimônio</strong>
               <span>Ativo, passivo e líquido</span>
             </Link>
-            <Link className={styles.homeBlock} to="/projetos">
-              <Icon name="goal" size={24} />
-              <strong>Projetos de vida</strong>
-              <span>Dashboard das metas</span>
-            </Link>
+            <ProjectsHomeTile projects={projects.data ?? []} loading={projects.loading && !projects.data} />
             <Link className={styles.homeBlock} to="/lancamentos?novo=1">
               <Icon name="add" size={24} />
               <strong>Lançar</strong>
               <span>Registrar receita ou despesa</span>
             </Link>
           </nav>
-
-          <LifeHorizonBars projects={projects.data ?? []} loading={projects.loading && !projects.data} />
 
           {emptyMonth ? (
             <section className={styles.emptyCard}>
@@ -179,44 +173,46 @@ export function HomePage() {
             )}
           </section>
         </>
-      ) : (
-        <LifeHorizonBars projects={projects.data ?? []} loading={projects.loading && !projects.data} />
-      )}
+      ) : null}
     </div>
   )
 }
 
-function LifeHorizonBars({ projects, loading }: { projects: LifeProject[]; loading: boolean }) {
+function ProjectsHomeTile({ projects, loading }: { projects: LifeProject[]; loading: boolean }) {
   return (
-    <section className={styles.horizonBlock} aria-labelledby="life-horizons">
-      <div className={styles.sectionHead}>
-        <h2 id="life-horizons" className={styles.sectionTitle}>
-          Projetos de vida
-        </h2>
-        <Link to="/projetos" className={styles.sectionLink}>
-          Ver dashboard
-        </Link>
-      </div>
-      {loading ? <Skeleton height={96} /> : null}
-      {LIFE_HORIZONS.map((horizon) => {
-        const items = projects.filter((project) => project.horizon === horizon.key)
-        const goal = items.reduce((sum, project) => sum + project.goalAmount, 0)
-        const accumulated = items.reduce((sum, project) => sum + project.accumulatedAmount, 0)
-        const percent = goal <= 0 ? 0 : Math.min(100, (accumulated / goal) * 100)
-        return (
-          <Link key={horizon.key} className={styles.horizonRow} to={`/projetos?horizonte=${horizon.key}`}>
-            <span className={styles.horizonMeta}>
-              <strong>{horizon.label}</strong>
-              <span>
-                {formatMoney(accumulated)} de {goal > 0 ? formatMoney(goal) : '—'} · {formatPercent(percent)}
+    <div className={`${styles.homeBlock} ${styles.homeBlockProjects}`}>
+      <Link className={styles.homeBlockProjectsHead} to="/projetos">
+        <Icon name="goal" size={24} />
+        <strong>Projetos de vida</strong>
+      </Link>
+      {loading ? <Skeleton height={72} /> : null}
+      <div className={styles.homeHorizonList}>
+        {LIFE_HORIZONS.map((horizon) => {
+          const items = projects.filter((project) => project.horizon === horizon.key)
+          const goal = items.reduce((sum, project) => sum + project.goalAmount, 0)
+          const accumulated = items.reduce((sum, project) => sum + project.accumulatedAmount, 0)
+          const percent = goal <= 0 ? 0 : Math.min(100, (accumulated / goal) * 100)
+          return (
+            <Link
+              key={horizon.key}
+              className={styles.homeHorizonRow}
+              to={`/projetos?horizonte=${horizon.key}`}
+            >
+              <span className={styles.homeHorizonMeta}>
+                <strong>{horizon.label.replace(' prazo', '')}</strong>
+                <span>{formatPercent(percent)}</span>
               </span>
-            </span>
-            <span className={styles.progress} aria-hidden>
-              <span className={styles.progressFill} style={{ width: `${percent}%` }} />
-            </span>
-          </Link>
-        )
-      })}
-    </section>
+              <span className={styles.progress} aria-hidden>
+                <span className={styles.progressFill} style={{ width: `${percent}%` }} />
+              </span>
+              <span className={styles.homeHorizonAmounts}>
+                {formatMoney(accumulated)}
+                {goal > 0 ? ` / ${formatMoney(goal)}` : ''}
+              </span>
+            </Link>
+          )
+        })}
+      </div>
+    </div>
   )
 }

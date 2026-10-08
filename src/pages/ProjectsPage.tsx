@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { familyApi, projectsApi, type LifeProject, type LifeProjectScope } from '../api/finance'
+import { familyApi, projectsApi, type LifeProjectScope } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Pager } from '../components/Pager'
 import { ChartAccountSelect } from '../components/ChartAccountSelect'
@@ -161,7 +161,6 @@ export function ProjectsPage() {
 
       {showForm ? (
         <ProjectForm
-          existing={projects.data ?? []}
           onSaved={(id) => {
             projects.reload()
             setShowForm(false)
@@ -173,13 +172,10 @@ export function ProjectsPage() {
   )
 }
 
-function ProjectForm({ existing, onSaved }: { existing: LifeProject[]; onSaved: (id: string) => void }) {
+function ProjectForm({ onSaved }: { onSaved: (id: string) => void }) {
   const family = useLoad(() => familyApi.group(), [])
   const lookups = useLookups()
-  const usedAccounts = new Set(existing.map((project) => project.chartAccountId).filter(Boolean))
-  const lifeAccounts = lookups.cashFlowAccounts.filter(
-    (account) => account.section === 'LifeProject' && !usedAccounts.has(account.id),
-  )
+  const lifeAccounts = lookups.cashFlowAccounts.filter((account) => account.section === 'LifeProject')
   const [name, setName] = useState('')
   const [detailedDescription, setDetailedDescription] = useState('')
   const [goal, setGoal] = useState('')

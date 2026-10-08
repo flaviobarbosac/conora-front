@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { projectsApi, type LifeProjectScope } from '../api/finance'
+import { familyApi, projectsApi, type LifeProject, type LifeProjectScope } from '../api/finance'
+import { ChartAccountSelect } from '../components/ChartAccountSelect'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
@@ -14,34 +15,32 @@ import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
 import { confirmDestructive } from '../lib/confirm'
 import {
+  currentCompetence,
   dateToApi,
   formatCompetence,
   formatDate,
   formatMoney,
+  formatMoneyInput,
   formatPercent,
+  monthsInclusive,
   parseMoney,
+  shiftCompetence,
   todayInput,
 } from '../lib/format'
 import { LIFE_HORIZONS } from '../lib/lifeHorizon'
 import styles from './page.module.css'
 
+function ymFromIso(iso: string | null | undefined): string {
+  return iso?.slice(0, 7) ?? ''
+}
+
 export function ProjectDetailPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const project = useLoad(() => projectsApi.get(id), [id])
-  const lookups = useLookups()
   const remove = useAction()
-  const save = useAction()
-  const contribute = useAction()
   const data = project.data
   const horizonLabel = LIFE_HORIZONS.find((item) => item.key === data?.horizon)?.label
-
-  const [description, setDescription] = useState<string | null>(null)
-  const descriptionValue = description ?? data?.detailedDescription ?? ''
-
-  const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(todayInput)
-  const [accountId, setAccountId] = useState('')
 
   async function removeProject() {
     if (!data) {
@@ -52,46 +51,6 @@ export function ProjectDetailPage() {
     }
     if (await remove.run(() => projectsApi.remove(data.id))) {
       navigate('/projetos')
-    }
-  }
-
-  async function saveDescription(event: FormEvent) {
-    event.preventDefault()
-    if (!data?.chartAccountId) {
-      return
-    }
-    if (
-      await save.run(() =>
-        projectsApi.update(data.id, {
-          name: data.name,
-          goalAmount: data.goalAmount,
-          dueDate: data.dueDate,
-          contributionStartYm: data.contributionStartYm,
-          scope: data.scope as LifeProjectScope,
-          chartAccountId: data.chartAccountId!,
-          detailedDescription: descriptionValue.trim() || undefined,
-        }),
-      )
-    ) {
-      setDescription(null)
-      project.reload()
-    }
-  }
-
-  async function submitContribution(event: FormEvent) {
-    event.preventDefault()
-    if (!data) {
-      return
-    }
-    const value = parseMoney(amount)
-    if (!Number.isFinite(value) || value <= 0) {
-      contribute.setError('Informe um valor maior que zero.')
-      return
-    }
-    if (await contribute.run(() => projectsApi.contribute(data.id, value, dateToApi(date), accountId || undefined))) {
-      setAmount('')
-      project.reload()
-      lookups.reloadAccounts()
     }
   }
 
@@ -109,7 +68,7 @@ export function ProjectDetailPage() {
           </>
         }
       />
-      <ErrorText message={project.error ?? remove.error ?? save.error ?? contribute.error} />
+      <ErrorText message={project.error ?? remove.error} />
       {project.loading && !data ? <Loading /> : null}
       {data ? (
         <>
@@ -137,68 +96,17 @@ export function ProjectDetailPage() {
             </span>
           </section>
 
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Descrição detalhada</h2>
-            {data.isOwner ? (
-              <form className={styles.form} onSubmit={(event) => void saveDescription(event)}>
-                <div className={styles.formWide}>
-                  <TextArea
-                    label="Descrição detalhada"
-                    name="projectDescription"
-                    rows={6}
-                    value={descriptionValue}
-                    onChange={(event) => setDescription(event.target.value)}
-                    maxLength={4000}
-                  />
-                </div>
-                <div className={styles.formActions}>
-                  <Button type="submit" disabled={save.busy}>
-                    Salvar descrição
-                  </Button>
-                </div>
-              </form>
-            ) : data.detailedDescription ? (
-              <p>{data.detailedDescription}</p>
-            ) : (
-              <p className={styles.muted}>Sem descrição detalhada.</p>
-            )}
-          </section>
-
           {data.isOwner ? (
+            <>
+              <ProjectEditForm key={`${data.id}-${data.chartAccountId}`} data={data} onSaved={() => project.reload()} />
+              <ContributeForm key={`contrib-${data.id}`} data={data} onSaved={() => project.reload()} />
+            </>
+          ) : (
             <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>Aportar</h2>
-              <form className={styles.form} onSubmit={(event) => void submitContribution(event)}>
-                <MoneyField label="Valor (R$)" name="contribAmount" required value={amount} onChange={setAmount} />
-                <Field
-                  label="Data"
-                  name="contribDate"
-                  type="date"
-                  required
-                  value={date}
-                  onChange={(event) => setDate(event.target.value)}
-                />
-                <Select
-                  label="Conta de origem"
-                  name="contribAccount"
-                  required
-                  value={accountId}
-                  onChange={(event) => setAccountId(event.target.value)}
-                >
-                  <option value="">Selecione</option>
-                  {lookups.accounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.name}
-                    </option>
-                  ))}
-                </Select>
-                <div className={styles.formActions}>
-                  <Button type="submit" disabled={contribute.busy}>
-                    Registrar aporte
-                  </Button>
-                </div>
-              </form>
+              <h2 className={styles.sectionTitle}>Descrição detalhada</h2>
+              {data.detailedDescription ? <p>{data.detailedDescription}</p> : <p className={styles.muted}>Sem descrição detalhada.</p>}
             </section>
-          ) : null}
+          )}
 
           <p className={styles.muted}>
             <Link to="/projetos">← Ver todos os projetos</Link>
@@ -206,5 +114,227 @@ export function ProjectDetailPage() {
         </>
       ) : null}
     </div>
+  )
+}
+
+function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => void }) {
+  const family = useLoad(() => familyApi.group(), [])
+  const lookups = useLookups()
+  const lifeAccounts = lookups.cashFlowAccounts.filter((account) => account.section === 'LifeProject')
+  const save = useAction()
+  const [name, setName] = useState(data.name)
+  const [detailedDescription, setDetailedDescription] = useState(data.detailedDescription ?? '')
+  const [goal, setGoal] = useState(formatMoneyInput(data.goalAmount))
+  const [dueYm, setDueYm] = useState(ymFromIso(data.dueDate))
+  const [startYm, setStartYm] = useState(data.contributionStartYm || shiftCompetence(currentCompetence(), 1))
+  const [scope, setScope] = useState<LifeProjectScope>(data.scope)
+  const [chartAccountId, setChartAccountId] = useState(data.chartAccountId ?? '')
+  const hasFamilyGroup = Boolean(family.data?.groupId)
+  const currentYm = currentCompetence()
+  const months = dueYm ? monthsInclusive(startYm, dueYm) : []
+  const goalAmount = parseMoney(goal)
+  const parcel = months.length > 0 && Number.isFinite(goalAmount) && goalAmount > 0 ? goalAmount / months.length : null
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    if (!Number.isFinite(goalAmount) || goalAmount <= 0) {
+      save.setError('Informe uma meta maior que zero.')
+      return
+    }
+    if (!chartAccountId) {
+      save.setError('Escolha a conta do plano de contas.')
+      return
+    }
+    if (!dueYm) {
+      save.setError('Informe o prazo.')
+      return
+    }
+    if (startYm > dueYm) {
+      save.setError('O início do aporte não pode ser depois do prazo.')
+      return
+    }
+    const projectScope = scope === 'Group' && hasFamilyGroup ? 'Group' : 'Personal'
+    if (
+      await save.run(() =>
+        projectsApi.update(data.id, {
+          name: name.trim(),
+          goalAmount,
+          dueDate: dateToApi(`${dueYm}-01`),
+          contributionStartYm: startYm,
+          scope: projectScope,
+          chartAccountId,
+          detailedDescription: detailedDescription.trim() || undefined,
+        }),
+      )
+    ) {
+      onSaved()
+    }
+  }
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.sectionTitle}>Editar projeto</h2>
+      <form className={styles.form} onSubmit={(event) => void submit(event)}>
+        <div className={styles.formWide}>
+          <Field label="Nome" name="projectName" required value={name} onChange={(event) => setName(event.target.value)} />
+        </div>
+        <div className={styles.formWide}>
+          <TextArea
+            label="Descrição detalhada"
+            name="projectDescription"
+            rows={5}
+            value={detailedDescription}
+            onChange={(event) => setDetailedDescription(event.target.value)}
+            maxLength={4000}
+          />
+        </div>
+        <ChartAccountSelect
+          label="Conta do plano"
+          name="projectChartAccount"
+          required
+          value={chartAccountId}
+          onChange={setChartAccountId}
+          options={lifeAccounts}
+          tree={lookups.chartAccounts}
+          emptyLabel="Selecione"
+        />
+        <Select
+          label="Escopo"
+          name="projectScope"
+          value={scope}
+          onChange={(event) => setScope(event.target.value as LifeProjectScope)}
+        >
+          <option value="Personal">Pessoal</option>
+          <option value="Group" disabled={!hasFamilyGroup}>
+            Família{hasFamilyGroup ? '' : ' (entre no grupo primeiro)'}
+          </option>
+        </Select>
+        <MoneyField label="Meta (R$)" name="projectGoal" required value={goal} onChange={setGoal} />
+        <Field
+          label="Prazo"
+          name="projectDue"
+          type="month"
+          required
+          value={dueYm}
+          min={startYm || currentYm}
+          onChange={(event) => setDueYm(event.target.value)}
+        />
+        <Field
+          label="Início do aporte"
+          name="projectStart"
+          type="month"
+          required
+          value={startYm}
+          max={dueYm || undefined}
+          onChange={(event) => setStartYm(event.target.value)}
+        />
+        {parcel !== null ? (
+          <p className={`${styles.muted} ${styles.formWide}`}>
+            Parcela sugerida: {formatMoney(parcel)}/mês · {months.length} {months.length === 1 ? 'mês' : 'meses'} (de{' '}
+            {formatCompetence(months[0])} até {formatCompetence(months[months.length - 1])})
+          </p>
+        ) : null}
+        <div className={styles.formWide}>
+          <ErrorText message={save.error} />
+        </div>
+        <div className={styles.formActions}>
+          <Button type="submit" disabled={save.busy}>
+            Salvar projeto
+          </Button>
+        </div>
+      </form>
+    </section>
+  )
+}
+
+function ContributeForm({ data, onSaved }: { data: LifeProject; onSaved: () => void }) {
+  const lookups = useLookups()
+  const contribute = useAction()
+  const lifeAccounts = lookups.cashFlowAccounts.filter((account) => account.section === 'LifeProject')
+  const bankAccounts = lookups.accounts.filter((account) => !account.isArchived)
+  const [amount, setAmount] = useState('')
+  const [date, setDate] = useState(todayInput)
+  const [accountId, setAccountId] = useState('')
+  const [chartAccountId, setChartAccountId] = useState(data.chartAccountId ?? '')
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    const value = parseMoney(amount)
+    if (!Number.isFinite(value) || value <= 0) {
+      contribute.setError('Informe um valor maior que zero.')
+      return
+    }
+    if (!accountId) {
+      contribute.setError('Escolha a conta bancária de origem.')
+      return
+    }
+    if (!chartAccountId) {
+      contribute.setError('Escolha a conta do plano de contas.')
+      return
+    }
+    if (
+      await contribute.run(() =>
+        projectsApi.contribute(data.id, {
+          amount: value,
+          occurredAt: dateToApi(date),
+          accountId,
+          chartAccountId,
+        }),
+      )
+    ) {
+      setAmount('')
+      onSaved()
+      lookups.reloadAccounts()
+    }
+  }
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.sectionTitle}>Aportar</h2>
+      <form className={styles.form} onSubmit={(event) => void submit(event)}>
+        <MoneyField label="Valor (R$)" name="contribAmount" required value={amount} onChange={setAmount} />
+        <Field
+          label="Data"
+          name="contribDate"
+          type="date"
+          required
+          value={date}
+          onChange={(event) => setDate(event.target.value)}
+        />
+        <Select
+          label="Conta bancária"
+          name="contribBankAccount"
+          required
+          value={accountId}
+          onChange={(event) => setAccountId(event.target.value)}
+        >
+          <option value="">Selecione</option>
+          {bankAccounts.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.name}
+              {account.bankName ? ` · ${account.bankName}` : ''}
+            </option>
+          ))}
+        </Select>
+        <ChartAccountSelect
+          label="Conta do plano"
+          name="contribChartAccount"
+          required
+          value={chartAccountId}
+          onChange={setChartAccountId}
+          options={lifeAccounts}
+          tree={lookups.chartAccounts}
+          emptyLabel="Selecione"
+        />
+        <div className={styles.formWide}>
+          <ErrorText message={contribute.error} />
+        </div>
+        <div className={styles.formActions}>
+          <Button type="submit" disabled={contribute.busy}>
+            Registrar aporte
+          </Button>
+        </div>
+      </form>
+    </section>
   )
 }

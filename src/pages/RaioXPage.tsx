@@ -10,7 +10,7 @@ import {
 } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
-import { Badge, ErrorText, Loading } from '../components/ui/Feedback'
+import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
 import { chartAccountLabel } from '../lib/chartLabel'
 import { currentCompetence, formatCompetence, formatMoney, formatPercent } from '../lib/format'
@@ -278,10 +278,7 @@ function GroupBlock({
         <span className={styles.raioxToggle} aria-hidden>
           {expanded ? '−' : '+'}
         </span>
-        <span>
-          <strong>{chartAccountLabel(account)}</strong>
-          {account.level === 'Analytical' ? <Badge>Analítica</Badge> : null}
-        </span>
+        <strong>{chartAccountLabel(account)}</strong>
         <TotalsCell totals={totals} />
       </button>
       {expanded

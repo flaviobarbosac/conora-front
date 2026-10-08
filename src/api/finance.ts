@@ -411,8 +411,10 @@ export const projectsApi = {
   update: (id: string, input: LifeProjectInput) =>
     apiFetch<LifeProject>(`/life-projects/${id}`, json('PUT', input)),
   remove: (id: string) => apiFetch<void>(`/life-projects/${id}`, json('DELETE')),
-  contribute: (id: string, amount: number, occurredAt: string, accountId?: string, description?: string) =>
-    apiFetch<unknown>(`/life-projects/${id}/contributions`, json('POST', { amount, occurredAt, accountId, description })),
+  contribute: (
+    id: string,
+    input: { amount: number; occurredAt: string; accountId: string; chartAccountId: string; description?: string },
+  ) => apiFetch<unknown>(`/life-projects/${id}/contributions`, json('POST', input)),
 }
 
 /* ---------- Patrimony ---------- */
