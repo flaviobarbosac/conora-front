@@ -6,6 +6,7 @@ declare const self: ServiceWorkerGlobalScope
 
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
+self.skipWaiting()
 clientsClaim()
 
 self.addEventListener('fetch', (event) => {

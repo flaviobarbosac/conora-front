@@ -68,26 +68,38 @@ async function parseError(response: Response): Promise<string> {
   }
 }
 
+let refreshInFlight: Promise<boolean> | null = null
+
 async function refreshAccessToken(): Promise<boolean> {
-  const refreshToken = getRefreshToken()
-  if (!refreshToken) {
-    return false
+  if (refreshInFlight) {
+    return refreshInFlight
   }
 
-  const response = await fetch(`${apiBase()}/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
+  refreshInFlight = (async () => {
+    const refreshToken = getRefreshToken()
+    if (!refreshToken) {
+      return false
+    }
+
+    const response = await fetch(`${apiBase()}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    })
+
+    if (!response.ok) {
+      clearSession()
+      return false
+    }
+
+    const auth = (await response.json()) as AuthResponse
+    persistSession(auth)
+    return true
+  })().finally(() => {
+    refreshInFlight = null
   })
 
-  if (!response.ok) {
-    clearSession()
-    return false
-  }
-
-  const auth = (await response.json()) as AuthResponse
-  persistSession(auth)
-  return true
+  return refreshInFlight
 }
 
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
