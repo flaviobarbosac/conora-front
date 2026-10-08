@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { familyApi } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
+import { AlertsBell } from '../components/AlertsBell'
 import { BrandLockup } from '../components/BrandLockup'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
@@ -183,6 +184,7 @@ export function AppShell() {
             <BrandLockup size="nav" />
           </div>
           <div className={styles.appHeaderUser} ref={profileMenuRef}>
+            <AlertsBell peerOpen={profileMenuOpen} onOpen={() => setProfileMenuOpen(false)} />
             <button
               type="button"
               className={styles.avatarBtn}

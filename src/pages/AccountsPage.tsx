@@ -22,6 +22,7 @@ import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
+import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
 import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
 import styles from './page.module.css'
@@ -192,6 +193,16 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
   const [balance, setBalance] = useState('')
   const action = useAction()
   const needsBank = kind !== 'Cash'
+  useRegisterDirty(
+    'account-form',
+    name.trim() !== '' ||
+      kind !== 'Checking' ||
+      bankCode !== '021' ||
+      agency.trim() !== '' ||
+      accountNumber.trim() !== '' ||
+      checkDigit.trim() !== '' ||
+      balance.trim() !== '',
+  )
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -304,7 +315,12 @@ function TransferForm({ accounts, onSaved }: { accounts: Account[]; onSaved: () 
   const [to, setTo] = useState('')
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayInput)
+  const initialDate = useState(todayInput)[0]
   const action = useAction()
+  useRegisterDirty(
+    'transfer-form',
+    from !== '' || to !== '' || amount.trim() !== '' || date !== initialDate,
+  )
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -363,6 +379,14 @@ function CardForm({ accounts, onSaved }: { accounts: Account[]; onSaved: () => v
   const [due, setDue] = useState('')
   const [paymentAccountId, setPaymentAccountId] = useState('')
   const action = useAction()
+  useRegisterDirty(
+    'card-form',
+    name.trim() !== '' ||
+      limit.trim() !== '' ||
+      closing.trim() !== '' ||
+      due.trim() !== '' ||
+      paymentAccountId !== '',
+  )
 
   async function submit(event: FormEvent) {
     event.preventDefault()

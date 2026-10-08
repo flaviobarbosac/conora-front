@@ -193,6 +193,23 @@
   gap: var(--space-3);
 }
 
+.homeBlockInsight {
+  min-height: 140px;
+  gap: var(--space-2);
+}
+
+.homeBlockHero {
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.homeBlockHint {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
 .homeBlockProjectsHead {
   display: flex;
   align-items: center;
@@ -715,7 +732,7 @@ button.compact {
 .raioxList {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  overflow: hidden;
+  overflow-x: auto;
   background: var(--surface);
 }
 
@@ -723,14 +740,16 @@ button.compact {
   background: var(--surface);
   color: var(--text-muted);
   font-size: var(--text-base);
+  cursor: default;
 }
 
 .raioxRow {
   display: grid;
-  grid-template-columns: 2rem 1fr minmax(16rem, auto);
+  grid-template-columns: 2rem minmax(8rem, 1fr) minmax(28rem, 1.8fr);
   gap: var(--space-3);
   align-items: center;
   width: 100%;
+  min-width: 46rem;
   padding: var(--space-3) var(--space-4);
   border: 0;
   border-bottom: 1px solid var(--border-subtle);
@@ -746,25 +765,45 @@ button.compact {
 
 .raioxGroup {
   background: var(--bg-app);
-  padding-left: calc(var(--space-4) + 1rem);
+}
+
+.raioxLeaf {
+  background: color-mix(in srgb, var(--surface) 70%, var(--bg-app));
 }
 
 .raioxEntry {
   background: color-mix(in srgb, var(--primary) 6%, var(--bg-app));
-  padding-left: calc(var(--space-4) + 2rem);
 }
 
 .raioxToggle {
   font-weight: var(--weight-semibold);
   color: var(--primary);
+  width: 1.25rem;
+  text-align: center;
+}
+
+.raioxAccountName {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .raioxTotals {
   display: grid;
-  grid-template-columns: 6.5rem 6.5rem 8rem;
-  gap: var(--space-2);
+  grid-template-columns: minmax(12rem, 1fr) minmax(12rem, 1fr) minmax(6.5rem, 0.6fr);
+  gap: var(--space-4);
+  align-items: baseline;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.raioxAmount,
+.raioxPercent {
+  overflow: visible;
+}
+
+.raioxHead .raioxTotals {
+  font-size: var(--text-sm);
 }
 
 /* ---------- Hub tiles ---------- */
@@ -888,6 +927,52 @@ button.compact {
   }
 }
 
+.budgetGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.budgetGroupToggle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) 0;
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.budgetGroupToggle:hover strong {
+  color: var(--primary);
+}
+
+.budgetGroupChevron {
+  flex-shrink: 0;
+  width: 1.25rem;
+  font-weight: var(--weight-semibold);
+  color: var(--text-muted);
+}
+
+.budgetGroupMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.budgetGroupBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: var(--space-2);
+}
+
 .budgetAccountName {
   display: block;
   padding: 0;
@@ -904,13 +989,14 @@ button.compact {
 }
 
 .budgetAmountWrap {
-  width: 8.5rem;
+  width: 12.5rem;
   flex-shrink: 0;
 }
 
 .budgetAmountWrap :global(input) {
   width: 100%;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .sheetOverlay {

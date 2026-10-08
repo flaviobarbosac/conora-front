@@ -8,6 +8,7 @@ export type IconName =
   | 'income'
   | 'expense'
   | 'alert'
+  | 'bell'
   | 'calendar'
   | 'search'
   | 'user'
@@ -72,6 +73,11 @@ export const ICON_CATALOG: Record<IconName, IconDef> = {
     label: 'Alerta',
     base: ['M10.3 4.2 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z'],
     accent: ['M12 9.5v4', 'M12 17h.01'],
+  },
+  bell: {
+    label: 'Notificações',
+    base: ['M6 9a6 6 0 1 1 12 0c0 3.5 1.5 5 2 6H4c.5-1 2-2.5 2-6z', 'M10 19a2 2 0 0 0 4 0'],
+    accent: ['M12 3v1'],
   },
   calendar: {
     label: 'Data',

@@ -248,6 +248,7 @@ export type MonthlyReport = {
 
 export const dashboardApi = {
   get: (ym: string) => apiFetch<Dashboard>(`/dashboard/${ym}`),
+  alerts: (ym: string) => apiFetch<Alert[]>(`/dashboard/${ym}/alerts`),
   monthlyReport: (ym: string) => apiFetch<MonthlyReport>(`/reports/monthly/${ym}`),
 }
 

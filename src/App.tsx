@@ -4,6 +4,7 @@ import { listenNativeShare } from './share/receiveShare'
 import { useAuth } from './auth/AuthProvider'
 import { ConfirmDialogHost } from './components/ConfirmDialog'
 import { Splash } from './components/Splash'
+import { UnsavedChangesProvider } from './hooks/useUnsavedChanges'
 import { AppShell } from './layouts/AppShell'
 import { AccountsPage } from './pages/AccountsPage'
 import { AiPage } from './pages/AiPage'
@@ -44,7 +45,7 @@ export default function App() {
   useEffect(() => listenNativeShare(() => navigate('/compartilhar')), [navigate])
 
   return (
-    <>
+    <UnsavedChangesProvider>
       {splashDone ? null : <Splash onFinished={() => setSplashDone(true)} />}
       <ConfirmDialogHost />
       <Routes>
@@ -79,6 +80,6 @@ export default function App() {
           </Route>
         </Route>
       </Routes>
-    </>
+    </UnsavedChangesProvider>
   )
 }

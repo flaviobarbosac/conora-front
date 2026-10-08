@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { familyApi, projectsApi, type LifeProjectScope } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
@@ -14,6 +14,7 @@ import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
+import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import {
   currentCompetence,
   dateToApi,
@@ -25,7 +26,7 @@ import {
   parseMoney,
   shiftCompetence,
 } from '../lib/format'
-import { LIFE_HORIZONS, type HorizonKey } from '../lib/lifeHorizon'
+import { horizonFillClass, LIFE_HORIZONS, type HorizonKey } from '../lib/lifeHorizon'
 import styles from './page.module.css'
 
 function isHorizon(value: string | null): value is HorizonKey {
@@ -34,10 +35,24 @@ function isHorizon(value: string | null): value is HorizonKey {
 
 export function ProjectsPage() {
   const navigate = useNavigate()
+  const { confirmLeave } = useUnsavedChanges()
   const [searchParams, setSearchParams] = useSearchParams()
   const horizonte = isHorizon(searchParams.get('horizonte')) ? searchParams.get('horizonte') : null
   const projects = useLoad(() => projectsApi.list(), [])
   const [showForm, setShowForm] = useState(false)
+  const [formDirty, setFormDirty] = useState(false)
+
+  useRegisterDirty('projects-form', showForm && formDirty)
+
+  async function toggleForm() {
+    if (showForm && formDirty && !(await confirmLeave())) {
+      return
+    }
+    setShowForm((value) => !value)
+    if (showForm) {
+      setFormDirty(false)
+    }
+  }
 
   const list = useMemo(() => {
     const all = projects.data ?? []
@@ -63,7 +78,7 @@ export function ProjectsPage() {
         kicker="Metas"
         title="Projetos de vida"
         actions={
-          <Button onClick={() => setShowForm((value) => !value)}>
+          <Button onClick={() => void toggleForm()}>
             {showForm ? 'Fechar cadastro' : 'Novo projeto'}
           </Button>
         }
@@ -91,7 +106,10 @@ export function ProjectsPage() {
                 </span>
               </span>
               <span className={styles.progress} aria-hidden>
-                <span className={styles.progressFill} style={{ width: `${percent}%` }} />
+                <span
+                  className={`${styles.progressFill} ${horizonFillClass(styles, horizon.key)}`}
+                  style={{ width: `${percent}%` }}
+                />
               </span>
             </button>
           )
@@ -161,7 +179,9 @@ export function ProjectsPage() {
 
       {showForm ? (
         <ProjectForm
+          onDirtyChange={setFormDirty}
           onSaved={(id) => {
+            setFormDirty(false)
             projects.reload()
             setShowForm(false)
             navigate(`/projetos/${id}`)
@@ -172,7 +192,13 @@ export function ProjectsPage() {
   )
 }
 
-function ProjectForm({ onSaved }: { onSaved: (id: string) => void }) {
+function ProjectForm({
+  onDirtyChange,
+  onSaved,
+}: {
+  onDirtyChange?: (dirty: boolean) => void
+  onSaved: (id: string) => void
+}) {
   const family = useLoad(() => familyApi.group(), [])
   const lookups = useLookups()
   const lifeAccounts = lookups.cashFlowAccounts.filter((account) => account.section === 'LifeProject')
@@ -186,9 +212,22 @@ function ProjectForm({ onSaved }: { onSaved: (id: string) => void }) {
   const action = useAction()
   const hasFamilyGroup = Boolean(family.data?.groupId)
   const currentYm = currentCompetence()
+  const defaultStartYm = useState(() => shiftCompetence(currentCompetence(), 1))[0]
   const months = dueYm ? monthsInclusive(startYm, dueYm) : []
   const goalAmount = parseMoney(goal)
   const parcel = months.length > 0 && Number.isFinite(goalAmount) && goalAmount > 0 ? goalAmount / months.length : null
+
+  useEffect(() => {
+    const dirty =
+      name.trim() !== '' ||
+      detailedDescription.trim() !== '' ||
+      goal.trim() !== '' ||
+      dueYm !== '' ||
+      startYm !== defaultStartYm ||
+      scope !== 'Personal' ||
+      chartAccountId !== ''
+    onDirtyChange?.(dirty)
+  }, [name, detailedDescription, goal, dueYm, startYm, defaultStartYm, scope, chartAccountId, onDirtyChange])
 
   async function submit(event: FormEvent) {
     event.preventDefault()

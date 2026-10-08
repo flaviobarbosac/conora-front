@@ -8,6 +8,16 @@ export const LIFE_HORIZONS: { key: HorizonKey; code: string; label: string }[] =
   { key: 'long', code: 'LIFE_LONG', label: 'Longo prazo' },
 ]
 
+/** Curto = verde, médio = amarelo, longo = vermelho. Uses the app success/warning/danger tokens. */
+export function horizonFillClass(
+  styles: Record<string, string>,
+  key: HorizonKey,
+): string {
+  if (key === 'short') return styles.progressFill_ok
+  if (key === 'mid') return styles.progressFill_warning
+  return styles.progressFill_danger
+}
+
 export function horizonCodeOf(accountId: string | null, accounts: ChartAccount[]): string | null {
   if (!accountId) {
     return null

@@ -1,15 +1,24 @@
-﻿import { useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { budgetsApi, dashboardApi, familyApi, projectsApi, type LifeProject } from '../api/finance'
+import {
+  budgetsApi,
+  dashboardApi,
+  familyApi,
+  patrimonyApi,
+  projectsApi,
+  type Budget,
+  type LifeProject,
+  type PatrimonySummary,
+} from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { Badge, ErrorText, Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
-import { toneFromSeverity } from '../lib/severity'
 import { currentCompetence, formatMoney, formatPercent } from '../lib/format'
-import { LIFE_HORIZONS } from '../lib/lifeHorizon'
+import { buildPatrimonyHomeInsight, buildRaioXHomeInsight } from '../lib/homeInsights'
+import { horizonFillClass, LIFE_HORIZONS } from '../lib/lifeHorizon'
 import styles from './page.module.css'
 
 function firstName(fullName: string | undefined): string {
@@ -25,12 +34,12 @@ export function HomePage() {
   const [ym, setYm] = useState(currentCompetence)
   const dashboard = useLoad(() => dashboardApi.get(ym), [ym])
   const budget = useLoad(() => budgetsApi.get(ym), [ym])
+  const patrimony = useLoad(() => patrimonyApi.get(), [])
   const projects = useLoad(() => projectsApi.list(), [])
   const profile = useLoad(() => familyApi.profile(), [])
   const name = firstName(profile.data?.name)
   const data = dashboard.data
   const emptyMonth = data && data.incomeTotal === 0 && data.expenseTotal === 0
-  const riskAlert = data?.alerts.find((alert) => alert.severity === 'Exceeded' || alert.severity === 'Attention')
 
   return (
     <div className={styles.page}>
@@ -45,7 +54,7 @@ export function HomePage() {
         }
       />
 
-      <ErrorText message={dashboard.error ?? budget.error ?? projects.error} />
+      <ErrorText message={dashboard.error ?? budget.error ?? patrimony.error ?? projects.error} />
 
       {dashboard.loading && !data ? (
         <div className={styles.skeletonStack} aria-busy="true" aria-live="polite">
@@ -79,27 +88,14 @@ export function HomePage() {
                 </strong>
               </div>
             </div>
-            {riskAlert ? (
-              <p className={styles.muted}>
-                Alerta: {riskAlert.message}
-                {data.accountsBalance < 0 ? ' · atenção ao uso de limite/cheque especial.' : ''}
-              </p>
-            ) : data.accountsBalance < 0 ? (
+            {data.accountsBalance < 0 ? (
               <p className={styles.muted}>Saldo negativo: revise o uso de limite ou cheque especial.</p>
             ) : null}
           </section>
 
           <nav className={styles.homeBlocks} aria-label="Atalhos principais">
-            <Link className={styles.homeBlock} to="/raio-x">
-              <Icon name="budget" size={24} />
-              <strong>Raio-X</strong>
-              <span>Previsto × realizado do mês</span>
-            </Link>
-            <Link className={styles.homeBlock} to="/patrimonio">
-              <Icon name="wallet" size={24} />
-              <strong>Patrimônio</strong>
-              <span>Ativo, passivo e líquido</span>
-            </Link>
+            <RaioXHomeTile budget={budget.data} loading={budget.loading && !budget.data} />
+            <PatrimonyHomeTile summary={patrimony.data} loading={patrimony.loading && !patrimony.data} />
             <ProjectsHomeTile projects={projects.data ?? []} loading={projects.loading && !projects.data} />
             <Link className={styles.homeBlock} to="/lancamentos?novo=1">
               <Icon name="add" size={24} />
@@ -138,43 +134,83 @@ export function HomePage() {
             </div>
           )}
 
-          <section className={styles.section} aria-labelledby="alerts-title">
-            <div className={styles.sectionHead}>
-              <h2 id="alerts-title" className={styles.sectionTitle}>
-                Alertas
-              </h2>
-              {data.alerts.length > 0 ? (
-                <Link to="/raio-x" className={styles.sectionLink}>
-                  Ver Raio-X
-                </Link>
-              ) : null}
-            </div>
-            {data.alerts.length === 0 ? (
-              <p className={styles.muted}>Tudo em ordem nesta competência.</p>
-            ) : (
-              <ul className={styles.alertList}>
-                {data.alerts.map((alert) => {
-                  const tone = toneFromSeverity(alert.severity)
-                  return (
-                    <li key={`${alert.code}-${alert.chartAccountId ?? ''}`} className={`${styles.alertRow} ${styles[`alertRow_${tone}`]}`}>
-                      <span className={styles.alertIcon} aria-hidden="true">
-                        <Icon name="alert" size={20} />
-                      </span>
-                      <span className={styles.rowMain}>
-                        <strong>{alert.message}</strong>
-                      </span>
-                      <Badge tone={tone}>
-                        {alert.percent !== null ? `${Math.round(alert.percent)}%` : alert.severity}
-                      </Badge>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </section>
         </>
       ) : null}
     </div>
+  )
+}
+
+function RaioXHomeTile({ budget, loading }: { budget: Budget | null | undefined; loading: boolean }) {
+  const insight = useMemo(() => (budget ? buildRaioXHomeInsight(budget) : null), [budget])
+
+  return (
+    <Link className={`${styles.homeBlock} ${styles.homeBlockInsight}`} to="/raio-x">
+      <span className={styles.homeBlockProjectsHead}>
+        <Icon name="budget" size={24} />
+        <strong>Raio-X</strong>
+      </span>
+      {loading ? <Skeleton height={56} /> : null}
+      {!loading && insight ? (
+        <>
+          <span className={styles.homeBlockHero}>
+            {insight.monthPercent === null ? 'Sem orçamento' : formatPercent(insight.monthPercent)}
+          </span>
+          <span className={styles.homeHorizonAmounts}>
+            {formatMoney(insight.actual)} / {formatMoney(insight.planned)}
+          </span>
+          {insight.topDeviation ? (
+            <span
+              className={`${styles.homeBlockHint} ${
+                insight.topDeviation.percent < 0
+                  ? styles.negative
+                  : insight.topDeviation.percent > 0
+                    ? styles.positive
+                    : ''
+              }`}
+            >
+              {insight.topDeviation.name} {formatPercent(insight.topDeviation.percent)}
+            </span>
+          ) : insight.spendable > 0 ? (
+            <span className={styles.homeBlockHint}>
+              Receita {formatMoney(insight.received)} / {formatMoney(insight.spendable)}
+            </span>
+          ) : (
+            <span className={styles.homeBlockHint}>Previsto × realizado do mês</span>
+          )}
+        </>
+      ) : null}
+    </Link>
+  )
+}
+
+function PatrimonyHomeTile({
+  summary,
+  loading,
+}: {
+  summary: PatrimonySummary | null | undefined
+  loading: boolean
+}) {
+  const insight = summary ? buildPatrimonyHomeInsight(summary) : null
+  return (
+    <Link className={`${styles.homeBlock} ${styles.homeBlockInsight}`} to="/patrimonio">
+      <span className={styles.homeBlockProjectsHead}>
+        <Icon name="wallet" size={24} />
+        <strong>Patrimônio</strong>
+      </span>
+      {loading ? <Skeleton height={56} /> : null}
+      {!loading && insight ? (
+        <>
+          <span className={`${styles.homeBlockHero} ${insight.netWorth < 0 ? styles.negative : ''}`}>
+            {formatMoney(insight.netWorth)}
+          </span>
+          <span className={styles.homeHorizonAmounts}>Patrimônio líquido</span>
+          <span className={styles.homeBlockHint}>
+            Ativo {formatMoney(insight.assetsTotal)} · Passivo {formatMoney(insight.liabilitiesTotal)}
+          </span>
+        </>
+      ) : null}
+      {!loading && !insight ? <span className={styles.homeBlockHint}>Ativo, passivo e líquido</span> : null}
+    </Link>
   )
 }
 
@@ -203,7 +239,10 @@ function ProjectsHomeTile({ projects, loading }: { projects: LifeProject[]; load
                 <span>{formatPercent(percent)}</span>
               </span>
               <span className={styles.progress} aria-hidden>
-                <span className={styles.progressFill} style={{ width: `${percent}%` }} />
+                <span
+                  className={`${styles.progressFill} ${horizonFillClass(styles, horizon.key)}`}
+                  style={{ width: `${percent}%` }}
+                />
               </span>
               <span className={styles.homeHorizonAmounts}>
                 {formatMoney(accumulated)}

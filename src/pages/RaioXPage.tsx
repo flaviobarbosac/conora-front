@@ -13,49 +13,27 @@ import { PageHeader } from '../components/PageHeader'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
 import { chartAccountLabel } from '../lib/chartLabel'
+import { compareChartSiblings } from '../lib/chartOrder'
 import { currentCompetence, formatCompetence, formatMoney, formatPercent } from '../lib/format'
+import {
+  buildAmountMaps,
+  groupAccountsByParent,
+  sumBranch,
+  variationPercent,
+  type RaioXTotals,
+} from '../lib/raioX'
 import styles from './page.module.css'
 
-type Totals = { planned: number; actual: number }
-
-function descendantIds(rootId: string, byParent: Map<string | null, ChartAccount[]>): Set<string> {
-  const ids = new Set<string>([rootId])
-  const walk = (id: string) => {
-    for (const child of byParent.get(id) ?? []) {
-      ids.add(child.id)
-      walk(child.id)
-    }
-  }
-  walk(rootId)
-  return ids
-}
-
-function sumBranch(
-  accountId: string,
-  byParent: Map<string | null, ChartAccount[]>,
-  planned: Map<string, number>,
-  actual: Map<string, number>,
-): Totals {
-  const ids = descendantIds(accountId, byParent)
-  let plannedTotal = 0
-  let actualTotal = 0
-  for (const id of ids) {
-    plannedTotal += planned.get(id) ?? 0
-    actualTotal += actual.get(id) ?? 0
-  }
-  return { planned: plannedTotal, actual: actualTotal }
-}
-
-function TotalsCell({ totals }: { totals: Totals }) {
-  const variation = totals.planned - totals.actual
-  const percent = totals.planned === 0 ? null : (totals.actual / totals.planned) * 100
+function TotalsCell({ totals }: { totals: RaioXTotals }) {
+  const percent = variationPercent(totals)
+  const tone =
+    percent === null ? undefined : percent < 0 ? styles.negative : percent > 0 ? styles.positive : undefined
   return (
     <span className={styles.raioxTotals}>
-      <span>{formatMoney(totals.planned)}</span>
-      <span>{formatMoney(totals.actual)}</span>
-      <span className={variation < 0 ? styles.negative : undefined}>
-        {formatMoney(variation)}
-        {percent === null ? '' : ` · ${formatPercent(percent)}`}
+      <span className={styles.raioxAmount}>{formatMoney(totals.planned)}</span>
+      <span className={styles.raioxAmount}>{formatMoney(totals.actual)}</span>
+      <span className={`${styles.raioxPercent} ${tone ?? ''}`}>
+        {percent === null ? '—' : formatPercent(percent)}
       </span>
     </span>
   )
@@ -71,37 +49,17 @@ export function RaioXPage() {
 
   const list = accounts.data ?? []
   const byParent = useMemo(() => {
-    const map = new Map<string | null, ChartAccount[]>()
-    for (const account of list) {
-      const bucket = map.get(account.parentId) ?? []
-      bucket.push(account)
-      map.set(account.parentId, bucket)
-    }
+    const map = groupAccountsByParent(list)
     for (const bucket of map.values()) {
-      bucket.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'pt-BR'))
+      bucket.sort(compareChartSiblings)
     }
     return map
   }, [list])
 
-  const planned = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const line of budget.data?.lines ?? []) {
-      if (line.chartAccountId && !line.isGroup) {
-        map.set(line.chartAccountId, line.plannedAmount)
-      }
-    }
-    return map
-  }, [budget.data])
-
-  const actual = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const line of budget.data?.lines ?? []) {
-      if (line.chartAccountId) {
-        map.set(line.chartAccountId, (map.get(line.chartAccountId) ?? 0) + line.actualAmount)
-      }
-    }
-    return map
-  }, [budget.data])
+  const { planned, actual } = useMemo(
+    () => buildAmountMaps(budget.data?.lines ?? []),
+    [budget.data],
+  )
 
   const roots = useMemo(
     () => (byParent.get(null) ?? []).filter((account) => account.level === 'Root'),
@@ -120,11 +78,8 @@ export function RaioXPage() {
     })
   }
 
-  function entriesFor(account: ChartAccount): Entry[] {
-    const ids = descendantIds(account.id, byParent)
-    return (entries.data?.items ?? []).filter(
-      (entry) => entry.chartAccountId && ids.has(entry.chartAccountId),
-    )
+  function entriesFor(accountId: string): Entry[] {
+    return (entries.data?.items ?? []).filter((entry) => entry.chartAccountId === accountId)
   }
 
   function openEntry(entry: Entry) {
@@ -160,9 +115,10 @@ export function RaioXPage() {
             </span>
           </div>
           {roots.map((root) => (
-            <RootBlock
+            <AccountBlock
               key={root.id}
-              root={root}
+              account={root}
+              depth={0}
               byParent={byParent}
               planned={planned}
               actual={actual}
@@ -198,8 +154,9 @@ function IncomeHero({ budget }: { budget: Budget }) {
   )
 }
 
-function RootBlock({
-  root,
+function AccountBlock({
+  account,
+  depth,
   byParent,
   planned,
   actual,
@@ -208,33 +165,49 @@ function RootBlock({
   entriesFor,
   onOpenEntry,
 }: {
-  root: ChartAccount
+  account: ChartAccount
+  depth: number
   byParent: Map<string | null, ChartAccount[]>
   planned: Map<string, number>
   actual: Map<string, number>
   open: Set<string>
   onToggle: (id: string) => void
-  entriesFor: (account: ChartAccount) => Entry[]
+  entriesFor: (accountId: string) => Entry[]
   onOpenEntry: (entry: Entry) => void
 }) {
-  const expanded = open.has(root.id)
-  const children = byParent.get(root.id) ?? []
-  const totals = sumBranch(root.id, byParent, planned, actual)
+  const children = byParent.get(account.id) ?? []
+  const monthEntries = account.level === 'Analytical' ? entriesFor(account.id) : []
+  const expandable = children.length > 0 || monthEntries.length > 0
+  const expanded = open.has(account.id)
+  const totals = sumBranch(account.id, byParent, planned, actual)
+  const rowClass =
+    account.level === 'Root'
+      ? styles.raioxRoot
+      : account.level === 'Group'
+        ? styles.raioxGroup
+        : styles.raioxLeaf
 
   return (
     <>
-      <button type="button" className={`${styles.raioxRow} ${styles.raioxRoot}`} onClick={() => onToggle(root.id)}>
+      <button
+        type="button"
+        className={`${styles.raioxRow} ${rowClass}`}
+        style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
+        onClick={() => (expandable ? onToggle(account.id) : undefined)}
+        aria-expanded={expandable ? expanded : undefined}
+      >
         <span className={styles.raioxToggle} aria-hidden>
-          {expanded ? '−' : '+'}
+          {expandable ? (expanded ? '−' : '+') : ''}
         </span>
-        <strong>{chartAccountLabel(root)}</strong>
+        <strong className={styles.raioxAccountName}>{chartAccountLabel(account)}</strong>
         <TotalsCell totals={totals} />
       </button>
       {expanded
         ? children.map((child) => (
-            <GroupBlock
+            <AccountBlock
               key={child.id}
               account={child}
+              depth={depth + 1}
               byParent={byParent}
               planned={planned}
               actual={actual}
@@ -245,48 +218,13 @@ function RootBlock({
             />
           ))
         : null}
-    </>
-  )
-}
-
-function GroupBlock({
-  account,
-  byParent,
-  planned,
-  actual,
-  open,
-  onToggle,
-  entriesFor,
-  onOpenEntry,
-}: {
-  account: ChartAccount
-  byParent: Map<string | null, ChartAccount[]>
-  planned: Map<string, number>
-  actual: Map<string, number>
-  open: Set<string>
-  onToggle: (id: string) => void
-  entriesFor: (account: ChartAccount) => Entry[]
-  onOpenEntry: (entry: Entry) => void
-}) {
-  const expanded = open.has(account.id)
-  const totals = sumBranch(account.id, byParent, planned, actual)
-  const monthEntries = expanded ? entriesFor(account) : []
-
-  return (
-    <>
-      <button type="button" className={`${styles.raioxRow} ${styles.raioxGroup}`} onClick={() => onToggle(account.id)}>
-        <span className={styles.raioxToggle} aria-hidden>
-          {expanded ? '−' : '+'}
-        </span>
-        <strong>{chartAccountLabel(account)}</strong>
-        <TotalsCell totals={totals} />
-      </button>
-      {expanded
+      {expanded && monthEntries.length > 0
         ? monthEntries.map((entry) => (
             <button
               key={entry.id}
               type="button"
               className={`${styles.raioxRow} ${styles.raioxEntry}`}
+              style={{ paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }}
               onClick={() => onOpenEntry(entry)}
             >
               <span />
@@ -295,17 +233,20 @@ function GroupBlock({
                 <span className={styles.rowSub}>{entry.competenceYm}</span>
               </span>
               <span className={styles.raioxTotals}>
-                <span />
-                <span>{formatMoney(entry.amount)}</span>
-                <span />
+                <span className={styles.raioxAmount} />
+                <span className={styles.raioxAmount}>{formatMoney(entry.amount)}</span>
+                <span className={styles.raioxPercent} />
               </span>
             </button>
           ))
         : null}
-      {expanded && monthEntries.length === 0 ? (
-        <div className={`${styles.raioxRow} ${styles.raioxEntry}`}>
+      {expanded && children.length === 0 && monthEntries.length === 0 ? (
+        <div
+          className={`${styles.raioxRow} ${styles.raioxEntry}`}
+          style={{ paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }}
+        >
           <span />
-          <span className={styles.muted}>Nenhum lançamento neste ramo.</span>
+          <span className={styles.muted}>Nenhum lançamento nesta conta.</span>
           <span />
         </div>
       ) : null}

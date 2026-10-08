@@ -37,6 +37,13 @@
   font-size: var(--text-lg);
   color: var(--text);
   background: var(--surface);
+  min-width: 0;
+}
+
+.input[inputmode='numeric'],
+.input[inputmode='decimal'] {
+  min-width: 12rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .input:focus {

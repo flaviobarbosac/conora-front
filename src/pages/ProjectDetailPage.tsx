@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { familyApi, projectsApi, type LifeProject, type LifeProjectScope } from '../api/finance'
 import { ChartAccountSelect } from '../components/ChartAccountSelect'
@@ -13,6 +13,7 @@ import { TextArea } from '../components/ui/TextArea'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
+import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
 import {
   currentCompetence,
@@ -134,6 +135,20 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
   const months = dueYm ? monthsInclusive(startYm, dueYm) : []
   const goalAmount = parseMoney(goal)
   const parcel = months.length > 0 && Number.isFinite(goalAmount) && goalAmount > 0 ? goalAmount / months.length : null
+  const isDirty = useMemo(() => {
+    const originalGoal = formatMoneyInput(data.goalAmount)
+    return (
+      name.trim() !== data.name ||
+      (detailedDescription.trim() || '') !== (data.detailedDescription ?? '').trim() ||
+      goal !== originalGoal ||
+      dueYm !== ymFromIso(data.dueDate) ||
+      startYm !== data.contributionStartYm ||
+      scope !== data.scope ||
+      chartAccountId !== (data.chartAccountId ?? '')
+    )
+  }, [name, detailedDescription, goal, dueYm, startYm, scope, chartAccountId, data])
+
+  useRegisterDirty(`project-edit:${data.id}`, isDirty)
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -256,6 +271,16 @@ function ContributeForm({ data, onSaved }: { data: LifeProject; onSaved: () => v
   const [date, setDate] = useState(todayInput)
   const [accountId, setAccountId] = useState('')
   const [chartAccountId, setChartAccountId] = useState(data.chartAccountId ?? '')
+  const initialDate = useState(todayInput)[0]
+  const isDirty = useMemo(
+    () =>
+      amount.trim() !== '' ||
+      date !== initialDate ||
+      accountId !== '' ||
+      chartAccountId !== (data.chartAccountId ?? ''),
+    [amount, date, initialDate, accountId, chartAccountId, data.chartAccountId],
+  )
+  useRegisterDirty(`project-contribute:${data.id}`, isDirty)
 
   async function submit(event: FormEvent) {
     event.preventDefault()

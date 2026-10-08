@@ -34,3 +34,16 @@ export function confirmDestructive(
 
   return handler(request)
 }
+
+/** Asks before discarding unsaved edits (navigation, close form, dismiss overlay). */
+export function confirmLeaveUnsaved(message?: string): Promise<boolean> {
+  return confirmDestructive(
+    message ?? 'Há alterações não salvas. Se sair agora, essas informações serão perdidas.',
+    {
+      title: 'Confirmar saída',
+      confirmLabel: 'Sair',
+      cancelLabel: 'Continuar editando',
+      danger: true,
+    },
+  )
+}

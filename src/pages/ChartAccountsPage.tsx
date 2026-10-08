@@ -12,8 +12,10 @@ import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
+import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
 import { chartAccountLabel } from '../lib/chartLabel'
+import { compareChartSiblings } from '../lib/chartOrder'
 import styles from './page.module.css'
 
 const SECTION_ORDER: ChartSection[] = [
@@ -48,6 +50,11 @@ export function ChartAccountsPage() {
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameName, setRenameName] = useState('')
 
+  useRegisterDirty(
+    'chart-accounts-edit',
+    (draftParentId !== null && draftName.trim() !== '') || (renameId !== null && renameName.trim() !== ''),
+  )
+
   const list = accounts.data ?? []
   const byParent = useMemo(() => {
     const map = new Map<string | null, ChartAccount[]>()
@@ -58,7 +65,7 @@ export function ChartAccountsPage() {
       map.set(key, bucket)
     }
     for (const bucket of map.values()) {
-      bucket.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'pt-BR'))
+      bucket.sort(compareChartSiblings)
     }
     return map
   }, [list])

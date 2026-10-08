@@ -9,6 +9,8 @@
     "build:android": "tsc -b && vite build --mode android && node scripts/bump-version.mjs",
     "build:ios": "tsc -b && vite build --mode ios && node scripts/bump-version.mjs",
     "lint": "oxlint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview",
     "cap:sync": "npm run build:android && node scripts/sync-android-google-auth.mjs --mode android && node scripts/patch-android-share-intent.mjs && npx cap sync android",
     "cap:sync:ios": "npm run build:ios && node scripts/sync-ios-google-auth.mjs && npx cap sync ios",
@@ -43,6 +45,7 @@
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
-    "vite-plugin-pwa": "^2.0.0"
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^3.2.7"
   }
 }

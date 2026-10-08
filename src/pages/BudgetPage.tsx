@@ -3,7 +3,6 @@ import {
   budgetsApi,
   chartAccountsApi,
   type Budget,
-  type BudgetMode,
   type BudgetYear,
   type ChartAccount,
   type ChartSection,
@@ -11,11 +10,12 @@ import {
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
-import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
+import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
+import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import {
   currentCompetence,
   formatCompetence,
@@ -24,7 +24,7 @@ import {
   parseMoney,
 } from '../lib/format'
 import { chartAccountLabel } from '../lib/chartLabel'
-import { readDefaultBudgetMode } from '../lib/preferences'
+import { compareChartSiblings } from '../lib/chartOrder'
 import styles from './page.module.css'
 
 const EXPENSE_SECTIONS: ChartSection[] = ['Discount', 'LifeProject', 'Essential', 'Social']
@@ -38,13 +38,27 @@ const SECTION_HINT: Partial<Record<ChartSection, string>> = {
 
 export function BudgetPage() {
   const [ym, setYm] = useState(currentCompetence)
+  const { confirmLeave, isDirty } = useUnsavedChanges()
   const budget = useLoad(() => budgetsApi.get(ym), [ym])
   const year = useMemo(() => Number(ym.slice(0, 4)), [ym])
   const yearData = useLoad(() => budgetsApi.getYear(year), [year])
   const categories = useLoad(() => chartAccountsApi.list(undefined, false, false), [])
   const copy = useAction()
 
+  async function changeYm(next: string) {
+    if (next === ym) {
+      return
+    }
+    if (isDirty && !(await confirmLeave())) {
+      return
+    }
+    setYm(next)
+  }
+
   async function copyPrevious() {
+    if (isDirty && !(await confirmLeave())) {
+      return
+    }
     if (await copy.run(() => budgetsApi.copyPrevious(ym))) {
       budget.reload()
       yearData.reload()
@@ -60,7 +74,7 @@ export function BudgetPage() {
         title="Orçamento"
         actions={
           <>
-            <CompetencePicker value={ym} onChange={setYm} />
+            <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
             <Button variant="secondary" disabled={copy.busy} onClick={() => void copyPrevious()}>
               Copiar mês anterior
             </Button>
@@ -98,13 +112,11 @@ type EditorProps = {
 }
 
 function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onSaved }: EditorProps) {
-  const [mode, setMode] = useState<BudgetMode>(() =>
-    budget.lines.some((line) => !line.isGroup && line.plannedAmount > 0) ? budget.mode : readDefaultBudgetMode(),
-  )
   const [query, setQuery] = useState('')
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(EXPENSE_SECTIONS.map((section) => [section, false])),
   )
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [yearAccountId, setYearAccountId] = useState<string | null>(null)
   const action = useAction()
@@ -150,6 +162,7 @@ function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onS
       }
     }
     setDrafts(initial)
+    action.setError(null)
   }, [ym, plannedSignature])
 
   const expenseAccounts = useMemo(
@@ -166,7 +179,7 @@ function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onS
       map.set(key, bucket)
     }
     for (const bucket of map.values()) {
-      bucket.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'pt-BR'))
+      bucket.sort(compareChartSiblings)
     }
     return map
   }, [expenseAccounts])
@@ -175,13 +188,10 @@ function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onS
     expenseAccounts.find((account) => account.level === 'Root' && account.section === section),
   ).filter(Boolean) as ChartAccount[]
 
-  const editableIds = useMemo(() => {
-    const analytical = expenseAccounts.filter((account) => account.level === 'Analytical')
-    if (mode === 'Detailed') {
-      return new Set(analytical.map((account) => account.id))
-    }
-    return new Set(analytical.filter((account) => plannedById.has(account.id)).map((account) => account.id))
-  }, [expenseAccounts, mode, plannedById])
+  const editableIds = useMemo(
+    () => new Set(expenseAccounts.filter((account) => account.level === 'Analytical').map((account) => account.id)),
+    [expenseAccounts],
+  )
 
   const needle = query.trim().toLowerCase()
   const matches = needle
@@ -232,30 +242,88 @@ function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onS
     return accountIds.reduce((total, id) => total + (actualById.get(id) ?? 0), 0)
   }
 
-  async function commitAccount(accountId: string) {
-    const text = (drafts[accountId] ?? '').trim()
-    const previous = plannedById.get(accountId)
+  const isDirty = useMemo(() => {
+    const ids = new Set<string>([...plannedById.keys(), ...Object.keys(drafts)])
+    for (const id of ids) {
+      const planned = plannedById.get(id)
+      const trimmed = (drafts[id] ?? '').trim()
+      if (!trimmed) {
+        if (planned !== undefined) {
+          return true
+        }
+        continue
+      }
+      const parsed = parseMoney(trimmed)
+      if (!Number.isFinite(parsed)) {
+        return true
+      }
+      if ((planned ?? 0) !== parsed) {
+        return true
+      }
+    }
+    return false
+  }, [drafts, plannedById])
 
-    if (!text) {
-      if (previous === undefined) {
+  useRegisterDirty(`budget:${ym}`, isDirty)
+
+  function isGroupOpen(groupId: string): boolean {
+    if (matches) {
+      return collectAnalyticalIds(groupId).some((id) => matches.has(id))
+    }
+    return openGroups[groupId] ?? false
+  }
+
+  function toggleGroup(groupId: string) {
+    setOpenGroups((current) => ({ ...current, [groupId]: !(current[groupId] ?? false) }))
+  }
+
+  function resetDraftsFromServer() {
+    const initial: Record<string, string> = {}
+    for (const [id, amount] of plannedById) {
+      initial[id] = formatMoneyInput(amount)
+    }
+    setDrafts(initial)
+    action.setError(null)
+  }
+
+  async function save() {
+    const lines: { chartAccountId: string; plannedAmount: number }[] = []
+    const toRemove: string[] = []
+    const ids = new Set<string>([...plannedById.keys(), ...Object.keys(drafts)])
+
+    for (const id of ids) {
+      const previous = plannedById.get(id)
+      const text = (drafts[id] ?? '').trim()
+      if (!text) {
+        if (previous !== undefined) {
+          toRemove.push(id)
+        }
+        continue
+      }
+      const plannedAmount = parseMoney(text)
+      if (!Number.isFinite(plannedAmount) || plannedAmount < 0) {
+        action.setError('Há um valor inválido no orçamento.')
         return
       }
-      if (await action.run(() => budgetsApi.removeLine(ym, accountId))) {
-        onSaved()
+      if (previous !== plannedAmount) {
+        lines.push({ chartAccountId: id, plannedAmount })
       }
+    }
+
+    if (lines.length === 0 && toRemove.length === 0) {
       return
     }
 
-    const plannedAmount = parseMoney(text)
-    if (!Number.isFinite(plannedAmount) || plannedAmount < 0) {
-      action.setError('Há um valor inválido no orçamento.')
-      return
-    }
-    if (previous === plannedAmount) {
-      return
-    }
-
-    if (await action.run(() => budgetsApi.upsert(ym, mode, [{ chartAccountId: accountId, plannedAmount }]))) {
+    if (
+      await action.run(async () => {
+        if (lines.length > 0) {
+          await budgetsApi.upsert(ym, 'Detailed', lines)
+        }
+        for (const id of toRemove) {
+          await budgetsApi.removeLine(ym, id)
+        }
+      })
+    ) {
       onSaved()
     }
   }
@@ -289,11 +357,56 @@ function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onS
               value={drafts[account.id] ?? ''}
               disabled={action.busy}
               onChange={(value) => setDrafts((current) => ({ ...current, [account.id]: value }))}
-              onCommit={() => void commitAccount(account.id)}
             />
           </span>
         </span>
       </li>
+    )
+  }
+
+  function groupHasVisibleContent(groupId: string): boolean {
+    return hasVisibleAnalytical(groupId)
+  }
+
+  function renderGroup(group: ChartAccount, depth = 1) {
+    if (!groupHasVisibleContent(group.id)) {
+      return null
+    }
+    const analyticalIds = collectAnalyticalIds(group.id)
+    const planned = sumPlanned(analyticalIds)
+    const actual = sumActual(analyticalIds)
+    const open = isGroupOpen(group.id)
+    const children = byParent.get(group.id) ?? []
+    const nestedGroups = children.filter((child) => child.level === 'Group')
+    const leaves = children.filter(
+      (child) => child.level === 'Analytical' && editableIds.has(child.id) && (!matches || matches.has(child.id)),
+    )
+
+    return (
+      <div key={group.id} className={styles.budgetGroup} style={{ marginLeft: depth > 1 ? 12 : 0 }}>
+        <button
+          type="button"
+          className={styles.budgetGroupToggle}
+          aria-expanded={open}
+          onClick={() => toggleGroup(group.id)}
+        >
+          <span className={styles.budgetGroupChevron} aria-hidden>
+            {open ? '−' : '+'}
+          </span>
+          <span className={styles.budgetGroupMain}>
+            <strong>{chartAccountLabel(group)}</strong>
+            <span className={styles.muted}>
+              Planejado {formatMoney(planned)} · Realizado {formatMoney(actual)}
+            </span>
+          </span>
+        </button>
+        {open ? (
+          <div className={styles.budgetGroupBody}>
+            {nestedGroups.map((nested) => renderGroup(nested, depth + 1))}
+            {leaves.length > 0 ? <ul className={styles.list}>{leaves.map((leaf) => renderAnalytical(leaf))}</ul> : null}
+          </div>
+        ) : null}
+      </div>
     )
   }
 
@@ -304,28 +417,7 @@ function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onS
 
     return (
       <>
-        {groups.map((group) => {
-          const analyticalIds = collectAnalyticalIds(group.id)
-          const visibleLeaves = (byParent.get(group.id) ?? []).filter(
-            (leaf) => editableIds.has(leaf.id) && (!matches || matches.has(leaf.id)),
-          )
-          if (visibleLeaves.length === 0) {
-            return null
-          }
-          const planned = sumPlanned(analyticalIds)
-          const actual = sumActual(analyticalIds)
-          return (
-            <div key={group.id} className={styles.section} style={{ marginLeft: 12 }}>
-              <h3 className={styles.sectionTitle}>
-                {chartAccountLabel(group)} <Badge>Soma</Badge>
-              </h3>
-              <p className={styles.muted}>
-                Planejado {formatMoney(planned)} · Realizado {formatMoney(actual)}
-              </p>
-              <ul className={styles.list}>{visibleLeaves.map((leaf) => renderAnalytical(leaf))}</ul>
-            </div>
-          )
-        })}
+        {groups.map((group) => renderGroup(group))}
         {leaves.length > 0 ? <ul className={styles.list}>{leaves.map((leaf) => renderAnalytical(leaf))}</ul> : null}
       </>
     )
@@ -341,18 +433,10 @@ function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onS
     <section className={styles.section}>
       <div className={styles.sectionHead}>
         <h2 className={styles.sectionTitle}>Definir orçamento</h2>
-        <div className={styles.segmented} role="group" aria-label="Modo do orçamento">
-          <button type="button" aria-pressed={mode === 'Simple'} onClick={() => setMode('Simple')}>
-            Simples
-          </button>
-          <button type="button" aria-pressed={mode === 'Detailed'} onClick={() => setMode('Detailed')}>
-            Detalhado
-          </button>
-        </div>
       </div>
       <p className={styles.muted}>
-        Informe o valor planejado em cada conta. Toque no nome da conta para ver o ano. O realizado vem dos
-        lançamentos.
+        Informe o valor planejado em cada conta e use Salvar. Toque no nome da conta para ver o ano. O realizado vem
+        dos lançamentos.
       </p>
       <Field
         label="Buscar"
@@ -361,11 +445,8 @@ function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onS
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Ex.: aluguel, mercado…"
       />
-      {mode === 'Simple' && editableIds.size === 0 ? (
-        <p className={styles.muted}>No modo simples, edite valores nas categorias já planejadas ou mude para detalhado.</p>
-      ) : null}
       <ErrorText message={action.error} />
-      {visibleRoots.length === 0 && mode === 'Detailed' ? <Empty>Nenhuma conta de despesa.</Empty> : null}
+      {visibleRoots.length === 0 ? <Empty>Nenhuma conta de despesa.</Empty> : null}
       {visibleRoots.map((root) => {
         const open = Boolean(matches) || (openSections[root.section] ?? false)
         const analyticalIds = collectAnalyticalIds(root.id)
@@ -394,7 +475,6 @@ function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onS
               <span>
                 {chartAccountLabel(root)} — {SECTION_HINT[root.section]}
               </span>
-              <Badge>Soma</Badge>
             </button>
             <p className={styles.muted}>
               Planejado {formatMoney(planned)} · Realizado {formatMoney(actual)}
@@ -414,6 +494,15 @@ function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onS
           onClose={() => setYearAccountId(null)}
         />
       ) : null}
+
+      <div className={styles.actions}>
+        <Button disabled={action.busy || !isDirty} onClick={() => void save()}>
+          Salvar
+        </Button>
+        <Button variant="secondary" disabled={action.busy || !isDirty} onClick={resetDraftsFromServer}>
+          Cancelar
+        </Button>
+      </div>
     </section>
   )
 }

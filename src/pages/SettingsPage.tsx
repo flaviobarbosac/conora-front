@@ -8,12 +8,7 @@ import { Field } from '../components/ui/Field'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
-import {
-  readDefaultBudgetMode,
-  readSidebarCollapsed,
-  writeDefaultBudgetMode,
-  writeSidebarCollapsed,
-} from '../lib/preferences'
+import { readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
 import { ThemeName, useTheme } from '../theme/ThemeProvider'
 import styles from './page.module.css'
 
@@ -24,7 +19,6 @@ export function SettingsPage() {
   const saveProfile = useAction()
   const [name, setName] = useState('')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed)
-  const [budgetMode, setBudgetMode] = useState(readDefaultBudgetMode)
 
   useEffect(() => {
     if (profile.data) {
@@ -82,24 +76,6 @@ export function SettingsPage() {
           <option value="collapsed">Recolhido (só ícones)</option>
         </Select>
         <p className={styles.muted}>O tema e o menu ficam neste aparelho. O nome de exibição vale na sua conta.</p>
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Orçamento</h2>
-        <Select
-          label="Modo padrão"
-          name="budgetMode"
-          value={budgetMode}
-          onChange={(event) => {
-            const mode = event.target.value === 'Detailed' ? 'Detailed' : 'Simple'
-            setBudgetMode(mode)
-            writeDefaultBudgetMode(mode)
-          }}
-        >
-          <option value="Simple">Simples (por grupo)</option>
-          <option value="Detailed">Detalhado (por linha)</option>
-        </Select>
-        <p className={styles.muted}>Usado quando o mês ainda não tem orçamento gravado. Depois vale o que estiver salvo no mês.</p>
       </section>
 
       <section className={styles.section} id="perfil">

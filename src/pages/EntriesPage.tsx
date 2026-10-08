@@ -14,6 +14,7 @@ import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
+import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import { scanReceipt } from '../camera/scanReceipt'
 import { confirmDestructive } from '../lib/confirm'
 import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
@@ -43,12 +44,36 @@ function amountClass(type: EntryType): string | undefined {
 
 export function EntriesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const { confirmLeave, isDirty } = useUnsavedChanges()
   const [ym, setYm] = useState(currentCompetence)
   const [typeFilter, setTypeFilter] = useState<EntryType | ''>('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [search, setSearch] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [formDirty, setFormDirty] = useState(false)
+
+  useRegisterDirty('entries-form', showForm && formDirty)
+
+  async function changeYm(next: string) {
+    if (next === ym) {
+      return
+    }
+    if (isDirty && !(await confirmLeave())) {
+      return
+    }
+    setYm(next)
+  }
+
+  async function toggleForm() {
+    if (showForm && formDirty && !(await confirmLeave())) {
+      return
+    }
+    setShowForm((value) => !value)
+    if (showForm) {
+      setFormDirty(false)
+    }
+  }
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams)
@@ -140,8 +165,8 @@ export function EntriesPage() {
         title="Lançamentos"
         actions={
           <>
-            <CompetencePicker value={ym} onChange={setYm} />
-            <Button onClick={() => setShowForm((value) => !value)}>{showForm ? 'Fechar' : '+ Novo lançamento'}</Button>
+            <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
+            <Button onClick={() => void toggleForm()}>{showForm ? 'Fechar' : '+ Novo lançamento'}</Button>
             <Button
               variant="secondary"
               onClick={() => {
@@ -161,7 +186,9 @@ export function EntriesPage() {
           accounts={lookups.accounts.map((account) => ({ id: account.id, name: account.name }))}
           categories={lookups.cashFlowAccounts}
           tree={lookups.chartAccounts}
+          onDirtyChange={setFormDirty}
           onSaved={() => {
+            setFormDirty(false)
             setShowForm(false)
             entries.reload()
             lookups.reloadAccounts()
@@ -240,6 +267,7 @@ type FormProps = {
   accounts: { id: string; name: string }[]
   categories: ChartAccount[]
   tree: ChartAccount[]
+  onDirtyChange?: (dirty: boolean) => void
   onSaved: () => void
 }
 
@@ -253,7 +281,7 @@ function matchesEntryType(section: string, type: FormType): boolean {
   return section === 'Discount' || section === 'LifeProject' || section === 'Essential' || section === 'Social'
 }
 
-function EntryForm({ accounts, categories, tree, onSaved }: FormProps) {
+function EntryForm({ accounts, categories, tree, onDirtyChange, onSaved }: FormProps) {
   const [type, setType] = useState<FormType>('Expense')
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayInput)
@@ -266,8 +294,37 @@ function EntryForm({ accounts, categories, tree, onSaved }: FormProps) {
   const [installments, setInstallments] = useState('')
   const [repeat, setRepeat] = useState('')
   const action = useAction()
+  const initialDate = useState(todayInput)[0]
+  const initialDescription = useState(pendingReceipt ? pendingReceipt.fileName.replace(/\.[^.]+$/, '') : '')[0]
 
   const kindCategories = categories.filter((category) => matchesEntryType(category.section, type))
+
+  useEffect(() => {
+    const dirty =
+      type !== 'Expense' ||
+      amount.trim() !== '' ||
+      date !== initialDate ||
+      description !== initialDescription ||
+      accountId !== '' ||
+      contraAccountId !== '' ||
+      chartAccountId !== '' ||
+      installments.trim() !== '' ||
+      repeat.trim() !== ''
+    onDirtyChange?.(dirty)
+  }, [
+    type,
+    amount,
+    date,
+    description,
+    accountId,
+    contraAccountId,
+    chartAccountId,
+    installments,
+    repeat,
+    initialDate,
+    initialDescription,
+    onDirtyChange,
+  ])
 
   async function suggest() {
     if (type === 'Transfer' || chartAccountId || description.trim().length < 3) {

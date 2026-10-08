@@ -29,16 +29,16 @@ export function parseMoney(text: string): number {
   return Number(normalized)
 }
 
-/** Strips letters/symbols while typing; keeps digits and one decimal separator (max 2 fraction digits). */
+/**
+ * Live pt-BR money mask while typing (cents from the right).
+ * Caps at 99.999.999,99 (10 digits). Empty input stays empty.
+ */
 export function sanitizeMoneyTyping(raw: string): string {
-  let text = raw.replace(/[^\d.,]/g, '').replace(/\./g, ',')
-  const comma = text.indexOf(',')
-  if (comma === -1) {
-    return text
+  const digits = raw.replace(/\D/g, '').slice(0, 10)
+  if (!digits) {
+    return ''
   }
-  const intPart = text.slice(0, comma).replace(/,/g, '')
-  const frac = text.slice(comma + 1).replace(/,/g, '').slice(0, 2)
-  return `${intPart},${frac}`
+  return formatMoneyInput(Number(digits) / 100)
 }
 
 export function formatPercent(value: number | null | undefined): string {

@@ -1,10 +1,13 @@
-import type { ChartAccount } from '../api/finance'
+import type { ChartAccount, ChartSection } from '../api/finance'
 import { chartAccountLabel } from './chartLabel'
+import { compareChartSections } from './chartOrder'
 
 export type ChartAccountGroup = {
   groupId: string
   groupName: string
-  sortOrder: number
+  section: ChartSection
+  /** Plain name used only to keep subgroups alphabetical, ignoring the display number. */
+  sortName: string
   items: ChartAccount[]
 }
 
@@ -17,21 +20,29 @@ export function groupChartAccounts(options: ChartAccount[], tree: ChartAccount[]
     const parent = account.parentId ? byId.get(account.parentId) : undefined
     const groupId = parent?.id ?? `section-${account.section}`
     const groupName = parent ? chartAccountLabel(parent) : account.section
-    const sortOrder = parent?.sortOrder ?? account.sortOrder
     const existing = groups.get(groupId)
     if (existing) {
       existing.items.push(account)
     } else {
-      groups.set(groupId, { groupId, groupName, sortOrder, items: [account] })
+      groups.set(groupId, {
+        groupId,
+        groupName,
+        section: account.section,
+        sortName: parent?.name ?? account.name,
+        items: [account],
+      })
     }
   }
 
   return [...groups.values()]
     .map((group) => ({
       ...group,
-      items: [...group.items].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'pt-BR')),
+      items: [...group.items].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
     }))
-    .sort((a, b) => a.sortOrder - b.sortOrder || a.groupName.localeCompare(b.groupName, 'pt-BR'))
+    .sort(
+      (a, b) =>
+        compareChartSections(a.section, b.section) || a.sortName.localeCompare(b.sortName, 'pt-BR'),
+    )
 }
 
 export function filterChartAccountGroups(groups: ChartAccountGroup[], query: string): ChartAccountGroup[] {
