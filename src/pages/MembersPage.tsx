@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { familyApi, type FamilyInvite, type FamilyMemberUser, type FamilyNotice } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
+import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
@@ -154,9 +155,11 @@ export function MembersPage() {
                   </span>
                   <span className={styles.rowEnd}>
                     {!member.isSelf && hasGroup ? (
-                      <Button variant="ghost" disabled={rowAction.busy} onClick={() => void removeMember(member)}>
-                        Remover
-                      </Button>
+                      <DeleteIconButton
+                        label="Remover"
+                        disabled={rowAction.busy}
+                        onClick={() => void removeMember(member)}
+                      />
                     ) : null}
                   </span>
                 </li>
@@ -201,9 +204,11 @@ export function MembersPage() {
                         <strong>{invite.email}</strong>
                         <span className={styles.rowSub}>Expira {formatDateTime(invite.expiresAt)}</span>
                       </span>
-                      <Button variant="ghost" disabled={rowAction.busy} onClick={() => void cancelInvite(invite)}>
-                        Cancelar
-                      </Button>
+                      <DeleteIconButton
+                        label="Cancelar convite"
+                        disabled={rowAction.busy}
+                        onClick={() => void cancelInvite(invite)}
+                      />
                     </li>
                   ))}
                 </ul>

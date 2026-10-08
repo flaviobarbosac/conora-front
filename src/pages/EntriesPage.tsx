@@ -4,6 +4,7 @@ import { entriesApi, type ChartAccount, type Entry, type EntryInput, type EntryT
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
+import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { IntegerField } from '../components/ui/IntegerField'
@@ -16,6 +17,7 @@ import { useLookups } from '../hooks/useLookups'
 import { scanReceipt } from '../camera/scanReceipt'
 import { confirmDestructive } from '../lib/confirm'
 import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
+import { isNativeApp } from '../lib/platform'
 import { peekPendingShare } from '../share/pendingShare'
 import styles from './page.module.css'
 
@@ -91,11 +93,26 @@ export function EntriesPage() {
   )
   const rowAction = useAction()
 
-  async function duplicate(entry: Entry) {
-    if (await rowAction.run(() => entriesApi.duplicate(entry.id))) {
-      entries.reload()
+  useEffect(() => {
+    if (isNativeApp()) {
+      return
     }
-  }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Insert' || event.ctrlKey || event.altKey || event.metaKey) {
+        return
+      }
+      const target = event.target as HTMLElement | null
+      if (target && (target.closest('input, textarea, select, [contenteditable="true"]'))) {
+        return
+      }
+      event.preventDefault()
+      setShowForm(true)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   async function remove(entry: Entry) {
     if (!(await confirmDestructive(`Excluir "${entry.description}"?`, { title: 'Excluir lançamento' }))) {
@@ -203,12 +220,7 @@ export function EntriesPage() {
                     {entry.type === 'Expense' ? '− ' : ''}
                     {formatMoney(entry.amount)}
                   </span>
-                  <Button variant="ghost" disabled={rowAction.busy} onClick={() => void duplicate(entry)}>
-                    Duplicar
-                  </Button>
-                  <Button variant="ghost" disabled={rowAction.busy} onClick={() => void remove(entry)}>
-                    Excluir
-                  </Button>
+                  <DeleteIconButton disabled={rowAction.busy} onClick={() => void remove(entry)} />
                 </span>
               </li>
             ))}

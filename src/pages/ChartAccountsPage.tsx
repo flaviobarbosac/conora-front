@@ -7,11 +7,13 @@ import {
 } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
+import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { confirmDestructive } from '../lib/confirm'
+import { chartAccountLabel } from '../lib/chartLabel'
 import styles from './page.module.css'
 
 const SECTION_ORDER: ChartSection[] = [
@@ -67,7 +69,11 @@ export function ChartAccountsPage() {
 
   const needle = query.trim().toLowerCase()
   const matches = needle
-    ? new Set(list.filter((account) => account.name.toLowerCase().includes(needle)).map((account) => account.id))
+    ? new Set(
+        list
+          .filter((account) => chartAccountLabel(account).toLowerCase().includes(needle))
+          .map((account) => account.id),
+      )
     : null
 
   function sectionVisible(root: ChartAccount): boolean {
@@ -152,7 +158,7 @@ export function ChartAccountsPage() {
             />
           ) : (
             <>
-              <strong>{account.name}</strong>
+              <strong>{chartAccountLabel(account)}</strong>
               <span className={styles.rowSub}>
                 {account.isSystem ? 'Padrão' : 'Sua conta'}
                 {account.isActive ? '' : ' · Inativa'}
@@ -174,9 +180,7 @@ export function ChartAccountsPage() {
                 Renomear
               </Button>
               {account.isActive ? (
-                <Button variant="ghost" disabled={action.busy} onClick={() => void removeAccount(account)}>
-                  Excluir
-                </Button>
+                <DeleteIconButton disabled={action.busy} onClick={() => void removeAccount(account)} />
               ) : null}
               {account.isActive ? (
                 <Button variant="ghost" disabled={action.busy} onClick={() => void deactivate(account)}>
@@ -217,7 +221,7 @@ export function ChartAccountsPage() {
           return (
             <div key={group.id} className={styles.section} style={{ marginLeft: 12 }}>
               <h3 className={styles.sectionTitle}>
-                {group.name} <Badge>Soma</Badge>
+                {chartAccountLabel(group)} <Badge>Soma</Badge>
               </h3>
               <ul className={styles.list}>{visibleLeaves.map((leaf) => renderAnalytical(leaf))}</ul>
               {draftParentId === group.id ? (
@@ -354,7 +358,7 @@ export function ChartAccountsPage() {
               onClick={() => setOpenSections((current) => ({ ...current, [root.section]: !open }))}
             >
               <span>
-                {root.name} — {SECTION_HINT[root.section]}
+                {chartAccountLabel(root)} — {SECTION_HINT[root.section]}
               </span>
               <Badge>Soma</Badge>
             </button>

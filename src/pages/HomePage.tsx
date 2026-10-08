@@ -1,6 +1,14 @@
 ﻿import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { budgetsApi, dashboardApi, familyApi } from '../api/finance'
+import {
+  budgetsApi,
+  chartAccountsApi,
+  dashboardApi,
+  familyApi,
+  projectsApi,
+  type ChartAccount,
+  type LifeProject,
+} from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -8,7 +16,8 @@ import { Badge, ErrorText, Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
 import { toneFromSeverity } from '../lib/severity'
-import { currentCompetence, formatMoney } from '../lib/format'
+import { currentCompetence, formatMoney, formatPercent } from '../lib/format'
+import { LIFE_HORIZONS, horizonCodeOf } from '../lib/lifeHorizon'
 import styles from './page.module.css'
 
 function firstName(fullName: string | undefined): string {
@@ -24,6 +33,8 @@ export function HomePage() {
   const [ym, setYm] = useState(currentCompetence)
   const dashboard = useLoad(() => dashboardApi.get(ym), [ym])
   const budget = useLoad(() => budgetsApi.get(ym), [ym])
+  const projects = useLoad(() => projectsApi.list(), [])
+  const chartAccounts = useLoad(() => chartAccountsApi.list('LifeProject', true, false), [])
   const profile = useLoad(() => familyApi.profile(), [])
   const name = firstName(profile.data?.name)
   const data = dashboard.data
@@ -88,7 +99,7 @@ export function HomePage() {
           </section>
 
           <nav className={styles.homeBlocks} aria-label="Atalhos principais">
-            <Link className={styles.homeBlock} to="/orcamento">
+            <Link className={styles.homeBlock} to="/raio-x">
               <Icon name="budget" size={24} />
               <strong>Raio-X</strong>
               <span>Previsto × realizado do mês</span>
@@ -98,10 +109,10 @@ export function HomePage() {
               <strong>Patrimônio</strong>
               <span>Ativo, passivo e líquido</span>
             </Link>
-            <Link className={styles.homeBlock} to="/relatorios">
-              <Icon name="search" size={24} />
-              <strong>Relatórios</strong>
-              <span>Visões e evolução</span>
+            <Link className={styles.homeBlock} to="/projetos">
+              <Icon name="goal" size={24} />
+              <strong>Projetos de vida</strong>
+              <span>Metas por horizonte</span>
             </Link>
             <Link className={styles.homeBlock} to="/lancamentos?novo=1">
               <Icon name="add" size={24} />
@@ -118,7 +129,7 @@ export function HomePage() {
               </p>
               <div className={styles.quickActions}>
                 <Button onClick={() => navigate('/lancamentos?novo=1')}>Registrar lançamento</Button>
-                <Button variant="secondary" onClick={() => navigate('/orcamento')}>
+                <Button variant="secondary" onClick={() => navigate('/raio-x')}>
                   Ver Raio-X
                 </Button>
               </div>
@@ -140,13 +151,15 @@ export function HomePage() {
             </div>
           )}
 
+          <LifeHorizonBars projects={projects.data ?? []} accounts={chartAccounts.data ?? []} />
+
           <section className={styles.section} aria-labelledby="alerts-title">
             <div className={styles.sectionHead}>
               <h2 id="alerts-title" className={styles.sectionTitle}>
                 Alertas
               </h2>
               {data.alerts.length > 0 ? (
-                <Link to="/orcamento" className={styles.sectionLink}>
+                <Link to="/raio-x" className={styles.sectionLink}>
                   Ver Raio-X
                 </Link>
               ) : null}
@@ -177,5 +190,34 @@ export function HomePage() {
         </>
       ) : null}
     </div>
+  )
+}
+
+function LifeHorizonBars({ projects, accounts }: { projects: LifeProject[]; accounts: ChartAccount[] }) {
+  return (
+    <section className={styles.horizonBlock} aria-labelledby="life-horizons">
+      <h2 id="life-horizons" className={styles.sectionTitle}>
+        Projetos de vida
+      </h2>
+      {LIFE_HORIZONS.map((horizon) => {
+        const items = projects.filter((project) => horizonCodeOf(project.chartAccountId, accounts) === horizon.code)
+        const goal = items.reduce((sum, project) => sum + project.goalAmount, 0)
+        const accumulated = items.reduce((sum, project) => sum + project.accumulatedAmount, 0)
+        const percent = goal <= 0 ? 0 : Math.min(100, (accumulated / goal) * 100)
+        return (
+          <Link key={horizon.key} className={styles.horizonRow} to={`/projetos?horizonte=${horizon.key}`}>
+            <span className={styles.horizonMeta}>
+              <strong>{horizon.label}</strong>
+              <span>
+                {formatMoney(accumulated)} de {goal > 0 ? formatMoney(goal) : '—'} · {formatPercent(percent)}
+              </span>
+            </span>
+            <span className={styles.progress} aria-hidden>
+              <span className={styles.progressFill} style={{ width: `${percent}%` }} />
+            </span>
+          </Link>
+        )
+      })}
+    </section>
   )
 }

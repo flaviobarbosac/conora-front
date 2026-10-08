@@ -8,6 +8,7 @@ import { AppShell } from './layouts/AppShell'
 import { AccountsPage } from './pages/AccountsPage'
 import { AiPage } from './pages/AiPage'
 import { BudgetPage } from './pages/BudgetPage'
+import { RaioXPage } from './pages/RaioXPage'
 import { ChartAccountsPage } from './pages/ChartAccountsPage'
 import { DiagnosisPage } from './pages/DiagnosisPage'
 import { EntriesPage } from './pages/EntriesPage'
@@ -55,6 +56,7 @@ export default function App() {
           <Route element={<AppShell />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/lancamentos" element={<EntriesPage />} />
+            <Route path="/raio-x" element={<RaioXPage />} />
             <Route path="/orcamento" element={<BudgetPage />} />
             <Route path="/contas" element={<AccountsPage />} />
             <Route path="/cartoes" element={<AccountsPage />} />

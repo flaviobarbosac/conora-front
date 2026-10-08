@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { helpApi, type HelpModule } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Field } from '../components/ui/Field'
@@ -63,7 +63,17 @@ function ModuleCard({
 export function HelpPage() {
   const helpData = useLoad(() => helpApi.get(), [])
   const [query, setQuery] = useState('')
-  const [openKey, setOpenKey] = useState<string | null>(FEATURED_MODULE_KEY)
+  const [openKey, setOpenKey] = useState<string | null>(() => {
+    const hash = typeof window === 'undefined' ? '' : window.location.hash.replace('#', '')
+    return hash || FEATURED_MODULE_KEY
+  })
+
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '')
+    if (hash) {
+      setOpenKey(hash)
+    }
+  }, [])
   const data = helpData.data
   const q = query.trim()
 

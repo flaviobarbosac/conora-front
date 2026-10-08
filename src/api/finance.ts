@@ -51,6 +51,7 @@ export type ChartAccount = {
   parentId: string | null
   name: string
   code: string | null
+  displayNumber: string | null
   level: ChartAccountLevel
   section: ChartSection
   isSystem: boolean
@@ -378,7 +379,8 @@ export type LifeProject = {
   id: string
   name: string
   goalAmount: number
-  dueDate: string | null
+  dueDate: string
+  contributionStartYm: string
   accumulatedAmount: number
   progressPercent: number
   scope: LifeProjectScope
@@ -392,11 +394,15 @@ export const projectsApi = {
   create: (
     name: string,
     goalAmount: number,
-    dueDate: string | undefined,
+    dueDate: string,
+    contributionStartYm: string,
     scope: LifeProjectScope,
     chartAccountId: string,
   ) =>
-    apiFetch<LifeProject>('/life-projects', json('POST', { name, goalAmount, dueDate, scope, chartAccountId })),
+    apiFetch<LifeProject>(
+      '/life-projects',
+      json('POST', { name, goalAmount, dueDate, contributionStartYm, scope, chartAccountId }),
+    ),
   remove: (id: string) => apiFetch<void>(`/life-projects/${id}`, json('DELETE')),
   contribute: (id: string, amount: number, occurredAt: string, accountId?: string, description?: string) =>
     apiFetch<unknown>(`/life-projects/${id}/contributions`, json('POST', { amount, occurredAt, accountId, description })),

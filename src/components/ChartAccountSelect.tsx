@@ -155,7 +155,7 @@ export function ChartAccountSelect({
             <span className={styles.placeholder}>{displayLabel}</span>
           ) : (
             <>
-              <strong>{selected?.name}</strong>
+              <strong>{selected ? `${selected.displayNumber ? `${selected.displayNumber} ` : ''}${selected.name}` : ''}</strong>
               {selectedGroupName ? <span>{selectedGroupName}</span> : null}
             </>
           )}
@@ -231,7 +231,7 @@ export function ChartAccountSelect({
                           onMouseEnter={() => setActiveIndex(index)}
                           onClick={() => selectValue(account.id)}
                         >
-                          {account.name}
+                          {account.displayNumber ? `${account.displayNumber} ${account.name}` : account.name}
                         </button>
                       </li>
                     )

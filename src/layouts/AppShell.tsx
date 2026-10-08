@@ -284,11 +284,11 @@ export function AppShell() {
             <Icon name="add" variant="tile" size={20} />
           </span>
         </NavLink>
-        <NavLink to="/orcamento" className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
+        <NavLink to="/raio-x" className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
           {({ isActive }) => (
             <>
               <Icon name="budget" variant={isActive ? 'duo' : 'linear'} size={24} />
-              <span>Orçamento</span>
+              <span>Raio-X</span>
             </>
           )}
         </NavLink>

@@ -4,6 +4,7 @@ import { ChartAccountSelect } from '../components/ChartAccountSelect'
 import { PageHeader } from '../components/PageHeader'
 import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
+import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
@@ -87,9 +88,7 @@ export function PatrimonyPage() {
                       {item.section === 'Asset' ? 'Ativo' : 'Passivo'}
                     </Badge>
                     <span className={styles.amount}>{formatMoney(item.amount)}</span>
-                    <Button variant="ghost" disabled={remove.busy} onClick={() => void removeItem(item)}>
-                      Excluir
-                    </Button>
+                    <DeleteIconButton disabled={remove.busy} onClick={() => void removeItem(item)} />
                   </span>
                 </li>
               ))}

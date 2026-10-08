@@ -1,8 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { familyApi, projectsApi, type Account, type LifeProject, type LifeProjectScope } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
+import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
@@ -13,15 +15,40 @@ import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
 import { confirmDestructive } from '../lib/confirm'
-import { dateToApi, formatDate, formatMoney, formatPercent, parseMoney, todayInput } from '../lib/format'
+import {
+  currentCompetence,
+  dateToApi,
+  formatCompetence,
+  formatDate,
+  formatMoney,
+  formatPercent,
+  monthsInclusive,
+  parseMoney,
+  shiftCompetence,
+  todayInput,
+} from '../lib/format'
+import { LIFE_HORIZONS, horizonCodeOf, horizonLabelOf, type HorizonKey } from '../lib/lifeHorizon'
 import styles from './page.module.css'
 
 export function ProjectsPage() {
+  const [searchParams] = useSearchParams()
+  const horizonte = searchParams.get('horizonte') as HorizonKey | null
   const projects = useLoad(() => projectsApi.list(), [])
   const lookups = useLookups()
   const remove = useAction()
-  const list = projects.data ?? []
+  const list = useMemo(() => {
+    const all = projects.data ?? []
+    if (!horizonte) {
+      return all
+    }
+    const code = LIFE_HORIZONS.find((item) => item.key === horizonte)?.code
+    if (!code) {
+      return all
+    }
+    return all.filter((project) => horizonCodeOf(project.chartAccountId, lookups.chartAccounts) === code)
+  }, [projects.data, horizonte, lookups.chartAccounts])
   const pagination = useClientPagination(list, 10)
+  const title = LIFE_HORIZONS.find((item) => item.key === horizonte)?.label
 
   async function removeProject(project: LifeProject) {
     if (!(await confirmDestructive(`Excluir o projeto "${project.name}"?`, { title: 'Excluir projeto' }))) {
@@ -34,14 +61,15 @@ export function ProjectsPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader kicker="Metas" title="Projetos de vida" />
+      <PageHeader kicker="Metas" title={title ? `Projetos · ${title}` : 'Projetos de vida'} />
       <ErrorText message={projects.error ?? remove.error} />
       {projects.loading && !projects.data ? <Loading /> : null}
-      {projects.data && projects.data.length === 0 ? <Empty>Nenhum projeto ainda. Crie o primeiro abaixo.</Empty> : null}
+      {projects.data && list.length === 0 ? <Empty>Nenhum projeto neste horizonte.</Empty> : null}
       {pagination.pageItems.map((project) => (
         <ProjectCard
           key={project.id}
           project={project}
+          horizon={horizonLabelOf(project.chartAccountId, lookups.chartAccounts)}
           accounts={lookups.accounts}
           onChanged={() => {
             projects.reload()
@@ -57,19 +85,20 @@ export function ProjectsPage() {
         pageSize={pagination.pageSize}
         onPageChange={pagination.setPage}
       />
-      <ProjectForm onSaved={projects.reload} />
+      <ProjectForm existing={projects.data ?? []} onSaved={projects.reload} />
     </div>
   )
 }
 
 type CardProps = {
   project: LifeProject
+  horizon: string | null
   accounts: Account[]
   onChanged: () => void
   onRemove: () => void
 }
 
-function ProjectCard({ project, accounts, onChanged, onRemove }: CardProps) {
+function ProjectCard({ project, horizon, accounts, onChanged, onRemove }: CardProps) {
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayInput)
@@ -99,10 +128,11 @@ function ProjectCard({ project, accounts, onChanged, onRemove }: CardProps) {
             <Badge tone={project.scope === 'Group' ? 'info' : 'ok'}>
               {project.scope === 'Group' ? 'Família' : 'Pessoal'}
             </Badge>
+            {horizon ? <Badge>{horizon}</Badge> : null}
           </strong>
           <span className={styles.rowSub}>
             {formatMoney(project.accumulatedAmount)} de {formatMoney(project.goalAmount)}
-            {project.dueDate ? ` · até ${formatDate(project.dueDate)}` : ''}
+            {` · até ${formatDate(project.dueDate)}`}
             {project.chartAccountName ? ` · ${project.chartAccountName}` : ''}
           </span>
         </span>
@@ -111,9 +141,7 @@ function ProjectCard({ project, accounts, onChanged, onRemove }: CardProps) {
           <Button variant="secondary" className={styles.compact} onClick={() => setOpen((value) => !value)}>
             Aportar
           </Button>
-          <Button variant="ghost" onClick={onRemove}>
-            Excluir
-          </Button>
+          <DeleteIconButton onClick={onRemove} />
         </span>
       </div>
       <span className={styles.progress} aria-hidden>
@@ -145,21 +173,28 @@ function ProjectCard({ project, accounts, onChanged, onRemove }: CardProps) {
   )
 }
 
-function ProjectForm({ onSaved }: { onSaved: () => void }) {
+function ProjectForm({ existing, onSaved }: { existing: LifeProject[]; onSaved: () => void }) {
   const family = useLoad(() => familyApi.group(), [])
   const lookups = useLookups()
-  const lifeAccounts = lookups.cashFlowAccounts.filter((account) => account.section === 'LifeProject')
+  const usedAccounts = new Set(existing.map((project) => project.chartAccountId).filter(Boolean))
+  const lifeAccounts = lookups.cashFlowAccounts.filter(
+    (account) => account.section === 'LifeProject' && !usedAccounts.has(account.id),
+  )
   const [name, setName] = useState('')
   const [goal, setGoal] = useState('')
-  const [dueDate, setDueDate] = useState('')
+  const [dueYm, setDueYm] = useState('')
+  const [startYm, setStartYm] = useState(() => shiftCompetence(currentCompetence(), 1))
   const [scope, setScope] = useState<LifeProjectScope>('Personal')
   const [chartAccountId, setChartAccountId] = useState('')
   const action = useAction()
   const hasFamilyGroup = Boolean(family.data?.groupId)
+  const currentYm = currentCompetence()
+  const months = dueYm ? monthsInclusive(startYm, dueYm) : []
+  const goalAmount = parseMoney(goal)
+  const parcel = months.length > 0 && Number.isFinite(goalAmount) && goalAmount > 0 ? goalAmount / months.length : null
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    const goalAmount = parseMoney(goal)
     if (!Number.isFinite(goalAmount) || goalAmount <= 0) {
       action.setError('Informe uma meta maior que zero.')
       return
@@ -168,21 +203,28 @@ function ProjectForm({ onSaved }: { onSaved: () => void }) {
       action.setError('Escolha a conta do plano de contas.')
       return
     }
+    if (!dueYm) {
+      action.setError('Informe o prazo.')
+      return
+    }
+    if (startYm < currentYm) {
+      action.setError('O início do aporte não pode ser antes do mês atual.')
+      return
+    }
+    if (startYm > dueYm) {
+      action.setError('O início do aporte não pode ser depois do prazo.')
+      return
+    }
     const projectScope = scope === 'Group' && hasFamilyGroup ? 'Group' : 'Personal'
     if (
       await action.run(() =>
-        projectsApi.create(
-          name.trim(),
-          goalAmount,
-          dueDate ? dateToApi(dueDate) : undefined,
-          projectScope,
-          chartAccountId,
-        ),
+        projectsApi.create(name.trim(), goalAmount, dateToApi(`${dueYm}-01`), startYm, projectScope, chartAccountId),
       )
     ) {
       setName('')
       setGoal('')
-      setDueDate('')
+      setDueYm('')
+      setStartYm(shiftCompetence(currentCompetence(), 1))
       setScope('Personal')
       setChartAccountId('')
       onSaved()
@@ -218,7 +260,31 @@ function ProjectForm({ onSaved }: { onSaved: () => void }) {
           </option>
         </Select>
         <MoneyField label="Meta (R$)" name="projectGoal" required value={goal} onChange={setGoal} />
-        <Field label="Prazo (opcional)" name="projectDue" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+        <Field
+          label="Prazo"
+          name="projectDue"
+          type="month"
+          required
+          value={dueYm}
+          min={startYm || currentYm}
+          onChange={(event) => setDueYm(event.target.value)}
+        />
+        <Field
+          label="Início do aporte"
+          name="projectStart"
+          type="month"
+          required
+          value={startYm}
+          min={currentYm}
+          max={dueYm || undefined}
+          onChange={(event) => setStartYm(event.target.value)}
+        />
+        {parcel !== null ? (
+          <p className={`${styles.muted} ${styles.formWide}`}>
+            Parcela sugerida: {formatMoney(parcel)}/mês · {months.length} {months.length === 1 ? 'mês' : 'meses'} (de{' '}
+            {formatCompetence(months[0])} até {formatCompetence(months[months.length - 1])})
+          </p>
+        ) : null}
         <div className={styles.formWide}>
           <ErrorText message={action.error} />
         </div>

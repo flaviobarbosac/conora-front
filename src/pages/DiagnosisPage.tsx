@@ -3,6 +3,7 @@ import { diagnosisApi, type IncomeSource } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
+import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
@@ -61,9 +62,7 @@ export function DiagnosisPage() {
                   </span>
                   <span className={styles.rowEnd}>
                     <span className={`${styles.amount} ${styles.positive}`}>{formatMoney(source.netSpendable)}</span>
-                    <Button variant="ghost" onClick={() => void removeSource(source)}>
-                      Excluir
-                    </Button>
+                    <DeleteIconButton onClick={() => void removeSource(source)} />
                   </span>
                 </li>
               ))}

@@ -10,7 +10,8 @@ export type NavItem = {
 export const NAV_ITEMS: ReadonlyArray<NavItem> = [
   { to: '/', label: 'Início', short: 'Início', icon: 'home' },
   { to: '/lancamentos', label: 'Lançamentos', short: 'Lançar', icon: 'list' },
-  { to: '/orcamento', label: 'Raio-X', short: 'Raio-X', icon: 'budget' },
+  { to: '/raio-x', label: 'Raio-X', short: 'Raio-X', icon: 'budget' },
+  { to: '/orcamento', label: 'Orçamento', short: 'Orçam.', icon: 'folder' },
   { to: '/relatorios', label: 'Relatórios', short: 'Mais', icon: 'search' },
 ]
 

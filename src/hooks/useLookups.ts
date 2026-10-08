@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { accountsApi, chartAccountsApi, type Account, type ChartAccount, type ChartSection } from '../api/finance'
+import { chartAccountLabel } from '../lib/chartLabel'
 import { useLoad } from './useLoad'
 
 const CASH_FLOW_SECTIONS: ChartSection[] = ['Income', 'Discount', 'LifeProject', 'Essential', 'Social']
@@ -18,7 +19,7 @@ export function useLookups() {
 
   const chartAccountName = useMemo(() => {
     const map = new Map<string, string>()
-    chartAccounts.data?.forEach((account: ChartAccount) => map.set(account.id, account.name))
+      chartAccounts.data?.forEach((account: ChartAccount) => map.set(account.id, chartAccountLabel(account)))
     return (id: string | null) => (id ? (map.get(id) ?? '—') : 'Sem conta')
   }, [chartAccounts.data])
 

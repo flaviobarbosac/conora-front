@@ -58,6 +58,19 @@ export function shiftCompetence(ym: string, delta: number): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
+export function monthsInclusive(fromYm: string, toYm: string): string[] {
+  if (!fromYm || !toYm || fromYm > toYm) {
+    return []
+  }
+  const months: string[] = []
+  let current = fromYm
+  while (current <= toYm) {
+    months.push(current)
+    current = shiftCompetence(current, 1)
+  }
+  return months
+}
+
 export function formatCompetence(ym: string): string {
   const [year, month] = ym.split('-').map(Number)
   const label = new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })

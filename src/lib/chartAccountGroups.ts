@@ -1,4 +1,5 @@
 import type { ChartAccount } from '../api/finance'
+import { chartAccountLabel } from './chartLabel'
 
 export type ChartAccountGroup = {
   groupId: string
@@ -15,7 +16,7 @@ export function groupChartAccounts(options: ChartAccount[], tree: ChartAccount[]
   for (const account of options) {
     const parent = account.parentId ? byId.get(account.parentId) : undefined
     const groupId = parent?.id ?? `section-${account.section}`
-    const groupName = parent?.name ?? account.section
+    const groupName = parent ? chartAccountLabel(parent) : account.section
     const sortOrder = parent?.sortOrder ?? account.sortOrder
     const existing = groups.get(groupId)
     if (existing) {
@@ -44,7 +45,7 @@ export function filterChartAccountGroups(groups: ChartAccountGroup[], query: str
       const groupMatch = group.groupName.toLocaleLowerCase('pt-BR').includes(normalized)
       const items = groupMatch
         ? group.items
-        : group.items.filter((item) => item.name.toLocaleLowerCase('pt-BR').includes(normalized))
+        : group.items.filter((item) => chartAccountLabel(item).toLocaleLowerCase('pt-BR').includes(normalized))
       return items.length > 0 ? { ...group, items } : null
     })
     .filter((group): group is ChartAccountGroup => group !== null)
