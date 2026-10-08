@@ -1,4 +1,5 @@
 ﻿import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   budgetsApi,
   chartAccountsApi,
@@ -37,29 +38,36 @@ function lineKey(line: BudgetLine, index: number): string {
   return line.chartAccountId ?? `group-${line.section}-${line.groupName}-${index}`
 }
 
-function BudgetLineRow({ line, index }: { line: BudgetLine; index: number }) {
+function BudgetLineRow({ line, index, ym }: { line: BudgetLine; index: number; ym: string }) {
   const tone = toneFromSeverity(line.status)
+  const rowClass = line.actualAmount > 0 ? styles.budgetRowActual : styles.budgetRowPlanned
+  const accountCell =
+    line.chartAccountId && !line.isGroup ? (
+      <Link
+        className={styles.budgetAccountLink}
+        to={`/lancamentos?competenceYm=${encodeURIComponent(ym)}&chartAccountId=${encodeURIComponent(line.chartAccountId)}`}
+      >
+        {line.chartAccountName}
+      </Link>
+    ) : (
+      <strong>{line.chartAccountName}</strong>
+    )
+
   return (
-    <li key={lineKey(line, index)} className={styles.row}>
-      <span className={styles.rowMain}>
-        <strong>{line.chartAccountName}</strong>
-        {line.groupName && line.groupName !== '—' ? (
-          <span className={styles.rowSub}>{line.groupName}</span>
+    <tr key={lineKey(line, index)} className={rowClass}>
+      <td>
+        {accountCell}
+        {line.groupName && line.groupName !== '—' && !line.isGroup ? (
+          <div className={styles.rowSub}>{line.groupName}</div>
         ) : null}
-        <span className={styles.rowSub}>
-          {formatMoney(line.actualAmount)} de {formatMoney(line.plannedAmount)} · resta {formatMoney(line.remaining)}
-        </span>
-        <span className={styles.progress} aria-hidden>
-          <span
-            className={`${styles.progressFill} ${styles[`progressFill_${tone === 'info' ? 'ok' : tone}`]}`}
-            style={{ width: `${Math.min(line.percent ?? 0, 100)}%` }}
-          />
-        </span>
-      </span>
-      <Badge tone={tone}>
-        {STATUS_LABEL[line.status] ?? line.status} · {formatPercent(line.percent)}
-      </Badge>
-    </li>
+      </td>
+      <td className={styles.num}>{formatMoney(line.plannedAmount)}</td>
+      <td className={styles.num}>{formatMoney(line.actualAmount)}</td>
+      <td className={styles.num}>{formatPercent(line.percent)}</td>
+      <td>
+        <Badge tone={tone}>{STATUS_LABEL[line.status] ?? line.status}</Badge>
+      </td>
+    </tr>
   )
 }
 
@@ -90,7 +98,7 @@ export function BudgetPage() {
     <div className={styles.page}>
       <PageHeader
         kicker="Planejamento"
-        title="Orçamento"
+        title="Raio-X"
         actions={
           <>
             <CompetencePicker value={ym} onChange={setYm} />
@@ -106,9 +114,18 @@ export function BudgetPage() {
         <>
           <section className={styles.hero}>
             <div className={styles.heroTop}>
-              <span>Renda disponível ({formatCompetence(data.competenceYm)})</span>
+              <span>Raio-X · {formatCompetence(data.competenceYm)}</span>
             </div>
-            <strong>{formatMoney(data.spendableIncome)}</strong>
+            <div className={styles.heroSplit} aria-label="Receita prevista e recebida">
+              <div>
+                <span>Receita prevista</span>
+                <strong>{formatMoney(data.spendableIncome)}</strong>
+              </div>
+              <div>
+                <span>Receita recebida</span>
+                <strong className={styles.positive}>{formatMoney(data.receivedIncome)}</strong>
+              </div>
+            </div>
             {data.incomeSources.length > 0 ? (
               <ul className={styles.list}>
                 {data.incomeSources.map((source) => (
@@ -135,22 +152,39 @@ export function BudgetPage() {
               </div>
               <div className={styles.grid3}>
                 <div className={styles.stat}>
-                  <span>Planejado</span>
+                  <span>Previsto</span>
                   <strong>{formatMoney(section.plannedAmount)}</strong>
                 </div>
                 <div className={styles.stat}>
-                  <span>Realizado</span>
+                  <span>Realizado até hoje</span>
                   <strong>{formatMoney(section.actualAmount)}</strong>
+                </div>
+                <div className={styles.stat}>
+                  <span>Projeção do mês</span>
+                  <strong>{formatMoney(data.projectedExpense)}</strong>
                 </div>
               </div>
               {section.lines.length === 0 ? (
                 <p className={styles.muted}>Nenhuma linha nesta conta.</p>
               ) : (
-                <ul className={styles.list}>
-                  {section.lines.map((line, index) => (
-                    <BudgetLineRow key={lineKey(line, index)} line={line} index={index} />
-                  ))}
-                </ul>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className={styles.budgetTable}>
+                    <thead>
+                      <tr>
+                        <th>Conta</th>
+                        <th className={styles.num}>Previsto</th>
+                        <th className={styles.num}>Realizado</th>
+                        <th className={styles.num}>Variação</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {section.lines.map((line, index) => (
+                        <BudgetLineRow key={lineKey(line, index)} line={line} index={index} ym={ym} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
           ))}
@@ -161,7 +195,7 @@ export function BudgetPage() {
               <strong>{formatMoney(data.monthResult)}</strong>
             </div>
             <div className={styles.stat}>
-              <span>Total planejado</span>
+              <span>Total previsto</span>
               <strong>{formatMoney(data.totalPlanned)}</strong>
             </div>
             <div className={styles.stat}>

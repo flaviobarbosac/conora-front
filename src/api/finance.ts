@@ -294,6 +294,7 @@ export type Budget = {
   totalActual: number
   projectedExpense: number
   spendableIncome: number
+  receivedIncome: number
   monthResult: number
   incomeSources: BudgetIncomeSource[]
   sections: BudgetSectionBlock[]
@@ -382,12 +383,20 @@ export type LifeProject = {
   progressPercent: number
   scope: LifeProjectScope
   isOwner: boolean
+  chartAccountId: string | null
+  chartAccountName: string | null
 }
 
 export const projectsApi = {
   list: () => apiFetch<LifeProject[]>('/life-projects'),
-  create: (name: string, goalAmount: number, dueDate?: string, scope: LifeProjectScope = 'Personal') =>
-    apiFetch<LifeProject>('/life-projects', json('POST', { name, goalAmount, dueDate, scope })),
+  create: (
+    name: string,
+    goalAmount: number,
+    dueDate: string | undefined,
+    scope: LifeProjectScope,
+    chartAccountId: string,
+  ) =>
+    apiFetch<LifeProject>('/life-projects', json('POST', { name, goalAmount, dueDate, scope, chartAccountId })),
   remove: (id: string) => apiFetch<void>(`/life-projects/${id}`, json('DELETE')),
   contribute: (id: string, amount: number, occurredAt: string, accountId?: string, description?: string) =>
     apiFetch<unknown>(`/life-projects/${id}/contributions`, json('POST', { amount, occurredAt, accountId, description })),
@@ -399,6 +408,7 @@ export type PatrimonyItem = {
   id: string
   chartAccountId: string
   chartAccountName: string
+  name: string
   section: ChartSection
   groupName: string
   amount: number
@@ -432,10 +442,10 @@ export type Reserve = {
 export const patrimonyApi = {
   get: () => apiFetch<PatrimonySummary>('/patrimony'),
   reserve: (competenceYm?: string) => apiFetch<Reserve>(`/patrimony/reserve${query({ competenceYm })}`),
-  create: (chartAccountId: string, amount: number) =>
-    apiFetch<PatrimonyItem>('/patrimony/items', json('POST', { chartAccountId, amount })),
-  update: (id: string, amount: number) =>
-    apiFetch<PatrimonyItem>(`/patrimony/items/${id}`, json('PUT', { amount })),
+  create: (chartAccountId: string, name: string, amount: number) =>
+    apiFetch<PatrimonyItem>('/patrimony/items', json('POST', { chartAccountId, name, amount })),
+  update: (id: string, name: string, amount: number) =>
+    apiFetch<PatrimonyItem>(`/patrimony/items/${id}`, json('PUT', { name, amount })),
   remove: (id: string) => apiFetch<void>(`/patrimony/items/${id}`, json('DELETE')),
 }
 

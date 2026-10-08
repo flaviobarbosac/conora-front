@@ -112,6 +112,82 @@
   gap: var(--space-3);
 }
 
+.budgetTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-md);
+}
+
+.budgetTable th,
+.budgetTable td {
+  padding: 8px 6px;
+  border-top: 1px solid var(--border-subtle);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.budgetTable th {
+  color: var(--text-muted);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.budgetTable .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.budgetRowActual {
+  background: color-mix(in srgb, var(--color-ok, #2f9e44) 10%, transparent);
+}
+
+.budgetRowPlanned {
+  background: color-mix(in srgb, var(--color-info, #385387) 8%, transparent);
+}
+
+.budgetAccountLink {
+  color: inherit;
+  text-decoration: none;
+  font-weight: var(--weight-semibold);
+}
+
+.budgetAccountLink:hover {
+  text-decoration: underline;
+}
+
+.homeBlocks {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr 1fr;
+}
+
+.homeBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface-muted, var(--surface));
+  border: 1px solid var(--border-subtle);
+  color: inherit;
+  text-decoration: none;
+  min-height: 96px;
+}
+
+.homeBlock:hover {
+  border-color: var(--color-primary, #385387);
+}
+
+.homeBlock strong {
+  font-size: var(--text-h3);
+}
+
+.homeBlock span {
+  color: var(--text-muted);
+  font-size: var(--text-base);
+}
+
 .quickChip {
   height: 40px;
   padding: 0 var(--space-4);

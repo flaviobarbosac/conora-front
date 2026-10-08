@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { dashboardApi, familyApi } from '../api/finance'
+import { budgetsApi, dashboardApi, familyApi } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -8,7 +8,6 @@ import { Badge, ErrorText, Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
 import { toneFromSeverity } from '../lib/severity'
-import { scanReceipt } from '../camera/scanReceipt'
 import { currentCompetence, formatMoney } from '../lib/format'
 import styles from './page.module.css'
 
@@ -24,10 +23,12 @@ export function HomePage() {
   const navigate = useNavigate()
   const [ym, setYm] = useState(currentCompetence)
   const dashboard = useLoad(() => dashboardApi.get(ym), [ym])
+  const budget = useLoad(() => budgetsApi.get(ym), [ym])
   const profile = useLoad(() => familyApi.profile(), [])
   const name = firstName(profile.data?.name)
   const data = dashboard.data
   const emptyMonth = data && data.incomeTotal === 0 && data.expenseTotal === 0
+  const riskAlert = data?.alerts.find((alert) => alert.severity === 'Exceeded' || alert.severity === 'Attention')
 
   return (
     <div className={styles.page}>
@@ -42,7 +43,7 @@ export function HomePage() {
         }
       />
 
-      <ErrorText message={dashboard.error} />
+      <ErrorText message={dashboard.error ?? budget.error} />
 
       {dashboard.loading && !data ? (
         <div className={styles.skeletonStack} aria-busy="true" aria-live="polite">
@@ -57,25 +58,57 @@ export function HomePage() {
 
       {data ? (
         <>
-          <section className={styles.hero} aria-labelledby="month-result">
+          <section className={styles.hero} aria-labelledby="day-photo">
             <div className={styles.heroTop}>
-              <span id="month-result">Resultado de {ym}</span>
+              <span id="day-photo">Foto do dia · {ym}</span>
               {data.isClosed ? <Badge tone="info">Mês fechado</Badge> : null}
             </div>
-            <strong className={data.result < 0 ? styles.negative : data.result > 0 ? styles.positive : undefined}>
-              {formatMoney(data.result)}
-            </strong>
-            <div className={styles.heroSplit} aria-label="Resumo de receitas e despesas">
+            <div className={styles.heroSplit} aria-label="Saldo e previsão">
               <div>
-                <span>Receitas</span>
-                <strong className={styles.positive}>{formatMoney(data.incomeTotal)}</strong>
+                <span>Saldo atual</span>
+                <strong className={data.accountsBalance < 0 ? styles.negative : styles.positive}>
+                  {formatMoney(data.accountsBalance)}
+                </strong>
               </div>
               <div>
-                <span>Despesas</span>
-                <strong className={styles.negative}>{formatMoney(data.expenseTotal)}</strong>
+                <span>Previsão do mês</span>
+                <strong className={data.result < 0 ? styles.negative : undefined}>
+                  {formatMoney(budget.data?.monthResult ?? data.result)}
+                </strong>
               </div>
             </div>
+            {riskAlert ? (
+              <p className={styles.muted}>
+                Alerta: {riskAlert.message}
+                {data.accountsBalance < 0 ? ' · atenção ao uso de limite/cheque especial.' : ''}
+              </p>
+            ) : data.accountsBalance < 0 ? (
+              <p className={styles.muted}>Saldo negativo: revise o uso de limite ou cheque especial.</p>
+            ) : null}
           </section>
+
+          <nav className={styles.homeBlocks} aria-label="Atalhos principais">
+            <Link className={styles.homeBlock} to="/orcamento">
+              <Icon name="budget" size={24} />
+              <strong>Raio-X</strong>
+              <span>Previsto × realizado do mês</span>
+            </Link>
+            <Link className={styles.homeBlock} to="/patrimonio">
+              <Icon name="wallet" size={24} />
+              <strong>Patrimônio</strong>
+              <span>Ativo, passivo e líquido</span>
+            </Link>
+            <Link className={styles.homeBlock} to="/relatorios">
+              <Icon name="search" size={24} />
+              <strong>Relatórios</strong>
+              <span>Visões e evolução</span>
+            </Link>
+            <Link className={styles.homeBlock} to="/lancamentos?novo=1">
+              <Icon name="add" size={24} />
+              <strong>Lançar</strong>
+              <span>Registrar receita ou despesa</span>
+            </Link>
+          </nav>
 
           {emptyMonth ? (
             <section className={styles.emptyCard}>
@@ -86,60 +119,25 @@ export function HomePage() {
               <div className={styles.quickActions}>
                 <Button onClick={() => navigate('/lancamentos?novo=1')}>Registrar lançamento</Button>
                 <Button variant="secondary" onClick={() => navigate('/orcamento')}>
-                  Ver orçamento
+                  Ver Raio-X
                 </Button>
               </div>
             </section>
           ) : (
-            <>
-              <nav className={styles.quickActions} aria-label="Atalhos">
-                <Button variant="secondary" className={styles.quickChip} onClick={() => navigate('/lancamentos?novo=1')}>
-                  <Icon name="add" size={20} /> Lançar
-                </Button>
-                <Button
-                  variant="secondary"
-                  className={styles.quickChip}
-                  onClick={() => {
-                    void scanReceipt()
-                      .then(() => navigate('/compartilhar'))
-                      .catch(() => undefined)
-                  }}
-                >
-                  <Icon name="add" size={20} /> Escanear
-                </Button>
-                <Button variant="secondary" className={styles.quickChip} onClick={() => navigate('/orcamento')}>
-                  <Icon name="budget" size={20} /> Orçamento
-                </Button>
-                <Button variant="secondary" className={styles.quickChip} onClick={() => navigate('/diagnostico')}>
-                  <Icon name="search" size={20} /> Diagnóstico
-                </Button>
-                <Button variant="secondary" className={styles.quickChip} onClick={() => navigate('/contas')}>
-                  <Icon name="card" size={20} /> Contas
-                </Button>
-              </nav>
-
-              <div className={styles.grid3}>
-                <div className={styles.stat}>
-                  <span>Saldo em contas</span>
-                  <strong>{formatMoney(data.accountsBalance)}</strong>
-                </div>
-                <div className={styles.stat}>
-                  <span>Já recebido</span>
-                  <strong className={styles.positive}>{formatMoney(data.receivedIncome)}</strong>
-                </div>
-                <div className={styles.stat}>
-                  <span>Cartão no mês</span>
-                  <strong className={styles.negative}>{formatMoney(data.cardPurchasesTotal)}</strong>
-                </div>
+            <div className={styles.grid3}>
+              <div className={styles.stat}>
+                <span>Já recebido</span>
+                <strong className={styles.positive}>{formatMoney(data.receivedIncome)}</strong>
               </div>
-
-              {data.projectContributionsTotal > 0 ? (
-                <div className={styles.stat}>
-                  <span>Aportes em projetos</span>
-                  <strong>{formatMoney(data.projectContributionsTotal)}</strong>
-                </div>
-              ) : null}
-            </>
+              <div className={styles.stat}>
+                <span>Despesas</span>
+                <strong className={styles.negative}>{formatMoney(data.expenseTotal)}</strong>
+              </div>
+              <div className={styles.stat}>
+                <span>Cartão no mês</span>
+                <strong className={styles.negative}>{formatMoney(data.cardPurchasesTotal)}</strong>
+              </div>
+            </div>
           )}
 
           <section className={styles.section} aria-labelledby="alerts-title">
@@ -149,7 +147,7 @@ export function HomePage() {
               </h2>
               {data.alerts.length > 0 ? (
                 <Link to="/orcamento" className={styles.sectionLink}>
-                  Ver orçamento
+                  Ver Raio-X
                 </Link>
               ) : null}
             </div>

@@ -48,10 +48,30 @@ export function EntriesPage() {
   const [showForm, setShowForm] = useState(false)
 
   useEffect(() => {
+    const next = new URLSearchParams(searchParams)
+    let changed = false
+
     if (searchParams.get('novo') === '1') {
       setShowForm(true)
-      const next = new URLSearchParams(searchParams)
       next.delete('novo')
+      changed = true
+    }
+
+    const competenceYm = searchParams.get('competenceYm')
+    if (competenceYm) {
+      setYm(competenceYm)
+      next.delete('competenceYm')
+      changed = true
+    }
+
+    const chartAccountId = searchParams.get('chartAccountId')
+    if (chartAccountId) {
+      setCategoryFilter(chartAccountId)
+      next.delete('chartAccountId')
+      changed = true
+    }
+
+    if (changed) {
       setSearchParams(next, { replace: true })
     }
   }, [searchParams, setSearchParams])

@@ -4,6 +4,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
+import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
@@ -23,7 +24,7 @@ export function PatrimonyPage() {
   const pagination = useClientPagination(items, 10)
 
   async function removeItem(item: PatrimonyItem) {
-    if (!(await confirmDestructive(`Excluir "${item.chartAccountName}"?`, { title: 'Excluir item' }))) {
+    if (!(await confirmDestructive(`Excluir "${item.name}"?`, { title: 'Excluir item' }))) {
       return
     }
     if (await remove.run(() => patrimonyApi.remove(item.id))) {
@@ -76,8 +77,10 @@ export function PatrimonyPage() {
               {pagination.pageItems.map((item) => (
                 <li key={item.id} className={styles.row}>
                   <span className={styles.rowMain}>
-                    <strong>{item.chartAccountName}</strong>
-                    <span className={styles.rowSub}>{item.groupName}</span>
+                    <strong>{item.name}</strong>
+                    <span className={styles.rowSub}>
+                      {item.chartAccountName} · {item.groupName}
+                    </span>
                   </span>
                   <span className={styles.rowEnd}>
                     <Badge tone={item.section === 'Asset' ? 'ok' : 'danger'}>
@@ -102,7 +105,6 @@ export function PatrimonyPage() {
         </>
       ) : null}
       <ItemForm
-        usedIds={new Set(items.map((item) => item.chartAccountId))}
         onSaved={() => {
           summary.reload()
           reserve.reload()
@@ -112,10 +114,11 @@ export function PatrimonyPage() {
   )
 }
 
-function ItemForm({ usedIds, onSaved }: { usedIds: Set<string>; onSaved: () => void }) {
+function ItemForm({ onSaved }: { onSaved: () => void }) {
   const lookups = useLookups()
-  const options = lookups.patrimonyAccounts.filter((account) => !usedIds.has(account.id))
+  const options = lookups.patrimonyAccounts
   const [chartAccountId, setChartAccountId] = useState('')
+  const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const action = useAction()
 
@@ -123,15 +126,20 @@ function ItemForm({ usedIds, onSaved }: { usedIds: Set<string>; onSaved: () => v
     event.preventDefault()
     const value = parseMoney(amount)
     if (!chartAccountId) {
-      action.setError('Escolha a conta.')
+      action.setError('Escolha a conta do plano.')
+      return
+    }
+    if (!name.trim()) {
+      action.setError('Informe o nome do item.')
       return
     }
     if (!Number.isFinite(value) || value < 0) {
       action.setError('Valor inválido.')
       return
     }
-    if (await action.run(() => patrimonyApi.create(chartAccountId, value))) {
+    if (await action.run(() => patrimonyApi.create(chartAccountId, name.trim(), value))) {
       setChartAccountId('')
+      setName('')
       setAmount('')
       onSaved()
     }
@@ -142,7 +150,7 @@ function ItemForm({ usedIds, onSaved }: { usedIds: Set<string>; onSaved: () => v
       <h2 className={styles.sectionTitle}>Novo item</h2>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
         <Select
-          label="Conta"
+          label="Conta do plano"
           name="patrimonyAccount"
           required
           value={chartAccountId}
@@ -159,6 +167,14 @@ function ItemForm({ usedIds, onSaved }: { usedIds: Set<string>; onSaved: () => v
             </optgroup>
           ))}
         </Select>
+        <Field
+          label="Nome do item"
+          name="patrimonyName"
+          required
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Ex.: Civic 2018, apartamento, empréstimo X"
+        />
         <MoneyField label="Valor (R$)" name="patrimonyAmount" required value={amount} onChange={setAmount} />
         <div className={styles.formWide}>
           <ErrorText message={action.error} />

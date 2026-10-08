@@ -44,7 +44,7 @@ export function MorePage() {
 
   async function deleteAccount() {
     const confirmed = await confirmDestructive(
-      'Excluir sua conta e todos os seus dados? Esta ação não pode ser desfeita.',
+      'Excluir sua conta remove o acesso ao app. Registros com obrigação fiscal podem ser retidos por até 5 anos. Continuar?',
       { title: 'Excluir conta' },
     )
     if (confirmed && (await privacy.run(() => lgpdApi.deleteAccount()))) {

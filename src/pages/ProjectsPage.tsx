@@ -102,6 +102,7 @@ function ProjectCard({ project, accounts, onChanged, onRemove }: CardProps) {
           <span className={styles.rowSub}>
             {formatMoney(project.accumulatedAmount)} de {formatMoney(project.goalAmount)}
             {project.dueDate ? ` · até ${formatDate(project.dueDate)}` : ''}
+            {project.chartAccountName ? ` · ${project.chartAccountName}` : ''}
           </span>
         </span>
         <span className={styles.rowEnd}>
@@ -145,10 +146,13 @@ function ProjectCard({ project, accounts, onChanged, onRemove }: CardProps) {
 
 function ProjectForm({ onSaved }: { onSaved: () => void }) {
   const family = useLoad(() => familyApi.group(), [])
+  const lookups = useLookups()
+  const lifeAccounts = lookups.cashFlowAccounts.filter((account) => account.section === 'LifeProject')
   const [name, setName] = useState('')
   const [goal, setGoal] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [scope, setScope] = useState<LifeProjectScope>('Personal')
+  const [chartAccountId, setChartAccountId] = useState('')
   const action = useAction()
   const hasFamilyGroup = Boolean(family.data?.groupId)
 
@@ -159,16 +163,27 @@ function ProjectForm({ onSaved }: { onSaved: () => void }) {
       action.setError('Informe uma meta maior que zero.')
       return
     }
+    if (!chartAccountId) {
+      action.setError('Escolha a conta do plano de contas.')
+      return
+    }
     const projectScope = scope === 'Group' && hasFamilyGroup ? 'Group' : 'Personal'
     if (
       await action.run(() =>
-        projectsApi.create(name.trim(), goalAmount, dueDate ? dateToApi(dueDate) : undefined, projectScope),
+        projectsApi.create(
+          name.trim(),
+          goalAmount,
+          dueDate ? dateToApi(dueDate) : undefined,
+          projectScope,
+          chartAccountId,
+        ),
       )
     ) {
       setName('')
       setGoal('')
       setDueDate('')
       setScope('Personal')
+      setChartAccountId('')
       onSaved()
     }
   }
@@ -180,6 +195,20 @@ function ProjectForm({ onSaved }: { onSaved: () => void }) {
         <div className={styles.formWide}>
           <Field label="Nome" name="projectName" required value={name} onChange={(event) => setName(event.target.value)} />
         </div>
+        <Select
+          label="Conta do plano"
+          name="projectChartAccount"
+          required
+          value={chartAccountId}
+          onChange={(event) => setChartAccountId(event.target.value)}
+        >
+          <option value="">Selecione</option>
+          {lifeAccounts.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.name}
+            </option>
+          ))}
+        </Select>
         <Select
           label="Escopo"
           name="projectScope"
