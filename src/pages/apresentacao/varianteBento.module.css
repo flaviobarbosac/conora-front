@@ -160,8 +160,4 @@
     flex: 1;
     margin-top: 0;
   }
-
-  .tall {
-    grid-row: span 2;
-  }
 }

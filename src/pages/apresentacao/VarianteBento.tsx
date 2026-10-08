@@ -9,13 +9,13 @@ import styles from './varianteBento.module.css'
 
 type Tile = {
   feature: Feature
-  size: 'wide' | 'tall' | 'regular' | 'small'
+  size: 'wide' | 'regular' | 'small'
   preview?: ReactNode
 }
 
 const TILES: ReadonlyArray<Tile> = [
   { feature: feature('orcamento'), size: 'wide', preview: <BudgetPreview /> },
-  { feature: feature('raio-x'), size: 'tall', preview: <RaioXPreview /> },
+  { feature: feature('raio-x'), size: 'wide', preview: <RaioXPreview /> },
   { feature: feature('projetos'), size: 'regular', preview: <ProjectPreview /> },
   { feature: feature('patrimonio'), size: 'regular', preview: <PatrimonyPreview /> },
   { feature: feature('whatsapp'), size: 'regular', preview: <ChatPreview /> },
