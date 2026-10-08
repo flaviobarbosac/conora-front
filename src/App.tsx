@@ -8,6 +8,7 @@ import { UnsavedChangesProvider } from './hooks/useUnsavedChanges'
 import { AppShell } from './layouts/AppShell'
 import { AiPage } from './pages/AiPage'
 import { ApresentacaoPage } from './pages/ApresentacaoPage'
+import { ApresentacaoVariantesPage } from './pages/apresentacao/ApresentacaoVariantesPage'
 import { DiagnosisPage } from './pages/DiagnosisPage'
 import { HelpPage } from './pages/HelpPage'
 import { HomePage } from './pages/HomePage'
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/apresentacao" element={<ApresentacaoPage />} />
+        <Route path="/apresentacao/:variante" element={<ApresentacaoVariantesPage />} />
         <Route path="/compartilhar" element={<ShareTargetPage />} />
         <Route path="/grupo/convite/:token" element={<GroupInvitePage />} />
         <Route path="/grupo/bem-vindo" element={<Navigate to="/membros" replace />} />

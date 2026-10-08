@@ -1,0 +1,41 @@
+.switcher {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  z-index: 50;
+  display: flex;
+  gap: 4px;
+  max-width: calc(100% - 2 * var(--space-4));
+  padding: 4px;
+  border-radius: var(--radius-full);
+  background: #172638;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  transform: translateX(-50%);
+  overflow-x: auto;
+}
+
+.switcher a {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  color: #a9b6c7;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.switcher a:hover {
+  color: #fff;
+}
+
+.switcher .active {
+  background: #6aacff;
+  color: #0e1826;
+}
+
+.switcher .active:hover {
+  color: #0e1826;
+}
