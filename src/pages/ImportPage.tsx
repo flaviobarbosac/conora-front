@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+﻿import { useState, type FormEvent } from 'react'
 import { importsApi, type ImportFormat, type ImportPreview } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -16,8 +16,8 @@ export function ImportPage() {
   const [content, setContent] = useState('')
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [accountId, setAccountId] = useState('')
-  const [expenseCategoryId, setExpenseCategoryId] = useState('')
-  const [incomeCategoryId, setIncomeCategoryId] = useState('')
+  const [expenseChartAccountId, setExpenseChartAccountId] = useState('')
+  const [incomeChartAccountId, setIncomeChartAccountId] = useState('')
   const [result, setResult] = useState<string | null>(null)
   const previewAction = useAction()
   const commitAction = useAction()
@@ -44,7 +44,7 @@ export function ImportPage() {
       return
     }
     await commitAction.run(async () => {
-      const done = await importsApi.commit(preview.batchId, accountId, expenseCategoryId || undefined, incomeCategoryId || undefined)
+      const done = await importsApi.commit(preview.batchId, accountId, expenseChartAccountId || undefined, incomeChartAccountId || undefined)
       setResult(`${done.imported} lançamento(s) importado(s), ${done.skipped} ignorado(s).`)
       setPreview(null)
       setContent('')
@@ -121,25 +121,21 @@ export function ImportPage() {
               ))}
             </Select>
             <span />
-            <Select label="Categoria padrão de despesa" name="importExpenseCategory" value={expenseCategoryId} onChange={(event) => setExpenseCategoryId(event.target.value)}>
+            <Select label="Conta padrão de despesa" name="importExpenseAccount" value={expenseChartAccountId} onChange={(event) => setExpenseChartAccountId(event.target.value)}>
               <option value="">Automática</option>
-              {lookups.categories
-                .filter((category) => category.kind === 'Expense')
-                .map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
+              {lookups.expenseAccounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              ))}
             </Select>
-            <Select label="Categoria padrão de receita" name="importIncomeCategory" value={incomeCategoryId} onChange={(event) => setIncomeCategoryId(event.target.value)}>
+            <Select label="Conta padrão de receita" name="importIncomeAccount" value={incomeChartAccountId} onChange={(event) => setIncomeChartAccountId(event.target.value)}>
               <option value="">Automática</option>
-              {lookups.categories
-                .filter((category) => category.kind === 'Income')
-                .map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
+              {lookups.incomeAccounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              ))}
             </Select>
           </div>
           <ErrorText message={commitAction.error} />

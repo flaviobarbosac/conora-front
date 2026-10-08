@@ -47,6 +47,7 @@ export function SettingsPage() {
     event.preventDefault()
     if (await saveProfile.run(() => familyApi.updateProfile(name.trim()))) {
       profile.reload()
+      window.dispatchEvent(new Event('conora:profile-changed'))
     }
   }
 

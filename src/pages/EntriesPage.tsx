@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+﻿import { useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { entriesApi, type Entry, type EntryInput, type EntryType } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
@@ -62,7 +62,7 @@ export function EntriesPage() {
       entriesApi.list({
         competenceYm: ym,
         type: typeFilter || undefined,
-        categoryId: categoryFilter || undefined,
+        chartAccountId: categoryFilter || undefined,
         search: appliedSearch || undefined,
         take: 100,
       }),
@@ -89,8 +89,8 @@ export function EntriesPage() {
     const parts = [formatDate(entry.occurredAt), lookups.accountName(entry.accountId)]
     if (entry.type === 'Transfer') {
       parts.push(`→ ${lookups.accountName(entry.contraAccountId)}`)
-    } else if (entry.categoryId) {
-      parts.push(lookups.categoryName(entry.categoryId))
+    } else if (entry.chartAccountId) {
+      parts.push(lookups.chartAccountName(entry.chartAccountId))
     }
     return parts.join(' · ')
   }
@@ -121,7 +121,7 @@ export function EntriesPage() {
       {showForm ? (
         <EntryForm
           accounts={lookups.accounts.map((account) => ({ id: account.id, name: account.name }))}
-          categories={lookups.categories}
+          categories={lookups.cashFlowAccounts}
           onSaved={() => {
             setShowForm(false)
             entries.reload()
@@ -147,11 +147,11 @@ export function EntriesPage() {
               </option>
             ))}
           </Select>
-          <Select label="Categoria" name="categoryFilter" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+          <Select label="Conta" name="categoryFilter" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
             <option value="">Todas</option>
-            {lookups.categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
+            {lookups.cashFlowAccounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name}
               </option>
             ))}
           </Select>
@@ -203,8 +203,18 @@ export function EntriesPage() {
 
 type FormProps = {
   accounts: { id: string; name: string }[]
-  categories: { id: string; name: string; kind: string }[]
+  categories: { id: string; name: string; section: string }[]
   onSaved: () => void
+}
+
+function matchesEntryType(section: string, type: FormType): boolean {
+  if (type === 'Income') {
+    return section === 'Income'
+  }
+  if (type === 'Transfer') {
+    return false
+  }
+  return section === 'Discount' || section === 'LifeProject' || section === 'Essential' || section === 'Social'
 }
 
 function EntryForm({ accounts, categories, onSaved }: FormProps) {
@@ -216,21 +226,21 @@ function EntryForm({ accounts, categories, onSaved }: FormProps) {
   const [receiptPreview] = useState(pendingReceipt?.dataUrl ?? '')
   const [accountId, setAccountId] = useState('')
   const [contraAccountId, setContraAccountId] = useState('')
-  const [categoryId, setCategoryId] = useState('')
+  const [chartAccountId, setChartAccountId] = useState('')
   const [installments, setInstallments] = useState('')
   const [repeat, setRepeat] = useState('')
   const action = useAction()
 
-  const kindCategories = categories.filter((category) => category.kind === type)
+  const kindCategories = categories.filter((category) => matchesEntryType(category.section, type))
 
   async function suggest() {
-    if (type === 'Transfer' || categoryId || description.trim().length < 3) {
+    if (type === 'Transfer' || chartAccountId || description.trim().length < 3) {
       return
     }
     try {
-      const suggestion = await entriesApi.suggestCategory(description.trim())
-      if (suggestion.categoryId && kindCategories.some((category) => category.id === suggestion.categoryId)) {
-        setCategoryId(suggestion.categoryId)
+      const suggestion = await entriesApi.suggestAccount(description.trim())
+      if (suggestion.chartAccountId && kindCategories.some((category) => category.id === suggestion.chartAccountId)) {
+        setChartAccountId(suggestion.chartAccountId)
       }
     } catch {
       // suggestion is optional
@@ -251,7 +261,7 @@ function EntryForm({ accounts, categories, onSaved }: FormProps) {
       description: description.trim(),
       accountId: accountId || undefined,
       contraAccountId: type === 'Transfer' ? contraAccountId || undefined : undefined,
-      categoryId: type === 'Transfer' ? undefined : categoryId || undefined,
+      chartAccountId: type === 'Transfer' ? undefined : chartAccountId || undefined,
       installmentCount: Number(installments) > 1 ? Number(installments) : undefined,
       repeatMonths: Number(repeat) > 1 ? Number(repeat) : undefined,
       confirmDuplicate,
@@ -280,7 +290,7 @@ function EntryForm({ accounts, categories, onSaved }: FormProps) {
             aria-pressed={type === option}
             onClick={() => {
               setType(option)
-              setCategoryId('')
+              setChartAccountId('')
             }}
           >
             {TYPE_LABEL[option]}
@@ -301,7 +311,7 @@ function EntryForm({ accounts, categories, onSaved }: FormProps) {
             onBlur={() => void suggest()}
           />
         </div>
-        <Select label={type === 'Transfer' ? 'Conta de origem' : 'Conta'} name="accountId" required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+        <Select label={type === 'Transfer' ? 'Conta de origem' : 'Conta bancária'} name="accountId" required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
           <option value="">Selecione</option>
           {accounts.map((account) => (
             <option key={account.id} value={account.id}>
@@ -321,8 +331,8 @@ function EntryForm({ accounts, categories, onSaved }: FormProps) {
               ))}
           </Select>
         ) : (
-          <Select label="Categoria" name="categoryId" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-            <option value="">Sem categoria</option>
+          <Select label="Conta" name="chartAccountId" value={chartAccountId} onChange={(event) => setChartAccountId(event.target.value)}>
+            <option value="">Sem conta</option>
             {kindCategories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}

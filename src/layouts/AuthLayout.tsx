@@ -31,6 +31,15 @@ export function AuthLayout({ title, subtitle, children, footer }: Props) {
         </div>
         {children}
         {footer ? <p className={styles.footer}>{footer}</p> : null}
+        <p className={styles.legal}>
+          <a href="https://conora.com.br/privacidade" target="_blank" rel="noreferrer">
+            Privacidade
+          </a>
+          <span aria-hidden="true"> · </span>
+          <a href="https://conora.com.br/termos" target="_blank" rel="noreferrer">
+            Termos
+          </a>
+        </p>
       </div>
     </div>
   )

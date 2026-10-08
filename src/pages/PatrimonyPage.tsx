@@ -1,20 +1,18 @@
-import { useState, type FormEvent } from 'react'
-import { patrimonyApi, type PatrimonyItem, type PatrimonyKind } from '../api/finance'
+﻿import { useState, type FormEvent } from 'react'
+import { patrimonyApi, type ChartAccount, type PatrimonyItem } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
-import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
+import { useLookups } from '../hooks/useLookups'
 import { confirmDestructive } from '../lib/confirm'
 import { formatMoney, parseMoney } from '../lib/format'
 import styles from './page.module.css'
-
-const KIND_LABEL: Record<PatrimonyKind, string> = { Asset: 'Bem / ativo', Liability: 'Dívida / passivo' }
 
 export function PatrimonyPage() {
   const summary = useLoad(() => patrimonyApi.get(), [])
@@ -25,7 +23,7 @@ export function PatrimonyPage() {
   const pagination = useClientPagination(items, 10)
 
   async function removeItem(item: PatrimonyItem) {
-    if (!(await confirmDestructive(`Excluir "${item.name}"?`, { title: 'Excluir item' }))) {
+    if (!(await confirmDestructive(`Excluir "${item.chartAccountName}"?`, { title: 'Excluir item' }))) {
       return
     }
     if (await remove.run(() => patrimonyApi.remove(item.id))) {
@@ -44,10 +42,27 @@ export function PatrimonyPage() {
             <span>Patrimônio líquido</span>
             <strong className={data.netWorth < 0 ? styles.negative : undefined}>{formatMoney(data.netWorth)}</strong>
             <span>
-              Saldo em contas {formatMoney(data.accountsBalance)} + bens {formatMoney(data.assetsTotal)} − dívidas{' '}
-              {formatMoney(data.liabilitiesTotal)} − faturas em aberto {formatMoney(data.unpaidCardInvoices)}
+              Contas {formatMoney(data.accountsBalance)} + uso {formatMoney(data.assetsInUse)} + não uso{' '}
+              {formatMoney(data.assetsNotInUse)} − passivos {formatMoney(data.liabilitiesTotal)} − faturas{' '}
+              {formatMoney(data.unpaidCardInvoices)}
             </span>
           </section>
+          {data.groups.length > 0 ? (
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>Totais por grupo</h2>
+              <ul className={styles.list}>
+                {data.groups.map((group) => (
+                  <li key={`${group.section}-${group.groupName}`} className={styles.row}>
+                    <span className={styles.rowMain}>
+                      <strong>{group.groupName}</strong>
+                      <span className={styles.rowSub}>{group.section === 'Asset' ? 'Ativo' : 'Passivo'}</span>
+                    </span>
+                    <span className={styles.amount}>{formatMoney(group.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
           {reserve.data ? (
             <div className={styles.stat}>
               <span>Reserva sugerida (média de gastos essenciais · {reserve.data.monthsConsidered} mês(es))</span>
@@ -55,16 +70,19 @@ export function PatrimonyPage() {
             </div>
           ) : null}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Bens e dívidas</h2>
+            <h2 className={styles.sectionTitle}>Itens</h2>
             {data.items.length === 0 ? <Empty>Nenhum item cadastrado.</Empty> : null}
             <ul className={styles.list}>
               {pagination.pageItems.map((item) => (
                 <li key={item.id} className={styles.row}>
                   <span className={styles.rowMain}>
-                    <strong>{item.name}</strong>
+                    <strong>{item.chartAccountName}</strong>
+                    <span className={styles.rowSub}>{item.groupName}</span>
                   </span>
                   <span className={styles.rowEnd}>
-                    <Badge tone={item.kind === 'Asset' ? 'ok' : 'danger'}>{KIND_LABEL[item.kind]}</Badge>
+                    <Badge tone={item.section === 'Asset' ? 'ok' : 'danger'}>
+                      {item.section === 'Asset' ? 'Ativo' : 'Passivo'}
+                    </Badge>
                     <span className={styles.amount}>{formatMoney(item.amount)}</span>
                     <Button variant="ghost" disabled={remove.busy} onClick={() => void removeItem(item)}>
                       Excluir
@@ -84,6 +102,7 @@ export function PatrimonyPage() {
         </>
       ) : null}
       <ItemForm
+        usedIds={new Set(items.map((item) => item.chartAccountId))}
         onSaved={() => {
           summary.reload()
           reserve.reload()
@@ -93,21 +112,26 @@ export function PatrimonyPage() {
   )
 }
 
-function ItemForm({ onSaved }: { onSaved: () => void }) {
-  const [kind, setKind] = useState<PatrimonyKind>('Asset')
-  const [name, setName] = useState('')
+function ItemForm({ usedIds, onSaved }: { usedIds: Set<string>; onSaved: () => void }) {
+  const lookups = useLookups()
+  const options = lookups.patrimonyAccounts.filter((account) => !usedIds.has(account.id))
+  const [chartAccountId, setChartAccountId] = useState('')
   const [amount, setAmount] = useState('')
   const action = useAction()
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     const value = parseMoney(amount)
+    if (!chartAccountId) {
+      action.setError('Escolha a conta.')
+      return
+    }
     if (!Number.isFinite(value) || value < 0) {
       action.setError('Valor inválido.')
       return
     }
-    if (await action.run(() => patrimonyApi.create(kind, name.trim(), value))) {
-      setName('')
+    if (await action.run(() => patrimonyApi.create(chartAccountId, value))) {
+      setChartAccountId('')
       setAmount('')
       onSaved()
     }
@@ -117,21 +141,50 @@ function ItemForm({ onSaved }: { onSaved: () => void }) {
     <section className={styles.section}>
       <h2 className={styles.sectionTitle}>Novo item</h2>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
-        <Select label="Tipo" name="patrimonyKind" value={kind} onChange={(event) => setKind(event.target.value as PatrimonyKind)}>
-          <option value="Asset">{KIND_LABEL.Asset}</option>
-          <option value="Liability">{KIND_LABEL.Liability}</option>
+        <Select
+          label="Conta"
+          name="patrimonyAccount"
+          required
+          value={chartAccountId}
+          onChange={(event) => setChartAccountId(event.target.value)}
+        >
+          <option value="">Selecione</option>
+          {groupOptions(options).map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.items.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
         </Select>
-        <Field label="Nome" name="patrimonyName" required value={name} onChange={(event) => setName(event.target.value)} />
         <MoneyField label="Valor (R$)" name="patrimonyAmount" required value={amount} onChange={setAmount} />
         <div className={styles.formWide}>
           <ErrorText message={action.error} />
         </div>
         <div className={styles.formActions}>
-          <Button type="submit" disabled={action.busy}>
+          <Button type="submit" disabled={action.busy || options.length === 0}>
             Adicionar
           </Button>
         </div>
       </form>
     </section>
   )
+}
+
+function groupOptions(accounts: ChartAccount[]) {
+  const byParent = new Map<string, ChartAccount[]>()
+  const parents = new Map<string, string>()
+  for (const account of accounts) {
+    const key = account.parentId ?? account.section
+    parents.set(key, account.section === 'Asset' ? 'Ativo' : 'Passivo')
+    const bucket = byParent.get(key) ?? []
+    bucket.push(account)
+    byParent.set(key, bucket)
+  }
+  return [...byParent.entries()].map(([key, items]) => ({
+    label: parents.get(key) ?? key,
+    items,
+  }))
 }

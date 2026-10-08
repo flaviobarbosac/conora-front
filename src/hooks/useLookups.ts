@@ -1,11 +1,14 @@
 import { useMemo } from 'react'
-import { accountsApi, categoriesApi, type Account, type Category } from '../api/finance'
+import { accountsApi, chartAccountsApi, type Account, type ChartAccount, type ChartSection } from '../api/finance'
 import { useLoad } from './useLoad'
 
-/** Accounts and categories used by selects and by id → name lookups. */
+const CASH_FLOW_SECTIONS: ChartSection[] = ['Income', 'Discount', 'LifeProject', 'Essential', 'Social']
+const PATRIMONY_SECTIONS: ChartSection[] = ['Asset', 'Liability']
+
+/** Bank accounts and chart accounts used by selects and by id → name lookups. */
 export function useLookups() {
   const accounts = useLoad(() => accountsApi.list(), [])
-  const categories = useLoad(() => categoriesApi.list(), [])
+  const chartAccounts = useLoad(() => chartAccountsApi.list(undefined, false, false), [])
 
   const accountName = useMemo(() => {
     const map = new Map<string, string>()
@@ -13,18 +16,53 @@ export function useLookups() {
     return (id: string | null) => (id ? (map.get(id) ?? '—') : '—')
   }, [accounts.data])
 
-  const categoryName = useMemo(() => {
+  const chartAccountName = useMemo(() => {
     const map = new Map<string, string>()
-    categories.data?.forEach((category: Category) => map.set(category.id, category.name))
-    return (id: string | null) => (id ? (map.get(id) ?? '—') : 'Sem categoria')
-  }, [categories.data])
+    chartAccounts.data?.forEach((account: ChartAccount) => map.set(account.id, account.name))
+    return (id: string | null) => (id ? (map.get(id) ?? '—') : 'Sem conta')
+  }, [chartAccounts.data])
+
+  const analytical = useMemo(
+    () => (chartAccounts.data ?? []).filter((account) => account.level === 'Analytical' && account.isActive),
+    [chartAccounts.data],
+  )
+
+  const cashFlowAccounts = useMemo(
+    () => analytical.filter((account) => CASH_FLOW_SECTIONS.includes(account.section)),
+    [analytical],
+  )
+
+  const expenseAccounts = useMemo(
+    () =>
+      analytical.filter((account) =>
+        ['Discount', 'LifeProject', 'Essential', 'Social'].includes(account.section),
+      ),
+    [analytical],
+  )
+
+  const incomeAccounts = useMemo(
+    () => analytical.filter((account) => account.section === 'Income'),
+    [analytical],
+  )
+
+  const patrimonyAccounts = useMemo(
+    () => analytical.filter((account) => PATRIMONY_SECTIONS.includes(account.section)),
+    [analytical],
+  )
 
   return {
     accounts: accounts.data ?? [],
-    categories: categories.data ?? [],
+    chartAccounts: chartAccounts.data ?? [],
+    categories: cashFlowAccounts,
+    cashFlowAccounts,
+    expenseAccounts,
+    incomeAccounts,
+    patrimonyAccounts,
     accountName,
-    categoryName,
+    categoryName: chartAccountName,
+    chartAccountName,
     reloadAccounts: accounts.reload,
-    loading: accounts.loading || categories.loading,
+    reloadChartAccounts: chartAccounts.reload,
+    loading: accounts.loading || chartAccounts.loading,
   }
 }

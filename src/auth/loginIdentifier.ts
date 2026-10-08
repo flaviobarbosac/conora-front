@@ -21,7 +21,7 @@ export function formatCpfInput(value: string): string {
 }
 
 export function formatLoginUsuario(value: string): string {
-  if (isEmail(value) || value.includes('@')) {
+  if (isEmail(value) || value.includes('@') || /[a-zA-Z]/.test(value)) {
     return value
   }
   return formatCpfInput(value)

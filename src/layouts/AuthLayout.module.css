@@ -78,6 +78,16 @@
   color: var(--text-muted);
 }
 
+.legal {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.legal a {
+  color: var(--text-muted);
+}
+
 @media (min-width: 900px) {
   .shell {
     grid-template-columns: 1fr min(560px, 42vw);

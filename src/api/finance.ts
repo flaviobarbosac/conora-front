@@ -4,7 +4,15 @@ import { apiBlob, apiFetch } from './client'
 
 export type AccountKind = 'Checking' | 'Cash' | 'Other' | 'Savings' | 'Investment'
 export type BudgetMode = 'Simple' | 'Detailed'
-export type CategoryKind = 'Expense' | 'Income' | 'Transfer'
+export type ChartAccountLevel = 'Root' | 'Group' | 'Analytical'
+export type ChartSection =
+  | 'Income'
+  | 'Discount'
+  | 'LifeProject'
+  | 'Essential'
+  | 'Social'
+  | 'Asset'
+  | 'Liability'
 export type EntryType =
   | 'Expense'
   | 'Income'
@@ -15,7 +23,6 @@ export type EntryType =
 export type ImportFormat = 'Csv' | 'Ofx'
 export type ImportStatus = 'Preview' | 'Committed'
 export type InvoiceStatus = 'Open' | 'Closed' | 'Paid'
-export type PatrimonyKind = 'Asset' | 'Liability'
 export type PlanKind = 'Monthly1490' | 'Yearly14990'
 export type SubscriptionStatus = 'Active' | 'Expired' | 'ReadOnly'
 export type WhatsAppDraftStatus = 'Pending' | 'Confirmed' | 'Discarded'
@@ -37,31 +44,34 @@ function query(params: Record<string, string | number | boolean | undefined | nu
 
 const json = (method: string, body?: unknown) => ({ method, body })
 
-/* ---------- Categories ---------- */
+/* ---------- Chart of accounts ---------- */
 
-export type BudgetBlockKind = 'Investment' | 'Essential' | 'Social'
-
-export type Category = {
+export type ChartAccount = {
   id: string
+  parentId: string | null
   name: string
   code: string | null
-  kind: CategoryKind
+  level: ChartAccountLevel
+  section: ChartSection
   isSystem: boolean
   isActive: boolean
-  isEssential: boolean
-  budgetBlock?: BudgetBlockKind | null
-  groupName?: string | null
+  sortOrder: number
+  acceptsPosting: boolean
 }
 
-export const categoriesApi = {
-  list: (kind?: CategoryKind, includeInactive = false) =>
-    apiFetch<Category[]>(`/categories${query({ kind, includeInactive })}`),
-  create: (name: string, kind: CategoryKind, isEssential: boolean) =>
-    apiFetch<Category>('/categories', json('POST', { name, kind, isEssential })),
-  update: (id: string, name: string, isEssential: boolean, isActive: boolean) =>
-    apiFetch<Category>(`/categories/${id}`, json('PUT', { name, isEssential, isActive })),
-  remove: (id: string) => apiFetch<void>(`/categories/${id}`, json('DELETE')),
+export const chartAccountsApi = {
+  list: (section?: ChartSection, includeInactive = false, analyticalOnly = false) =>
+    apiFetch<ChartAccount[]>(`/chart-accounts${query({ section, includeInactive, analyticalOnly })}`),
+  create: (name: string, parentId: string) =>
+    apiFetch<ChartAccount>('/chart-accounts', json('POST', { name, parentId })),
+  update: (id: string, name: string, isActive: boolean) =>
+    apiFetch<ChartAccount>(`/chart-accounts/${id}`, json('PUT', { name, isActive })),
+  remove: (id: string) => apiFetch<void>(`/chart-accounts/${id}`, json('DELETE')),
 }
+
+/** @deprecated alias while pages migrate */
+export type Category = ChartAccount
+export const categoriesApi = chartAccountsApi
 
 /* ---------- Accounts ---------- */
 
@@ -129,7 +139,7 @@ export type CardPurchaseInput = {
   amount: number
   purchasedAt: string
   installments: number
-  categoryId: string
+  chartAccountId: string
   description: string
 }
 
@@ -155,7 +165,7 @@ export type Entry = {
   competenceYm: string
   accountId: string | null
   contraAccountId: string | null
-  categoryId: string | null
+  chartAccountId: string | null
   incomeSourceId: string | null
   creditCardId: string | null
   lifeProjectId: string | null
@@ -174,7 +184,7 @@ export type EntryInput = {
   competenceYm?: string
   accountId?: string
   contraAccountId?: string
-  categoryId?: string
+  chartAccountId?: string
   memberId?: string
   installmentCount?: number
   repeatMonths?: number
@@ -184,7 +194,7 @@ export type EntryInput = {
 export type EntryFilter = {
   competenceYm?: string
   type?: EntryType
-  categoryId?: string
+  chartAccountId?: string
   accountId?: string
   search?: string
   skip?: number
@@ -196,9 +206,9 @@ export const entriesApi = {
   create: (input: EntryInput) => apiFetch<Entry[]>('/entries', json('POST', input)),
   remove: (id: string) => apiFetch<void>(`/entries/${id}`, json('DELETE')),
   duplicate: (id: string) => apiFetch<Entry[]>(`/entries/${id}/duplicate`, json('POST')),
-  suggestCategory: (description: string) =>
-    apiFetch<{ categoryId: string | null; categoryName: string | null }>(
-      `/entries/suggest-category${query({ description })}`,
+  suggestAccount: (description: string) =>
+    apiFetch<{ chartAccountId: string | null; chartAccountName: string | null }>(
+      `/entries/suggest-account${query({ description })}`,
     ),
 }
 
@@ -208,7 +218,7 @@ export type Alert = {
   code: string
   severity: string
   message: string
-  categoryId: string | null
+  chartAccountId: string | null
   percent: number | null
 }
 
@@ -228,7 +238,7 @@ export type Dashboard = {
 
 export type MonthlyReport = {
   summary: Dashboard
-  byCategory: { categoryId: string | null; categoryName: string; amount: number }[]
+  byAccount: { chartAccountId: string | null; chartAccountName: string; amount: number }[]
   previousYm: string
   previousExpenseTotal: number
   expenseDelta: number
@@ -248,10 +258,12 @@ export const exportApi = {
 /* ---------- Budgets ---------- */
 
 export type BudgetLine = {
-  categoryId: string | null
-  categoryName: string
+  chartAccountId: string | null
+  chartAccountName: string
+  parentId: string | null
   groupName: string
-  block: BudgetBlockKind
+  section: ChartSection
+  level: ChartAccountLevel
   plannedAmount: number
   actualAmount: number
   remaining: number
@@ -260,8 +272,8 @@ export type BudgetLine = {
   isGroup: boolean
 }
 
-export type BudgetBlock = {
-  block: BudgetBlockKind
+export type BudgetSectionBlock = {
+  section: ChartSection
   name: string
   plannedAmount: number
   actualAmount: number
@@ -284,7 +296,7 @@ export type Budget = {
   spendableIncome: number
   monthResult: number
   incomeSources: BudgetIncomeSource[]
-  blocks: BudgetBlock[]
+  sections: BudgetSectionBlock[]
   lines: BudgetLine[]
 }
 
@@ -295,10 +307,10 @@ export type BudgetYearMonthCell = {
 }
 
 export type BudgetYearLine = {
-  categoryId: string | null
-  categoryName: string
+  chartAccountId: string | null
+  chartAccountName: string
   groupName: string
-  block: BudgetBlockKind
+  section: ChartSection
   months: BudgetYearMonthCell[]
 }
 
@@ -312,11 +324,11 @@ export type BudgetYear = {
 export const budgetsApi = {
   get: (ym: string) => apiFetch<Budget>(`/budgets/${ym}`),
   getYear: (year: number) => apiFetch<BudgetYear>(`/budgets/year/${year}`),
-  upsert: (ym: string, mode: BudgetMode, lines: { categoryId: string; plannedAmount: number }[]) =>
+  upsert: (ym: string, mode: BudgetMode, lines: { chartAccountId: string; plannedAmount: number }[]) =>
     apiFetch<Budget>(`/budgets/${ym}`, json('PUT', { mode, lines })),
   copyPrevious: (ym: string) => apiFetch<Budget>(`/budgets/${ym}/copy-previous`, json('POST')),
-  removeLine: (ym: string, categoryId: string) =>
-    apiFetch<void>(`/budgets/${ym}/lines/${categoryId}`, json('DELETE')),
+  removeLine: (ym: string, chartAccountId: string) =>
+    apiFetch<void>(`/budgets/${ym}/lines/${chartAccountId}`, json('DELETE')),
 }
 
 /* ---------- Diagnosis ---------- */
@@ -383,14 +395,30 @@ export const projectsApi = {
 
 /* ---------- Patrimony ---------- */
 
-export type PatrimonyItem = { id: string; kind: PatrimonyKind; name: string; amount: number }
+export type PatrimonyItem = {
+  id: string
+  chartAccountId: string
+  chartAccountName: string
+  section: ChartSection
+  groupName: string
+  amount: number
+}
+
+export type PatrimonyGroupTotal = {
+  groupName: string
+  section: ChartSection
+  amount: number
+}
 
 export type PatrimonySummary = {
   accountsBalance: number
   assetsTotal: number
+  assetsInUse: number
+  assetsNotInUse: number
   unpaidCardInvoices: number
   liabilitiesTotal: number
   netWorth: number
+  groups: PatrimonyGroupTotal[]
   items: PatrimonyItem[]
 }
 
@@ -404,8 +432,10 @@ export type Reserve = {
 export const patrimonyApi = {
   get: () => apiFetch<PatrimonySummary>('/patrimony'),
   reserve: (competenceYm?: string) => apiFetch<Reserve>(`/patrimony/reserve${query({ competenceYm })}`),
-  create: (kind: PatrimonyKind, name: string, amount: number) =>
-    apiFetch<PatrimonyItem>('/patrimony/items', json('POST', { kind, name, amount })),
+  create: (chartAccountId: string, amount: number) =>
+    apiFetch<PatrimonyItem>('/patrimony/items', json('POST', { chartAccountId, amount })),
+  update: (id: string, amount: number) =>
+    apiFetch<PatrimonyItem>(`/patrimony/items/${id}`, json('PUT', { amount })),
   remove: (id: string) => apiFetch<void>(`/patrimony/items/${id}`, json('DELETE')),
 }
 
@@ -542,8 +572,8 @@ export const whatsappApi = {
   setLink: (phone: string) => apiFetch<WhatsAppLink>('/whatsapp/link', json('POST', { phone })),
   unlink: () => apiFetch<void>('/whatsapp/link', json('DELETE')),
   drafts: (status?: WhatsAppDraftStatus) => apiFetch<WhatsAppDraft[]>(`/whatsapp/drafts${query({ status })}`),
-  confirm: (id: string, accountId?: string, categoryId?: string) =>
-    apiFetch<unknown>(`/whatsapp/drafts/${id}/confirm`, json('POST', { accountId, categoryId })),
+  confirm: (id: string, accountId?: string, chartAccountId?: string) =>
+    apiFetch<unknown>(`/whatsapp/drafts/${id}/confirm`, json('POST', { accountId, chartAccountId })),
   discard: (id: string) => apiFetch<unknown>(`/whatsapp/drafts/${id}/discard`, json('POST')),
 }
 
@@ -573,10 +603,10 @@ export const importsApi = {
     apiFetch<ImportPreview>('/imports/preview', json('POST', { fileName, format, content })),
   setRow: (batchId: string, rowId: string, willImport: boolean) =>
     apiFetch<ImportRow>(`/imports/${batchId}/rows/${rowId}`, json('PUT', { willImport })),
-  commit: (batchId: string, accountId: string, defaultExpenseCategoryId?: string, defaultIncomeCategoryId?: string) =>
+  commit: (batchId: string, accountId: string, defaultExpenseChartAccountId?: string, defaultIncomeChartAccountId?: string) =>
     apiFetch<{ batchId: string; imported: number; skipped: number }>(
       `/imports/${batchId}/commit`,
-      json('POST', { accountId, defaultExpenseCategoryId, defaultIncomeCategoryId }),
+      json('POST', { accountId, defaultExpenseChartAccountId, defaultIncomeChartAccountId }),
     ),
 }
 

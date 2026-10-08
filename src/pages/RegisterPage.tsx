@@ -18,9 +18,11 @@ export function RegisterPage() {
   const { session, register } = useAuth()
   const [searchParams] = useSearchParams()
   const afterRegister = safeReturnTo(searchParams.get('returnTo'))
+  const invitedEmail = (searchParams.get('email') ?? '').trim()
+  const emailLocked = invitedEmail.includes('@')
   const loginTo = afterRegister === '/' ? '/login' : `/login?returnTo=${encodeURIComponent(afterRegister)}`
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(invitedEmail)
   const [cpf, setCpf] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -46,7 +48,11 @@ export function RegisterPage() {
   return (
     <AuthLayout
       title="Criar conta"
-      subtitle="Cadastre a família com nome, CPF, e-mail e senha. Depois você já entra no painel."
+      subtitle={
+        emailLocked
+          ? `Convite para ${invitedEmail}. Complete o cadastro com este e-mail.`
+          : 'Cadastre a família com nome, CPF, e-mail e senha. Depois você já entra no painel.'
+      }
       footer={
         <>
           Já tem conta? <Link to={loginTo}>Entrar</Link>
@@ -61,6 +67,8 @@ export function RegisterPage() {
           type="email"
           autoComplete="email"
           required
+          readOnly={emailLocked}
+          disabled={emailLocked}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
         />

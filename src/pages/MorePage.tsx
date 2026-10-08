@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { dashboardApi, exportApi, lgpdApi } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
@@ -84,12 +84,12 @@ export function MorePage() {
               Em {data.previousYm}: despesas de {formatMoney(data.previousExpenseTotal)} (variação{' '}
               {formatMoney(data.expenseDelta)}) e resultado de {formatMoney(data.previousResult)}.
             </p>
-            {data.byCategory.length > 0 ? (
+            {data.byAccount.length > 0 ? (
               <ul className={styles.list}>
-                {data.byCategory.map((item) => (
-                  <li key={item.categoryId ?? item.categoryName} className={styles.row}>
+                {data.byAccount.map((item) => (
+                  <li key={item.chartAccountId ?? item.chartAccountName} className={styles.row}>
                     <span className={styles.rowMain}>
-                      <strong>{item.categoryName}</strong>
+                      <strong>{item.chartAccountName}</strong>
                     </span>
                     <span className={styles.amount}>{formatMoney(item.amount)}</span>
                   </li>

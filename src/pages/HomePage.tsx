@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { dashboardApi, familyApi } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
@@ -160,7 +160,7 @@ export function HomePage() {
                 {data.alerts.map((alert) => {
                   const tone = toneFromSeverity(alert.severity)
                   return (
-                    <li key={`${alert.code}-${alert.categoryId ?? ''}`} className={`${styles.alertRow} ${styles[`alertRow_${tone}`]}`}>
+                    <li key={`${alert.code}-${alert.chartAccountId ?? ''}`} className={`${styles.alertRow} ${styles[`alertRow_${tone}`]}`}>
                       <span className={styles.alertIcon} aria-hidden="true">
                         <Icon name="alert" size={20} />
                       </span>

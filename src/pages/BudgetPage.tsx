@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import {
   budgetsApi,
-  categoriesApi,
+  chartAccountsApi,
   type Budget,
   type BudgetLine,
   type BudgetMode,
-  type Category,
+  type ChartAccount,
 } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
@@ -34,7 +34,7 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 function lineKey(line: BudgetLine, index: number): string {
-  return line.categoryId ?? `group-${line.block}-${line.groupName}-${index}`
+  return line.chartAccountId ?? `group-${line.section}-${line.groupName}-${index}`
 }
 
 function BudgetLineRow({ line, index }: { line: BudgetLine; index: number }) {
@@ -42,7 +42,7 @@ function BudgetLineRow({ line, index }: { line: BudgetLine; index: number }) {
   return (
     <li key={lineKey(line, index)} className={styles.row}>
       <span className={styles.rowMain}>
-        <strong>{line.categoryName}</strong>
+        <strong>{line.chartAccountName}</strong>
         {line.groupName && line.groupName !== '—' ? (
           <span className={styles.rowSub}>{line.groupName}</span>
         ) : null}
@@ -68,7 +68,7 @@ export function BudgetPage() {
   const budget = useLoad(() => budgetsApi.get(ym), [ym])
   const year = useMemo(() => Number(ym.slice(0, 4)), [ym])
   const yearData = useLoad(() => budgetsApi.getYear(year), [year])
-  const categories = useLoad(() => categoriesApi.list('Expense'), [])
+  const categories = useLoad(() => chartAccountsApi.list(undefined, false, true), [])
   const copy = useAction()
 
   async function copyPrevious() {
@@ -81,8 +81,8 @@ export function BudgetPage() {
   const data = budget.data
   const editorKey = data
     ? `${data.competenceYm}:${data.mode}:${data.lines
-        .filter((line) => line.categoryId && !line.isGroup)
-        .map((line) => `${line.categoryId}=${line.plannedAmount}`)
+        .filter((line) => line.chartAccountId && !line.isGroup)
+        .map((line) => `${line.chartAccountId}=${line.plannedAmount}`)
         .join(',')}`
     : ym
 
@@ -125,29 +125,29 @@ export function BudgetPage() {
             )}
           </section>
 
-          {data.blocks.map((block) => (
-            <section key={block.block} className={styles.section}>
+          {data.sections.map((section) => (
+            <section key={section.section} className={styles.section}>
               <div className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle}>{block.name}</h2>
+                <h2 className={styles.sectionTitle}>{section.name}</h2>
                 <span className={styles.rowSub}>
-                  {formatPercent(block.percentOfSpendable)} da renda disponível
+                  {formatPercent(section.percentOfSpendable)} da renda disponível
                 </span>
               </div>
               <div className={styles.grid3}>
                 <div className={styles.stat}>
                   <span>Planejado</span>
-                  <strong>{formatMoney(block.plannedAmount)}</strong>
+                  <strong>{formatMoney(section.plannedAmount)}</strong>
                 </div>
                 <div className={styles.stat}>
                   <span>Realizado</span>
-                  <strong>{formatMoney(block.actualAmount)}</strong>
+                  <strong>{formatMoney(section.actualAmount)}</strong>
                 </div>
               </div>
-              {block.lines.length === 0 ? (
-                <p className={styles.muted}>Nenhuma linha neste bloco.</p>
+              {section.lines.length === 0 ? (
+                <p className={styles.muted}>Nenhuma linha nesta conta.</p>
               ) : (
                 <ul className={styles.list}>
-                  {block.lines.map((line, index) => (
+                  {section.lines.map((line, index) => (
                     <BudgetLineRow key={lineKey(line, index)} line={line} index={index} />
                   ))}
                 </ul>
@@ -231,8 +231,8 @@ function BudgetYearSection({
             </thead>
             <tbody>
               {data.lines.map((line, rowIndex) => (
-                <tr key={line.categoryId ?? `y-${line.categoryName}-${rowIndex}`}>
-                  <td style={{ padding: '8px 4px', borderTop: '1px solid var(--border-subtle)' }}>{line.categoryName}</td>
+                <tr key={line.chartAccountId ?? `y-${line.chartAccountName}-${rowIndex}`}>
+                  <td style={{ padding: '8px 4px', borderTop: '1px solid var(--border-subtle)' }}>{line.chartAccountName}</td>
                   {data.months.map((monthYm) => {
                     const cell = line.months.find((m) => m.competenceYm === monthYm)
                     return (
@@ -288,7 +288,7 @@ function BudgetYearSection({
 type EditorProps = {
   ym: string
   budget: Budget
-  categories: Category[]
+  categories: ChartAccount[]
   onSaved: () => void
 }
 
@@ -296,21 +296,25 @@ function BudgetEditor({ ym, budget, categories, onSaved }: EditorProps) {
   const [mode, setMode] = useState<BudgetMode>(() =>
     budget.lines.some((line) => !line.isGroup && line.plannedAmount > 0) ? budget.mode : readDefaultBudgetMode(),
   )
+  const expenseSections = new Set(['Discount', 'LifeProject', 'Essential', 'Social'])
   const editableCategories = useMemo(() => {
     const detailIds = new Set(
-      budget.lines.filter((line) => line.categoryId && !line.isGroup).map((line) => line.categoryId as string),
+      budget.lines.filter((line) => line.chartAccountId && !line.isGroup).map((line) => line.chartAccountId as string),
+    )
+    const pool = categories.filter(
+      (c) => c.isActive && c.level === 'Analytical' && expenseSections.has(c.section),
     )
     if (mode === 'Detailed') {
-      return categories.filter((c) => c.isActive)
+      return pool
     }
-    return categories.filter((c) => c.isActive && detailIds.has(c.id))
+    return pool.filter((c) => detailIds.has(c.id))
   }, [budget.lines, categories, mode])
 
   const [drafts, setDrafts] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {}
     for (const line of budget.lines) {
-      if (line.categoryId && !line.isGroup) {
-        initial[line.categoryId] = formatMoneyInput(line.plannedAmount)
+      if (line.chartAccountId && !line.isGroup) {
+        initial[line.chartAccountId] = formatMoneyInput(line.plannedAmount)
       }
     }
     return initial
@@ -318,7 +322,7 @@ function BudgetEditor({ ym, budget, categories, onSaved }: EditorProps) {
   const action = useAction()
 
   async function save() {
-    const lines: { categoryId: string; plannedAmount: number }[] = []
+    const lines: { chartAccountId: string; plannedAmount: number }[] = []
     for (const category of editableCategories) {
       const text = drafts[category.id] ?? ''
       if (!text.trim()) {
@@ -329,7 +333,7 @@ function BudgetEditor({ ym, budget, categories, onSaved }: EditorProps) {
         action.setError('Há um valor inválido no orçamento.')
         return
       }
-      lines.push({ categoryId: category.id, plannedAmount })
+      lines.push({ chartAccountId: category.id, plannedAmount })
     }
 
     if (await action.run(() => budgetsApi.upsert(ym, mode, lines))) {

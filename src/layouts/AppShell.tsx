@@ -24,8 +24,14 @@ export function AppShell() {
   const { theme, setTheme } = useTheme()
   const { pathname } = useLocation()
   const email = session?.email || 'conta'
-  const profile = useLoad(() => familyApi.profile(), [session?.email])
+  const profile = useLoad(() => familyApi.profile(), [session?.email, pathname])
   const displayName = profile.data?.name?.trim() || email
+
+  useEffect(() => {
+    const onProfileChanged = () => profile.reload()
+    window.addEventListener('conora:profile-changed', onProfileChanged)
+    return () => window.removeEventListener('conora:profile-changed', onProfileChanged)
+  }, [profile.reload])
   const [cadastrosOpen, setCadastrosOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement>(null)
@@ -295,6 +301,9 @@ export function AppShell() {
           )}
         </NavLink>
       </nav>
+      <span className={styles.mobileVersion} title={`Versão ${__APP_VERSION__}`}>
+        v{__APP_VERSION__}
+      </span>
     </div>
   )
 }

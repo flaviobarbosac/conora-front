@@ -34,6 +34,7 @@ export function MembersPage() {
       setDisplayName('')
       profile.reload()
       group.reload()
+      window.dispatchEvent(new Event('conora:profile-changed'))
     }
   }
 

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+﻿import { useState, type FormEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
   accountsApi,
@@ -33,7 +33,7 @@ const KIND_LABEL: Record<AccountKind, string> = {
   Other: 'Outra',
 }
 
-const ACCOUNT_KIND_OPTIONS: AccountKind[] = ['Checking', 'Savings', 'Investment', 'Cash']
+const ACCOUNT_KIND_OPTIONS: AccountKind[] = ['Checking', 'Savings', 'Investment']
 
 const INVOICE_LABEL: Record<InvoiceStatus, string> = {
   Open: 'Aberta',
@@ -156,7 +156,7 @@ export function AccountsPage() {
                 key={card.id}
                 card={card}
                 accounts={activeAccounts}
-                categories={lookups.categories.filter((category) => category.kind === 'Expense')}
+                categories={lookups.expenseAccounts}
                 onChanged={() => {
                   cards.reload()
                   refresh()
@@ -460,7 +460,7 @@ function PurchaseForm({ card, categories, onSaved }: { card: Card; categories: C
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayInput)
   const [installments, setInstallments] = useState('1')
-  const [categoryId, setCategoryId] = useState('')
+  const [chartAccountId, setChartAccountId] = useState('')
   const [description, setDescription] = useState('')
   const action = useAction()
 
@@ -476,7 +476,7 @@ function PurchaseForm({ card, categories, onSaved }: { card: Card; categories: C
         amount: value,
         purchasedAt: dateToApi(date),
         installments: Math.max(1, Number(installments) || 1),
-        categoryId,
+        chartAccountId,
         description: description.trim(),
       }),
     )
@@ -496,7 +496,7 @@ function PurchaseForm({ card, categories, onSaved }: { card: Card; categories: C
         value={installments}
         onChange={setInstallments}
       />
-      <Select label="Categoria" name={`purchaseCategory-${card.id}`} required value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+      <Select label="Conta" name={`purchaseAccount-${card.id}`} required value={chartAccountId} onChange={(event) => setChartAccountId(event.target.value)}>
         <option value="">Selecione</option>
         {categories.map((category) => (
           <option key={category.id} value={category.id}>

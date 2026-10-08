@@ -8,7 +8,7 @@ import { AppShell } from './layouts/AppShell'
 import { AccountsPage } from './pages/AccountsPage'
 import { AiPage } from './pages/AiPage'
 import { BudgetPage } from './pages/BudgetPage'
-import { CategoriesPage } from './pages/CategoriesPage'
+import { ChartAccountsPage } from './pages/ChartAccountsPage'
 import { DiagnosisPage } from './pages/DiagnosisPage'
 import { EntriesPage } from './pages/EntriesPage'
 import { HelpPage } from './pages/HelpPage'
@@ -61,7 +61,8 @@ export default function App() {
             <Route path="/projetos" element={<ProjectsPage />} />
             <Route path="/relatorios" element={<MorePage />} />
             <Route path="/diagnostico" element={<DiagnosisPage />} />
-            <Route path="/categorias" element={<CategoriesPage />} />
+            <Route path="/plano-de-contas" element={<ChartAccountsPage />} />
+            <Route path="/categorias" element={<Navigate to="/plano-de-contas" replace />} />
             <Route path="/patrimonio" element={<PatrimonyPage />} />
             <Route path="/membros" element={<MembersPage />} />
             <Route path="/plano" element={<PlanPage />} />
