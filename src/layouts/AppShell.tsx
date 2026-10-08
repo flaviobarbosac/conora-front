@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { familyApi } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
 import { AlertsBell } from '../components/AlertsBell'
 import { BrandLockup } from '../components/BrandLockup'
+import { Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
 import { PREFERENCES_CHANGED, readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
@@ -25,7 +26,7 @@ export function AppShell() {
   const { theme, setTheme } = useTheme()
   const { pathname } = useLocation()
   const email = session?.email || 'conta'
-  const profile = useLoad(() => familyApi.profile(), [session?.email, pathname])
+  const profile = useLoad(() => familyApi.profile(), [session?.email])
   const displayName = profile.data?.name?.trim() || email
 
   useEffect(() => {
@@ -260,7 +261,15 @@ export function AppShell() {
         </header>
 
         <main className={styles.main} id="conteudo-principal">
-          <Outlet />
+          <Suspense
+            fallback={
+              <div aria-busy="true" aria-live="polite">
+                <Skeleton height={140} />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 

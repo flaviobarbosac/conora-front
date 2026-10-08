@@ -1,0 +1,235 @@
+.hero,
+.section,
+.closing {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-5);
+}
+
+.hero {
+  display: grid;
+  gap: var(--space-10);
+  align-items: center;
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.kicker {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.heroCopy h1 {
+  font-size: clamp(2rem, 5vw + 0.5rem, 3.5rem);
+  font-weight: var(--weight-semibold);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.heroCopy h1 span {
+  color: var(--primary);
+}
+
+.lead {
+  font-size: var(--text-lg);
+  color: var(--text-muted);
+  max-width: 34rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.actions > button {
+  flex: 1 1 180px;
+}
+
+.facts {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.facts li {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.facts strong {
+  color: var(--text);
+}
+
+.heroVisual {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.glow {
+  position: absolute;
+  inset: 10% 5%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+  opacity: 0.35;
+  filter: blur(40px);
+}
+
+.heroVisual > :last-child {
+  position: relative;
+}
+
+.sectionHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.sectionHead h2,
+.closing h2 {
+  font-size: clamp(1.5rem, 2.5vw + 0.6rem, var(--text-h1));
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.card h3 {
+  margin-top: var(--space-2);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+}
+
+.card p {
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.steps li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--selected);
+}
+
+.stepNumber {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-on);
+  font-weight: var(--weight-semibold);
+}
+
+.steps h3 {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+}
+
+.steps p {
+  color: var(--text-muted);
+}
+
+.closing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  text-align: center;
+  padding-bottom: var(--space-14);
+}
+
+@media (min-width: 600px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .hero,
+  .section,
+  .closing {
+    padding-left: var(--space-10);
+    padding-right: var(--space-10);
+  }
+
+  .hero {
+    grid-template-columns: 1.15fr 1fr;
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-14);
+  }
+
+  .actions > button {
+    flex: 0 0 auto;
+  }
+
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}

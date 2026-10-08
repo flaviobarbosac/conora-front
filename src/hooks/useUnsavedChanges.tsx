@@ -23,6 +23,16 @@ type UnsavedChangesApi = {
 
 const UnsavedChangesContext = createContext<UnsavedChangesApi | null>(null)
 
+/** Strips BrowserRouter basename so navigate() does not double-prefix `/app`. */
+function toRouterPath(pathname: string, search: string, hash: string): string {
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '')
+  let path = pathname
+  if (base && base !== '/' && (path === base || path.startsWith(`${base}/`))) {
+    path = path.slice(base.length) || '/'
+  }
+  return `${path}${search}${hash}`
+}
+
 export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
   const [flags, setFlags] = useState<Record<string, boolean>>({})
   const navigate = useNavigate()
@@ -103,8 +113,12 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }) {
       if (!anchor || !isInternalLink(anchor)) {
         return
       }
-      const nextPath = `${anchor.pathname}${anchor.search}${anchor.hash}`
-      const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`
+      const nextPath = toRouterPath(anchor.pathname, anchor.search, anchor.hash)
+      const currentPath = toRouterPath(
+        window.location.pathname,
+        window.location.search,
+        window.location.hash,
+      )
       if (nextPath === currentPath) {
         return
       }

@@ -80,10 +80,15 @@
 }
 
 .hero > strong {
-  font-size: var(--text-h1);
+  font-size: clamp(1.25rem, 4vw + 0.5rem, var(--text-h1));
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-tight);
   line-height: var(--leading-tight);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .heroSplit {
@@ -102,8 +107,13 @@
 }
 
 .heroSplit strong {
-  font-size: var(--text-h3);
   font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1rem, 3.2vw + 0.4rem, var(--text-h3));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .quickActions {
@@ -199,10 +209,14 @@
 }
 
 .homeBlockHero {
-  font-size: var(--text-h2);
+  font-size: clamp(1rem, 3vw + 0.45rem, var(--text-h2));
   font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .homeBlockHint {
@@ -255,6 +269,11 @@
 .homeHorizonAmounts {
   font-size: var(--text-xs);
   color: var(--text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .quickChip {
@@ -387,9 +406,14 @@
 }
 
 .stat strong {
-  font-size: var(--text-h2);
+  font-size: clamp(1rem, 3vw + 0.45rem, var(--text-h2));
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-tight);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 /* ---------- Lists ---------- */
@@ -462,6 +486,18 @@
 .amount {
   font-weight: var(--weight-semibold);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.moneyValue {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(0.85rem, 2.8vw + 0.35rem, 1em);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .positive {
@@ -658,6 +694,109 @@ button.compact {
   background: var(--danger);
 }
 
+.progressFillPlanned {
+  background: color-mix(in srgb, var(--primary) 45%, var(--border-subtle));
+}
+
+.progressFillActual {
+  background: var(--primary);
+}
+
+.macroGrid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr;
+}
+
+.macroCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface-muted, var(--surface));
+  border: 1px solid var(--border-subtle);
+}
+
+.macroHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.macroHeadMeta {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.macroBars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.macroBarLink {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.macroBarLink:hover strong {
+  color: var(--primary);
+}
+
+.macroBarLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.macroBarLabel strong {
+  font-size: var(--text-sm);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.macroBarTracks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.macroLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.macroLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.macroDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
 .horizonBlock {
   background: var(--surface);
   border-radius: var(--radius-xl);
@@ -799,7 +938,10 @@ button.compact {
 
 .raioxAmount,
 .raioxPercent {
-  overflow: visible;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .raioxHead .raioxTotals {
@@ -881,6 +1023,10 @@ button.compact {
 @media (min-width: 900px) {
   .grid2 {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .macroGrid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .grid3,
@@ -989,7 +1135,7 @@ button.compact {
 }
 
 .budgetAmountWrap {
-  width: 12.5rem;
+  width: 14.5rem;
   flex-shrink: 0;
 }
 

@@ -346,7 +346,7 @@ function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onS
           >
             <strong>{chartAccountLabel(account)}</strong>
           </button>
-          <span className={styles.rowSub}>Realizado {formatMoney(actual)}</span>
+          <span className={`${styles.rowSub} ${styles.moneyValue}`}>Realizado {formatMoney(actual)}</span>
         </span>
         <span className={styles.rowEnd}>
           <span className={styles.budgetAmountWrap}>

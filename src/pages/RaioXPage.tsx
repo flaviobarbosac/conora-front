@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   budgetsApi,
   chartAccountsApi,
   entriesApi,
   type Budget,
   type ChartAccount,
+  type ChartSection,
   type Entry,
 } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
@@ -13,7 +14,7 @@ import { PageHeader } from '../components/PageHeader'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
 import { chartAccountLabel } from '../lib/chartLabel'
-import { compareChartSiblings } from '../lib/chartOrder'
+import { compareChartSiblings, isCashFlowSection } from '../lib/chartOrder'
 import { currentCompetence, formatCompetence, formatMoney, formatPercent } from '../lib/format'
 import {
   buildAmountMaps,
@@ -30,8 +31,8 @@ function TotalsCell({ totals }: { totals: RaioXTotals }) {
     percent === null ? undefined : percent < 0 ? styles.negative : percent > 0 ? styles.positive : undefined
   return (
     <span className={styles.raioxTotals}>
-      <span className={styles.raioxAmount}>{formatMoney(totals.planned)}</span>
-      <span className={styles.raioxAmount}>{formatMoney(totals.actual)}</span>
+      <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.planned)}</span>
+      <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.actual)}</span>
       <span className={`${styles.raioxPercent} ${tone ?? ''}`}>
         {percent === null ? '—' : formatPercent(percent)}
       </span>
@@ -39,8 +40,17 @@ function TotalsCell({ totals }: { totals: RaioXTotals }) {
   )
 }
 
+function parseSectionParam(raw: string | null): ChartSection | null {
+  if (!raw) {
+    return null
+  }
+  return isCashFlowSection(raw as ChartSection) ? (raw as ChartSection) : null
+}
+
 export function RaioXPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const focusSection = parseSectionParam(searchParams.get('section'))
   const [ym, setYm] = useState(currentCompetence)
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const budget = useLoad(() => budgetsApi.get(ym), [ym])
@@ -62,9 +72,22 @@ export function RaioXPage() {
   )
 
   const roots = useMemo(
-    () => (byParent.get(null) ?? []).filter((account) => account.level === 'Root'),
+    () =>
+      (byParent.get(null) ?? []).filter(
+        (account) => account.level === 'Root' && isCashFlowSection(account.section),
+      ),
     [byParent],
   )
+
+  useEffect(() => {
+    if (!focusSection || roots.length === 0) {
+      return
+    }
+    const match = roots.find((root) => root.section === focusSection)
+    if (match) {
+      setOpen((current) => new Set(current).add(match.id))
+    }
+  }, [focusSection, roots])
 
   function toggle(id: string) {
     setOpen((current) => {
@@ -143,11 +166,13 @@ function IncomeHero({ budget }: { budget: Budget }) {
       <div className={styles.heroSplit} aria-label="Receita prevista e recebida">
         <div>
           <span>Receita prevista</span>
-          <strong>{formatMoney(budget.spendableIncome)}</strong>
+          <strong className={styles.moneyValue}>{formatMoney(budget.spendableIncome)}</strong>
         </div>
         <div>
           <span>Receita recebida</span>
-          <strong className={styles.positive}>{formatMoney(budget.receivedIncome)}</strong>
+          <strong className={`${styles.moneyValue} ${styles.positive}`}>
+            {formatMoney(budget.receivedIncome)}
+          </strong>
         </div>
       </div>
     </section>
@@ -234,7 +259,7 @@ function AccountBlock({
               </span>
               <span className={styles.raioxTotals}>
                 <span className={styles.raioxAmount} />
-                <span className={styles.raioxAmount}>{formatMoney(entry.amount)}</span>
+                <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(entry.amount)}</span>
                 <span className={styles.raioxPercent} />
               </span>
             </button>

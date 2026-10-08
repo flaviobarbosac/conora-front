@@ -21,6 +21,13 @@ describe('sanitizeMoneyTyping', () => {
     expect(sanitizeMoneyTyping('9999999999')).toBe(formatMoneyInput(99_999_999.99))
   })
 
+  it('keeps 1 million, 10 million and 99 million intact', () => {
+    expect(sanitizeMoneyTyping('100000000')).toBe(formatMoneyInput(1_000_000))
+    expect(sanitizeMoneyTyping('1000000000')).toBe(formatMoneyInput(10_000_000))
+    expect(sanitizeMoneyTyping('9900000000')).toBe(formatMoneyInput(99_000_000))
+    expect(sanitizeMoneyTyping('100000000')).not.toBe(formatMoneyInput(999_999.99))
+  })
+
   it('caps at 10 digits', () => {
     expect(sanitizeMoneyTyping('1234567890123')).toBe(formatMoneyInput(12_345_678.9))
   })

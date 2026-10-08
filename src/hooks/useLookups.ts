@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import { accountsApi, chartAccountsApi, type Account, type ChartAccount, type ChartSection } from '../api/finance'
 import { chartAccountLabel } from '../lib/chartLabel'
+import { CASH_FLOW_SECTIONS } from '../lib/chartOrder'
 import { useLoad } from './useLoad'
 
-const CASH_FLOW_SECTIONS: ChartSection[] = ['Income', 'Discount', 'LifeProject', 'Essential', 'Social']
 const PATRIMONY_SECTIONS: ChartSection[] = ['Asset', 'Liability']
 
 /** Bank accounts and chart accounts used by selects and by id → name lookups. */

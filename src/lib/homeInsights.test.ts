@@ -1,14 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import type { Budget, BudgetSectionBlock, PatrimonySummary } from '../api/finance'
-import { buildPatrimonyHomeInsight, buildRaioXHomeInsight, pickTopDeviation } from './homeInsights'
+import type { Budget, BudgetSectionBlock, ChartSection, PatrimonySummary } from '../api/finance'
+import {
+  buildBudgetMacroBars,
+  buildPatrimonyHomeInsight,
+  buildPatrimonyMacroBars,
+  buildRaioXHomeInsight,
+  pickTopDeviation,
+} from './homeInsights'
 
 function section(
   name: string,
   plannedAmount: number,
   actualAmount: number,
+  chartSection: ChartSection = 'Essential',
 ): BudgetSectionBlock {
   return {
-    section: 'Essential',
+    section: chartSection,
     name,
     plannedAmount,
     actualAmount,
@@ -89,5 +96,42 @@ describe('buildPatrimonyHomeInsight', () => {
       assetsTotal: 5000,
       liabilitiesTotal: 1500,
     })
+  })
+})
+
+describe('buildBudgetMacroBars', () => {
+  it('keeps cash-flow sections and scales bars to the max value', () => {
+    const bars = buildBudgetMacroBars(
+      budget({
+        totalPlanned: 300,
+        totalActual: 150,
+        sections: [
+          section('Ativo', 999, 999, 'Asset'),
+          section('Essencial', 100, 50, 'Essential'),
+          section('Receita', 200, 100, 'Income'),
+        ],
+      }),
+    )
+    expect(bars.map((bar) => bar.section)).toEqual(['Income', 'Essential'])
+    expect(bars[0]?.plannedPct).toBe(100)
+    expect(bars[1]?.plannedPct).toBe(50)
+  })
+})
+
+describe('buildPatrimonyMacroBars', () => {
+  it('scales ativo and passivo to the larger total', () => {
+    const bars = buildPatrimonyMacroBars({
+      accountsBalance: 0,
+      assetsTotal: 800,
+      assetsInUse: 0,
+      assetsNotInUse: 0,
+      unpaidCardInvoices: 0,
+      liabilitiesTotal: 200,
+      netWorth: 600,
+      groups: [],
+      items: [],
+    })
+    expect(bars[0]).toMatchObject({ key: 'assets', pct: 100 })
+    expect(bars[1]).toMatchObject({ key: 'liabilities', pct: 25 })
   })
 })

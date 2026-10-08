@@ -42,7 +42,7 @@
 
 .input[inputmode='numeric'],
 .input[inputmode='decimal'] {
-  min-width: 12rem;
+  min-width: 14.5rem;
   font-variant-numeric: tabular-nums;
 }
 

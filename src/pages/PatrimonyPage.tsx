@@ -42,7 +42,9 @@ export function PatrimonyPage() {
         <>
           <section className={styles.hero}>
             <span>Patrimônio líquido</span>
-            <strong className={data.netWorth < 0 ? styles.negative : undefined}>{formatMoney(data.netWorth)}</strong>
+            <strong className={`${styles.moneyValue} ${data.netWorth < 0 ? styles.negative : ''}`}>
+              {formatMoney(data.netWorth)}
+            </strong>
             <span>
               Contas {formatMoney(data.accountsBalance)} + uso {formatMoney(data.assetsInUse)} + não uso{' '}
               {formatMoney(data.assetsNotInUse)} − passivos {formatMoney(data.liabilitiesTotal)} − faturas{' '}
@@ -59,7 +61,7 @@ export function PatrimonyPage() {
                       <strong>{group.groupName}</strong>
                       <span className={styles.rowSub}>{group.section === 'Asset' ? 'Ativo' : 'Passivo'}</span>
                     </span>
-                    <span className={styles.amount}>{formatMoney(group.amount)}</span>
+                    <span className={`${styles.amount} ${styles.moneyValue}`}>{formatMoney(group.amount)}</span>
                   </li>
                 ))}
               </ul>
@@ -68,7 +70,7 @@ export function PatrimonyPage() {
           {reserve.data ? (
             <div className={styles.stat}>
               <span>Reserva sugerida (média de gastos essenciais · {reserve.data.monthsConsidered} mês(es))</span>
-              <strong>{formatMoney(reserve.data.monthlyEssentialAverage)}</strong>
+              <strong className={styles.moneyValue}>{formatMoney(reserve.data.monthlyEssentialAverage)}</strong>
             </div>
           ) : null}
           <section className={styles.section}>
@@ -87,7 +89,7 @@ export function PatrimonyPage() {
                     <Badge tone={item.section === 'Asset' ? 'ok' : 'danger'}>
                       {item.section === 'Asset' ? 'Ativo' : 'Passivo'}
                     </Badge>
-                    <span className={styles.amount}>{formatMoney(item.amount)}</span>
+                    <span className={`${styles.amount} ${styles.moneyValue}`}>{formatMoney(item.amount)}</span>
                     <DeleteIconButton disabled={remove.busy} onClick={() => void removeItem(item)} />
                   </span>
                 </li>

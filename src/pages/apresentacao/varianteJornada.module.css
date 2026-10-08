@@ -1,0 +1,252 @@
+.hero {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto var(--space-8);
+  padding: 0 var(--space-5);
+}
+
+.heroImage {
+  display: block;
+  width: 100%;
+  height: 420px;
+  object-fit: cover;
+  border-radius: 24px;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0 var(--space-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(14, 24, 38, 0) 20%, rgba(14, 24, 38, 0.88) 100%);
+  color: #fff;
+}
+
+.kicker {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.heroOverlay h1 {
+  font-size: clamp(1.9rem, 5vw + 0.4rem, 3.6rem);
+  font-weight: var(--weight-semibold);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  max-width: 14ch;
+}
+
+.lead {
+  max-width: 32rem;
+  opacity: 0.85;
+}
+
+.scrollHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  min-height: 44px;
+  color: #fff;
+  font-weight: var(--weight-semibold);
+}
+
+.scrollHint:hover {
+  color: var(--accent);
+}
+
+.scrollHint svg {
+  transform: rotate(90deg);
+}
+
+.timeline {
+  position: relative;
+  list-style: none;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: calc(var(--space-5) + 19px);
+  width: 2px;
+  background: linear-gradient(var(--primary), var(--accent), transparent);
+  opacity: 0.4;
+}
+
+.chapter {
+  position: relative;
+  display: grid;
+  gap: var(--space-5);
+  padding-left: 56px;
+  scroll-margin-top: var(--space-8);
+}
+
+.marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-on);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  box-shadow: 0 0 0 6px var(--bg-app);
+}
+
+.chapterCopy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.verb {
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+  color: var(--primary);
+  letter-spacing: var(--tracking-tight);
+}
+
+.chapterCopy h2 {
+  font-size: clamp(1.4rem, 2vw + 0.8rem, var(--text-h1));
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+
+.chapterText {
+  color: var(--text-muted);
+  max-width: 34rem;
+}
+
+.chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.chapterPreview > :not(.stack) {
+  box-shadow: var(--shadow);
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.stack > * {
+  box-shadow: var(--shadow);
+}
+
+.together {
+  max-width: 640px;
+  margin: var(--space-12) auto var(--space-12);
+  padding: var(--space-8) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: center;
+  border-radius: 24px;
+  background: var(--selected);
+}
+
+.together h2 {
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+}
+
+.together p {
+  color: var(--text-muted);
+}
+
+@media (max-width: 599px) {
+  .hero {
+    padding: 0 var(--space-3);
+  }
+
+  .heroOverlay {
+    inset: 0 var(--space-3);
+    padding: var(--space-5);
+  }
+
+  .heroImage {
+    height: 460px;
+  }
+
+  .together {
+    margin-left: var(--space-5);
+    margin-right: var(--space-5);
+  }
+}
+
+@media (min-width: 900px) {
+  .hero,
+  .timeline {
+    padding-left: var(--space-10);
+    padding-right: var(--space-10);
+  }
+
+  .heroOverlay {
+    inset: 0 var(--space-10);
+    padding: var(--space-10);
+  }
+
+  .heroImage {
+    height: 520px;
+  }
+
+  .timeline::before {
+    left: 50%;
+    transform: translateX(-1px);
+  }
+
+  .chapter {
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: var(--space-14);
+    padding-left: 0;
+  }
+
+  .marker {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .chapter:nth-child(even) .chapterCopy {
+    order: 2;
+  }
+}

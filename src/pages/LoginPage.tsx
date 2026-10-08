@@ -64,6 +64,8 @@ export function LoginPage() {
       footer={
         <>
           Ainda não tem conta? <Link to={registerTo}>Criar conta</Link>
+          <br />
+          <Link to="/apresentacao">Conhecer o produto</Link>
         </>
       }
     >

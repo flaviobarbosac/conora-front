@@ -11,6 +11,19 @@ export const CHART_SECTION_ORDER: ChartSection[] = [
   'Liability',
 ]
 
+/** Cash-flow roots shown in Raio-X and Home orçamento chart (excludes Asset/Liability). */
+export const CASH_FLOW_SECTIONS: ChartSection[] = [
+  'Income',
+  'Discount',
+  'LifeProject',
+  'Essential',
+  'Social',
+]
+
+export function isCashFlowSection(section: ChartSection): boolean {
+  return CASH_FLOW_SECTIONS.includes(section)
+}
+
 function sectionRank(section: ChartSection): number {
   const index = CHART_SECTION_ORDER.indexOf(section)
   return index === -1 ? CHART_SECTION_ORDER.length : index
