@@ -24,15 +24,14 @@ import { currentCompetence, formatCompetence, formatMoney, formatPercent } from 
 import {
   aggregateYearMonths,
   buildAmountMaps,
-  discountTotals,
+  patrimonyStockMap,
   focusSections,
   groupAccountsByParent,
-  incomePlanned,
   monthsEndingAt,
   patrimonyRootAmounts,
   progressPercent,
   progressTone,
-  spendableIncomeBox,
+  sectionRealized,
   sumBranch,
   yearsNeededForMonths,
   type ProgressTone,
@@ -42,6 +41,22 @@ import {
 import styles from './page.module.css'
 
 const PERIODS = [1, 2, 6, 12] as const
+
+function focusClass(section: ChartSection, highlighted: ChartSection[]): string {
+  if (!highlighted.includes(section)) {
+    return ''
+  }
+  if (section === 'Discount') {
+    return styles.raioxFocusDiscount
+  }
+  if (section === 'Asset' || section === 'Liability') {
+    return section === 'Asset' ? styles.raioxFocusAsset : styles.raioxFocusLiability
+  }
+  if (section === 'Income') {
+    return styles.raioxFocusIncome
+  }
+  return styles.raioxFocus
+}
 
 function toneClass(tone: ProgressTone): string {
   if (tone === 'over') {
@@ -53,7 +68,20 @@ function toneClass(tone: ProgressTone): string {
   return styles.raioxToneOk
 }
 
-function TotalsCell({ totals }: { totals: RaioXTotals }) {
+function TotalsCell({ totals, stock = false }: { totals: RaioXTotals; stock?: boolean }) {
+  if (stock) {
+    const has = Math.abs(totals.actual) > 0.001
+    return (
+      <span className={styles.raioxTotals}>
+        <span className={styles.raioxAmount}>—</span>
+        <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>
+          {has ? formatMoney(totals.actual) : '—'}
+        </span>
+        <span className={styles.raioxPercent}>—</span>
+      </span>
+    )
+  }
+
   const percent = progressPercent(totals)
   const tone = progressTone(percent, totals)
   return (
@@ -109,6 +137,12 @@ export function RaioXPage() {
     }
     return map
   }, [list])
+
+  const patAmounts = useMemo(
+    () => patrimonyStockMap(patrimony.data?.items ?? []),
+    [patrimony.data],
+  )
+  const emptyAmounts = useMemo(() => new Map<string, number>(), [])
 
   const { planned, actual } = useMemo(() => {
     if (months === 1) {
@@ -231,7 +265,8 @@ export function RaioXPage() {
       {(budget.loading && !data) || loadingRange ? <Loading /> : null}
       {data ? (
         <RaioXHero
-          budget={data}
+          incomeActual={sectionRealized(byParent, actual, 'Income')}
+          discountActual={sectionRealized(byParent, actual, 'Discount')}
           patrimony={patrimony.data}
           focus={focus}
           onFocus={toggleFocus}
@@ -267,7 +302,8 @@ export function RaioXPage() {
               onOpenEntry={openEntry}
               onOpenOrigin={openOrigin}
               highlighted={highlighted}
-              patrimony={patrimony.data}
+              patAmounts={patAmounts}
+              emptyAmounts={emptyAmounts}
               showEntries={months === 1}
             />
           ))}
@@ -278,27 +314,25 @@ export function RaioXPage() {
 }
 
 function RaioXHero({
-  budget,
+  incomeActual,
+  discountActual,
   patrimony,
   focus,
   onFocus,
   months,
   ym,
 }: {
-  budget: Budget
+  incomeActual: number
+  discountActual: number
   patrimony: PatrimonySummary | null | undefined
   focus: RaioXFocus
   onFocus: (next: RaioXFocus) => void
   months: number
   ym: string
 }) {
-  const receitaPrevista = incomePlanned(budget)
-  const receitaRecebida = Math.abs(budget.receivedIncome)
-  const desconto = discountTotals(budget)
-  const gastavel = spendableIncomeBox(budget)
+  const gastavel = incomeActual - discountActual
   const liquido = patrimony ? patrimonyRootAmounts(patrimony).netWorth : 0
-  const periodLabel =
-    months === 1 ? formatCompetence(budget.competenceYm) : `${months} meses até ${formatCompetence(ym)}`
+  const periodLabel = months === 1 ? formatCompetence(ym) : `${months} meses até ${formatCompetence(ym)}`
 
   return (
     <section className={styles.hero}>
@@ -308,36 +342,40 @@ function RaioXHero({
       <div className={styles.heroCards} aria-label="Indicadores do Raio-X">
         <button
           type="button"
-          className={`${styles.heroCard} ${focus === 'income' ? styles.heroCardActive : ''}`}
+          className={`${styles.heroCard} ${styles.heroCardIncome} ${focus === 'income' ? styles.heroCardIncomeActive : ''}`}
           onMouseEnter={() => onFocus('income')}
           onFocus={() => onFocus('income')}
           onClick={() => onFocus('income')}
         >
-          <span>Receita</span>
-          <strong className={styles.moneyValue}>{formatMoney(receitaRecebida || receitaPrevista)}</strong>
-          <span className={styles.muted}>
-            Prevista {formatMoney(receitaPrevista)} · recebida {formatMoney(receitaRecebida)}
-          </span>
+          <span>Receita recebida</span>
+          <strong className={styles.moneyValue}>{formatMoney(incomeActual)}</strong>
         </button>
         <button
           type="button"
-          className={`${styles.heroCard} ${focus === 'spendable' ? styles.heroCardActive : ''}`}
+          className={`${styles.heroCard} ${styles.heroCardDiscount} ${focus === 'discount' ? styles.heroCardDiscountActive : ''}`}
+          onMouseEnter={() => onFocus('discount')}
+          onFocus={() => onFocus('discount')}
+          onClick={() => onFocus('discount')}
+        >
+          <span>Descontos realizados</span>
+          <strong className={styles.moneyValue}>{formatMoney(discountActual)}</strong>
+        </button>
+        <button
+          type="button"
+          className={`${styles.heroCard} ${styles.heroCardSpendable} ${focus === 'spendable' ? styles.heroCardSpendableActive : ''}`}
           onMouseEnter={() => onFocus('spendable')}
           onFocus={() => onFocus('spendable')}
           onClick={() => onFocus('spendable')}
         >
           <span>Renda gastável</span>
-          <strong className={styles.moneyValue}>
-            {formatMoney(months === 1 ? gastavel.planned : gastavel.actual || gastavel.planned)}
+          <strong className={`${styles.moneyValue} ${gastavel < 0 ? styles.negative : ''}`}>
+            {formatMoney(gastavel)}
           </strong>
-          <span className={styles.muted}>
-            Previsto {formatMoney(gastavel.planned)} · realizado {formatMoney(gastavel.actual)}
-            {desconto.actual > 0 ? ` · desconto ${formatMoney(desconto.actual)}` : ''}
-          </span>
+          <span className={styles.muted}>Receita recebida − descontos realizados</span>
         </button>
         <button
           type="button"
-          className={`${styles.heroCard} ${focus === 'patrimony' ? styles.heroCardActive : ''}`}
+          className={`${styles.heroCard} ${styles.heroCardPatrimony} ${focus === 'patrimony' ? styles.heroCardPatrimonyActive : ''}`}
           onMouseEnter={() => onFocus('patrimony')}
           onFocus={() => onFocus('patrimony')}
           onClick={() => onFocus('patrimony')}
@@ -440,7 +478,8 @@ function AccountBlock({
   onOpenEntry,
   onOpenOrigin,
   highlighted,
-  patrimony,
+  patAmounts,
+  emptyAmounts,
   showEntries,
 }: {
   account: ChartAccount
@@ -455,7 +494,8 @@ function AccountBlock({
   onOpenEntry: (entry: Entry) => void
   onOpenOrigin: (account: ChartAccount, entry?: Entry) => void
   highlighted: ChartSection[]
-  patrimony: PatrimonySummary | null | undefined
+  patAmounts: Map<string, number>
+  emptyAmounts: Map<string, number>
   showEntries: boolean
 }) {
   const children = byParent.get(account.id) ?? []
@@ -464,11 +504,8 @@ function AccountBlock({
   const patItems = isPatSection && account.level === 'Analytical' ? patrimonyItemsFor(account.id) : []
   const expandable = children.length > 0 || monthEntries.length > 0 || patItems.length > 0
   const expanded = open.has(account.id)
-  const isPatRoot = account.level === 'Root' && isPatSection
-  const totals: RaioXTotals = isPatRoot && patrimony
-    ? account.section === 'Asset'
-      ? { planned: patrimonyRootAmounts(patrimony).assets, actual: patrimonyRootAmounts(patrimony).assets }
-      : { planned: patrimonyRootAmounts(patrimony).liabilities, actual: patrimonyRootAmounts(patrimony).liabilities }
+  const totals: RaioXTotals = isPatSection
+    ? sumBranch(account.id, byParent, emptyAmounts, patAmounts)
     : sumBranch(account.id, byParent, planned, actual)
 
   const rowClass =
@@ -477,7 +514,7 @@ function AccountBlock({
       : account.level === 'Group'
         ? styles.raioxGroup
         : styles.raioxLeaf
-  const focused = highlighted.includes(account.section)
+  const focused = focusClass(account.section, highlighted)
 
   function onRowClick() {
     if (expandable) {
@@ -493,7 +530,7 @@ function AccountBlock({
     <>
       <button
         type="button"
-        className={`${styles.raioxRow} ${rowClass} ${focused ? styles.raioxFocus : ''}`}
+        className={`${styles.raioxRow} ${rowClass} ${focused}`}
         style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
         onClick={onRowClick}
         aria-expanded={expandable ? expanded : undefined}
@@ -502,16 +539,7 @@ function AccountBlock({
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
         <strong className={styles.raioxAccountName}>{chartAccountLabel(account)}</strong>
-        <TotalsCell
-          totals={
-            account.level === 'Analytical' && isPatSection
-              ? {
-                  planned: patItems.reduce((sum, item) => sum + Math.abs(item.amount), 0),
-                  actual: patItems.reduce((sum, item) => sum + Math.abs(item.amount), 0),
-                }
-              : totals
-          }
-        />
+        <TotalsCell totals={totals} stock={isPatSection} />
       </button>
       {expanded
         ? children.map((child) => (
@@ -529,7 +557,8 @@ function AccountBlock({
               onOpenEntry={onOpenEntry}
               onOpenOrigin={onOpenOrigin}
               highlighted={highlighted}
-              patrimony={patrimony}
+              patAmounts={patAmounts}
+              emptyAmounts={emptyAmounts}
               showEntries={showEntries}
             />
           ))

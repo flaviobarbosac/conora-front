@@ -191,6 +191,28 @@ export function isBudgetEditableSection(section: ChartSection): boolean {
   return isCashFlowSection(section)
 }
 
+/** Realized total of a section, same rollup the Raio-X tree shows on the root row. */
+export function sectionRealized(
+  byParent: Map<string | null, ChartAccount[]>,
+  actual: Map<string, number>,
+  section: ChartSection,
+): number {
+  const roots = (byParent.get(null) ?? []).filter(
+    (account) => account.level === 'Root' && account.section === section,
+  )
+  const planned = new Map<string, number>()
+  return roots.reduce((sum, root) => sum + sumBranch(root.id, byParent, planned, actual).actual, 0)
+}
+
+/** Item amounts keyed by chart account. Groups roll up with sumBranch. */
+export function patrimonyStockMap(items: { chartAccountId: string; amount: number }[]): Map<string, number> {
+  const actual = new Map<string, number>()
+  for (const item of items) {
+    actual.set(item.chartAccountId, (actual.get(item.chartAccountId) ?? 0) + Math.abs(item.amount))
+  }
+  return actual
+}
+
 export function patrimonyRootAmounts(summary: PatrimonySummary): {
   assets: number
   liabilities: number

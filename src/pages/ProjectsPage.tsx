@@ -26,7 +26,14 @@ import {
   parseMoney,
   shiftCompetence,
 } from '../lib/format'
-import { horizonFillClass, LIFE_HORIZONS, type HorizonKey } from '../lib/lifeHorizon'
+import {
+  horizonBadgeClass,
+  horizonFillClass,
+  isProjectExtrapolated,
+  LIFE_HORIZONS,
+  projectFillClass,
+  type HorizonKey,
+} from '../lib/lifeHorizon'
 import { showSaveToast } from '../lib/saveToast'
 import styles from './page.module.css'
 
@@ -115,6 +122,9 @@ export function ProjectsPage() {
             </button>
           )
         })}
+        <p className={styles.muted}>
+          Verde: curto prazo. Amarelo: médio prazo. Vermelho: longo prazo ou acima da meta.
+        </p>
       </section>
 
       <div className={styles.segmented} role="group" aria-label="Filtro por horizonte">
@@ -141,6 +151,7 @@ export function ProjectsPage() {
 
       {pagination.pageItems.map((project) => {
         const label = LIFE_HORIZONS.find((item) => item.key === project.horizon)?.label
+        const extrapolated = isProjectExtrapolated(project)
         return (
           <Link key={project.id} className={`${styles.section} ${styles.projectDashCard}`} to={`/projetos/${project.id}`}>
             <div className={styles.sectionHead}>
@@ -150,7 +161,12 @@ export function ProjectsPage() {
                   <Badge tone={project.scope === 'Group' ? 'info' : 'ok'}>
                     {project.scope === 'Group' ? 'Família' : 'Pessoal'}
                   </Badge>
-                  {label ? <Badge>{label}</Badge> : null}
+                  {label && project.horizon ? (
+                    <span className={`${styles.badge} ${horizonBadgeClass(styles, project.horizon)}`}>{label}</span>
+                  ) : null}
+                  {extrapolated ? (
+                    <span className={`${styles.badge} ${styles.badge_horizonLong}`}>Acima da meta</span>
+                  ) : null}
                 </strong>
                 <span className={styles.rowSub}>
                   {formatMoney(project.accumulatedAmount)} de {formatMoney(project.goalAmount)}
@@ -161,7 +177,10 @@ export function ProjectsPage() {
               <strong>{formatPercent(project.progressPercent)}</strong>
             </div>
             <span className={styles.progress} aria-hidden>
-              <span className={styles.progressFill} style={{ width: `${Math.min(project.progressPercent, 100)}%` }} />
+              <span
+                className={`${styles.progressFill} ${projectFillClass(styles, project)}`}
+                style={{ width: `${Math.min(project.progressPercent, 100)}%` }}
+              />
             </span>
             {project.detailedDescription ? (
               <p className={styles.muted}>{project.detailedDescription.slice(0, 140)}{project.detailedDescription.length > 140 ? '…' : ''}</p>

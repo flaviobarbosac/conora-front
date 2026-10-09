@@ -75,6 +75,8 @@
   --success-bg: #e6f3ec;
   --danger: #c0392b;
   --danger-bg: #fbeceb;
+  --horizon-long: #9b2c2c;
+  --horizon-long-bg: #f6e4e2;
   --warning: #c47d12;
   --warning-bg: #fcf4e4;
   --shadow: 0 20px 60px rgba(23, 38, 56, 0.12);
@@ -100,6 +102,8 @@
   --success-bg: #14301f;
   --danger: #ff8a80;
   --danger-bg: #3a1c1a;
+  --horizon-long: #e08a84;
+  --horizon-long-bg: #3a2422;
   --warning: #e09a1a;
   --warning-bg: #2a2418;
   --shadow: 0 24px 70px rgba(0, 0, 0, 0.4);

@@ -22,7 +22,6 @@ export function PatrimonyPage() {
   const [searchParams] = useSearchParams()
   const filterAccountId = searchParams.get('chartAccountId')
   const summary = useLoad(() => patrimonyApi.get(), [])
-  const reserve = useLoad(() => patrimonyApi.reserve(), [])
   const remove = useAction()
   const data = summary.data
   const items = useMemo(() => {
@@ -41,14 +40,13 @@ export function PatrimonyPage() {
     if (await remove.run(() => patrimonyApi.remove(item.id))) {
       showSaveToast('Item excluído.')
       summary.reload()
-      reserve.reload()
     }
   }
 
   return (
     <div className={styles.page}>
       <PageHeader secondary title="Patrimônio" />
-      <ErrorText message={summary.error ?? reserve.error ?? remove.error} />
+      <ErrorText message={summary.error ?? remove.error} />
       {summary.loading && !data ? <Loading /> : null}
       {data ? (
         <>
@@ -63,8 +61,7 @@ export function PatrimonyPage() {
                   {formatMoney(data.assetsTotal)}
                 </strong>
                 <span className={styles.muted}>
-                  Contas {formatMoney(data.accountsBalance)} · uso {formatMoney(data.assetsInUse)} · não uso{' '}
-                  {formatMoney(data.assetsNotInUse)}
+                  Uso {formatMoney(data.assetsInUse)} · não uso {formatMoney(data.assetsNotInUse)}
                 </span>
               </div>
               <div className={styles.heroCard}>
@@ -72,9 +69,9 @@ export function PatrimonyPage() {
                 <strong className={`${styles.moneyValue} ${styles.negative}`}>
                   {formatMoney(data.liabilitiesTotal)}
                 </strong>
-                <span className={styles.muted}>Inclui faturas {formatMoney(data.unpaidCardInvoices)}</span>
+                <span className={styles.muted}>Itens de passivo</span>
               </div>
-              <div className={`${styles.heroCard} ${styles.heroCardActive}`}>
+              <div className={`${styles.heroCard} ${styles.heroCardPatrimonyActive}`}>
                 <span>Patrimônio líquido</span>
                 <strong className={`${styles.moneyValue} ${data.netWorth < 0 ? styles.negative : ''}`}>
                   {formatMoney(data.netWorth)}
@@ -98,12 +95,6 @@ export function PatrimonyPage() {
                 ))}
               </ul>
             </section>
-          ) : null}
-          {reserve.data ? (
-            <div className={styles.stat}>
-              <span>Reserva sugerida (média de gastos essenciais · {reserve.data.monthsConsidered} mês(es))</span>
-              <strong className={styles.moneyValue}>{formatMoney(reserve.data.monthlyEssentialAverage)}</strong>
-            </div>
           ) : null}
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>
@@ -143,7 +134,6 @@ export function PatrimonyPage() {
         initialChartAccountId={filterAccountId}
         onSaved={() => {
           summary.reload()
-          reserve.reload()
         }}
       />
     </div>

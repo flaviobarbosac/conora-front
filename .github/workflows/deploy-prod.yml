@@ -1,0 +1,54 @@
+name: Deploy Production Front
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: sa-east-1
+
+jobs:
+  build-deploy:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - uses: actions/checkout@v4
+        with:
+          repository: flaviobarbosac/conora
+          ref: main
+          path: conora-backend
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Build
+        env:
+          VITE_API_URL: https://api.conora.com.br
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy front to EC2 via SSM
+        shell: pwsh
+        run: |
+          ./conora-backend/infra/scripts/deploy-ssm.ps1 -Environment dev -FrontDist dist

@@ -9,6 +9,7 @@ import {
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
+import { Icon } from '../components/ui/Icon'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
@@ -122,7 +123,6 @@ export function BudgetPage() {
           categories={categories.data ?? []}
           year={year}
           yearData={yearData.data}
-          yearLoading={yearData.loading}
           onSaved={() => {
             budget.reload()
             yearData.reload()
@@ -139,11 +139,10 @@ type EditorProps = {
   categories: ChartAccount[]
   year: number
   yearData: BudgetYear | null | undefined
-  yearLoading: boolean
   onSaved: () => void
 }
 
-function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading, onSaved }: EditorProps) {
+function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: EditorProps) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [drafts, setDrafts] = useState<Record<string, string>>({})
@@ -270,9 +269,7 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
   return (
     <section className={styles.section}>
       <div className={styles.budgetSaveBar}>
-        <p className={styles.muted}>
-          Edite o previsto e salve. Em cada conta: <strong>Repetir / parcelar</strong>.
-        </p>
+        <p className={styles.muted}>Edite o previsto e salve.</p>
         <div className={styles.budgetSaveActions}>
           <Button
             type="button"
@@ -301,7 +298,7 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
           <div className={`${styles.raioxRow} ${styles.budgetRow} ${styles.raioxHead}`}>
             <span />
             <span>Conta</span>
-            <span className={`${styles.raioxTotals} ${styles.budgetTotals}`}>
+            <span className={`${styles.raioxTotals} ${styles.budgetTotals} ${styles.budgetTotalsHead}`}>
               <span>Previsto</span>
               <span>Realizado</span>
               <span>% do previsto</span>
@@ -331,9 +328,7 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
           ym={ym}
           year={year}
           account={yearAccount}
-          months={yearData?.months ?? []}
           line={yearLine}
-          loading={yearLoading && !yearData}
           plannedAmount={(() => {
             const draft = drafts[yearAccount.id]
             if (draft != null && draft.trim()) {
@@ -366,7 +361,9 @@ function BudgetTotalsCell({
   return (
     <span className={`${styles.raioxTotals} ${styles.budgetTotals}`}>
       {edit ?? (
-        <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.planned)}</span>
+        <span className={`${styles.raioxAmount} ${styles.moneyValue} ${styles.budgetAmountAlign}`}>
+          {formatMoney(totals.planned)}
+        </span>
       )}
       <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.actual)}</span>
       <span className={`${styles.raioxPercent} ${toneClass(tone)}`}>
@@ -447,22 +444,31 @@ function BudgetAccountBlock({
         <span />
         <span className={styles.budgetAccountCell}>
           <strong className={styles.raioxAccountName}>{chartAccountLabel(account)}</strong>
-          <Button type="button" variant="ghost" disabled={busy} onClick={() => onOpenYear(account.id)}>
-            Repetir / parcelar
-          </Button>
         </span>
         <BudgetTotalsCell
           totals={{ planned: lineTotals.planned, actual: lineTotals.actual }}
           edit={
-            <span className={styles.raioxBudgetField}>
-              <MoneyField
-                compact
-                label={`Orçamento ${chartAccountLabel(account)}`}
-                name={`budget-${account.id}`}
-                value={draft}
+            <span className={styles.budgetPlannedCell}>
+              <span className={styles.raioxBudgetField}>
+                <MoneyField
+                  compact
+                  label={`Orçamento ${chartAccountLabel(account)}`}
+                  name={`budget-${account.id}`}
+                  value={draft}
+                  disabled={busy}
+                  onChange={(value) => onDraftChange(account.id, value)}
+                />
+              </span>
+              <button
+                type="button"
+                className={styles.budgetSpreadIcon}
                 disabled={busy}
-                onChange={(value) => onDraftChange(account.id, value)}
-              />
+                aria-label={`Repetir ou parcelar ${chartAccountLabel(account)}`}
+                title="Repetir ou parcelar"
+                onClick={() => onOpenYear(account.id)}
+              >
+                <Icon name="repeat" size={20} />
+              </button>
             </span>
           }
         />
@@ -546,13 +552,55 @@ function groupHasMatch(
   )
 }
 
+type AppliedMonth = { ym: string; amount: number }
+
+function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100
+}
+
+function plannedOn(line: BudgetYear['lines'][number] | null | undefined, monthYm: string): number {
+  return Math.abs(line?.months.find((month) => month.competenceYm === monthYm)?.plannedAmount ?? 0)
+}
+
+function monthsAfterAction(
+  startYm: string,
+  count: number,
+  values: number[],
+  line: BudgetYear['lines'][number] | null | undefined,
+  overwrite: boolean,
+  skipStart: boolean,
+): AppliedMonth[] {
+  return competencesFrom(startYm, count)
+    .slice(skipStart ? 1 : 0)
+    .map((monthYm, index) => {
+      const existing = plannedOn(line, monthYm)
+      const next = values[index] ?? 0
+      const kept = !overwrite && existing > 0.001
+      return { ym: monthYm, amount: kept ? existing : next }
+    })
+}
+
+function AppliedMonths({ months }: { months: AppliedMonth[] | null }) {
+  if (!months || months.length === 0) {
+    return null
+  }
+  return (
+    <ul className={styles.budgetResult} aria-label="Meses atualizados">
+      {months.map((month) => (
+        <li key={month.ym}>
+          <span>{formatCompetence(month.ym)}</span>
+          <span className={styles.moneyValue}>{formatMoney(month.amount)}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function BudgetYearSheet({
   ym,
   year,
   account,
-  months,
   line,
-  loading,
   plannedAmount,
   onClose,
   onChanged,
@@ -560,9 +608,7 @@ function BudgetYearSheet({
   ym: string
   year: number
   account: ChartAccount
-  months: string[]
   line: BudgetYear['lines'][number] | null | undefined
-  loading: boolean
   plannedAmount: number
   onClose: () => void
   onChanged: () => void
@@ -572,10 +618,17 @@ function BudgetYearSheet({
   const [repeatMonths, setRepeatMonths] = useState('3')
   const [installmentCount, setInstallmentCount] = useState('3')
   const [installmentTotal, setInstallmentTotal] = useState(() => formatMoneyInput(plannedAmount))
+  const [applied, setApplied] = useState<AppliedMonth[] | null>(null)
+  const [appliedKind, setAppliedKind] = useState<'repeat' | 'installment' | null>(null)
 
   useEffect(() => {
     setInstallmentTotal(formatMoneyInput(plannedAmount))
   }, [plannedAmount, account.id])
+
+  useEffect(() => {
+    setApplied(null)
+    setAppliedKind(null)
+  }, [account.id])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -630,6 +683,8 @@ function BudgetYearSheet({
     if (
       await action.run(() => budgetsApi.repeat(ym, account.id, count, overwrite, plannedAmount))
     ) {
+      setAppliedKind('repeat')
+      setApplied(monthsAfterAction(ym, count, Array(count).fill(plannedAmount), line, overwrite, true))
       showSaveToast('Previsto repetido nos meses seguintes.')
       onChanged()
     }
@@ -647,7 +702,17 @@ function BudgetYearSheet({
       return
     }
     const overwrite = await resolveOverwrite(hasConflict(ym, count, false))
+    const each = roundMoney(total / count)
+    const shares: number[] = []
+    let allocated = 0
+    for (let i = 0; i < count; i++) {
+      const value = i === count - 1 ? roundMoney(total - allocated) : each
+      shares.push(value)
+      allocated = roundMoney(allocated + value)
+    }
     if (await action.run(() => budgetsApi.installments(ym, account.id, total, count, overwrite))) {
+      setAppliedKind('installment')
+      setApplied(monthsAfterAction(ym, count, shares, line, overwrite, false))
       showSaveToast('Parcelas gravadas no orçamento.')
       onChanged()
     }
@@ -663,7 +728,7 @@ function BudgetYearSheet({
         }
       }}
     >
-      <div className={styles.sheet} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div className={`${styles.sheet} ${styles.budgetSheet}`} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className={styles.sectionHead}>
           <h2 id={titleId} className={styles.sectionTitle}>
             {chartAccountLabel(account)} · {year}
@@ -674,9 +739,12 @@ function BudgetYearSheet({
         </div>
         <div className={styles.budgetSpread}>
           <div className={styles.budgetSpreadBlock}>
+            <div>
+              <h3 className={styles.budgetSpreadTitle}>Repetir o previsto</h3>
+              <p className={styles.muted}>Copia o valor deste mês para os meses seguintes.</p>
+            </div>
             <IntegerField
-              label="Repetir por quantos meses?"
-              hint="Copia o previsto deste mês para os seguintes."
+              label="Quantos meses?"
               name="budgetRepeat"
               maxLength={3}
               value={repeatMonths}
@@ -685,17 +753,21 @@ function BudgetYearSheet({
             <Button type="button" variant="secondary" disabled={action.busy} onClick={() => void runRepeat()}>
               Repetir
             </Button>
+            {appliedKind === 'repeat' ? <AppliedMonths months={applied} /> : null}
           </div>
           <div className={styles.budgetSpreadBlock}>
+            <div>
+              <h3 className={styles.budgetSpreadTitle}>Parcelar um total</h3>
+              <p className={styles.muted}>Divide o valor a partir deste mês.</p>
+            </div>
             <MoneyField
-              label="Valor total a parcelar"
+              label="Valor total"
               name="budgetInstallmentTotal"
               value={installmentTotal}
               onChange={setInstallmentTotal}
             />
             <IntegerField
-              label="Parcelas"
-              hint="Divide o total a partir deste mês."
+              label="Quantidade de parcelas"
               name="budgetInstallments"
               maxLength={3}
               value={installmentCount}
@@ -704,33 +776,10 @@ function BudgetYearSheet({
             <Button type="button" variant="secondary" disabled={action.busy} onClick={() => void runInstallments()}>
               Parcelar
             </Button>
+            {appliedKind === 'installment' ? <AppliedMonths months={applied} /> : null}
           </div>
         </div>
         <ErrorText message={action.error} />
-        {loading ? <Loading /> : null}
-        {!loading && months.length === 0 ? <p className={styles.muted}>Sem dados para este ano.</p> : null}
-        {!loading && months.length > 0 ? (
-          <ul className={styles.list}>
-            {months.map((monthYm) => {
-              const cell = line?.months.find((month) => month.competenceYm === monthYm)
-              return (
-                <li key={monthYm} className={styles.row}>
-                  <span className={styles.rowMain}>
-                    <strong>{formatCompetence(monthYm)}</strong>
-                    <span className={styles.rowSub}>
-                      Planejado {cell ? formatMoney(Math.abs(cell.plannedAmount)) : '—'}
-                    </span>
-                  </span>
-                  <span className={styles.rowEnd}>
-                    <span className={styles.rowSub}>
-                      Realizado {cell ? formatMoney(Math.abs(cell.actualAmount)) : '—'}
-                    </span>
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-        ) : null}
       </div>
     </div>
   )

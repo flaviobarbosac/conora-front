@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
   chartAccountsApi,
@@ -43,9 +43,7 @@ export function ChartAccountsPage() {
   const accounts = useLoad(() => chartAccountsApi.list(undefined, true), [])
   const action = useAction()
   const [query, setQuery] = useState('')
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(SECTION_ORDER.map((section) => [section, false])),
-  )
+  const [section, setSection] = useState<ChartSection | null>(null)
   const [showAll, setShowAll] = useState(false)
   const [draftParentId, setDraftParentId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
@@ -85,12 +83,6 @@ export function ChartAccountsPage() {
       )
     : null
 
-  useEffect(() => {
-    if (matches || showAll) {
-      setOpenSections(Object.fromEntries(SECTION_ORDER.map((section) => [section, true])))
-    }
-  }, [matches, showAll])
-
   function sectionVisible(root: ChartAccount): boolean {
     if (!matches) {
       return true
@@ -104,6 +96,19 @@ export function ChartAccountsPage() {
     }
     return walk(root.id)
   }
+
+  const visibleRoots = roots.filter((root) => {
+    if (!sectionVisible(root)) {
+      return false
+    }
+    if (matches && (showAll || section === null)) {
+      return true
+    }
+    if (showAll) {
+      return true
+    }
+    return section !== null && root.section === section
+  })
 
   async function createUnder(parentId: string) {
     const name = draftName.trim()
@@ -349,6 +354,31 @@ export function ChartAccountsPage() {
         O lançamento entra na conta analítica. As contas de cima só somam.{' '}
         <Link to="/ajuda#plano-de-contas">Central de ajuda</Link>
       </p>
+      <div className={`${styles.segmented} ${styles.segmentedWrap}`} role="group" aria-label="Categoria">
+        <button
+          type="button"
+          aria-pressed={showAll}
+          onClick={() => {
+            setSection(null)
+            setShowAll((current) => !current)
+          }}
+        >
+          Todos
+        </button>
+        {roots.map((root) => (
+          <button
+            key={root.id}
+            type="button"
+            aria-pressed={!showAll && section === root.section}
+            onClick={() => {
+              setShowAll(false)
+              setSection((current) => (current === root.section ? null : root.section))
+            }}
+          >
+            {root.name}
+          </button>
+        ))}
+      </div>
       <div className={styles.budgetSaveBar}>
         <Field
           label="Buscar"
@@ -357,40 +387,21 @@ export function ChartAccountsPage() {
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Ex.: aluguel, salário…"
         />
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => {
-            const next = !showAll
-            setShowAll(next)
-            setOpenSections(Object.fromEntries(SECTION_ORDER.map((section) => [section, next])))
-          }}
-        >
-          {showAll ? 'Recolher' : 'Ver todas'}
-        </Button>
       </div>
       <ErrorText message={accounts.error ?? action.error} />
       {accounts.loading && !accounts.data ? <Loading /> : null}
       {!accounts.loading && roots.length === 0 ? <Empty>Nenhuma conta.</Empty> : null}
-      {roots.filter(sectionVisible).map((root) => {
-        const open = Boolean(matches) || (openSections[root.section] ?? false)
-        return (
-          <section key={root.id} className={styles.section}>
-            <button
-              type="button"
-              className={styles.sectionTitle}
-              style={{ display: 'flex', width: '100%', alignItems: 'center', gap: 8, background: 'none', border: 0, padding: 0, cursor: 'pointer', textAlign: 'left' }}
-              onClick={() => setOpenSections((current) => ({ ...current, [root.section]: !open }))}
-            >
-              <span>
-                {open ? '−' : '+'} {chartAccountLabel(root)}
-              </span>
-              <span className={styles.muted}>{SECTION_HINT[root.section]}</span>
-            </button>
-            {open ? renderChildren(root) : null}
-          </section>
-        )
-      })}
+      {!accounts.loading && roots.length > 0 && visibleRoots.length === 0 ? (
+        <Empty>{needle ? 'Nenhuma conta encontrada.' : 'Escolha uma categoria.'}</Empty>
+      ) : null}
+      {visibleRoots.map((root) => (
+        <section key={root.id} className={styles.section}>
+          <h2 className={styles.sectionTitle}>
+            {chartAccountLabel(root)} <span className={styles.muted}>{SECTION_HINT[root.section]}</span>
+          </h2>
+          {renderChildren(root)}
+        </section>
+      ))}
     </div>
   )
 }

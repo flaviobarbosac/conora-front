@@ -29,7 +29,12 @@ import {
   shiftCompetence,
   todayInput,
 } from '../lib/format'
-import { LIFE_HORIZONS } from '../lib/lifeHorizon'
+import {
+  horizonBadgeClass,
+  isProjectExtrapolated,
+  LIFE_HORIZONS,
+  projectFillClass,
+} from '../lib/lifeHorizon'
 import styles from './page.module.css'
 
 function ymFromIso(iso: string | null | undefined): string {
@@ -82,7 +87,12 @@ export function ProjectDetailPage() {
                   <Badge tone={data.scope === 'Group' ? 'info' : 'ok'}>
                     {data.scope === 'Group' ? 'Família' : 'Pessoal'}
                   </Badge>
-                  {horizonLabel ? <Badge>{horizonLabel}</Badge> : null}
+                  {horizonLabel && data.horizon ? (
+                    <span className={`${styles.badge} ${horizonBadgeClass(styles, data.horizon)}`}>{horizonLabel}</span>
+                  ) : null}
+                  {isProjectExtrapolated(data) ? (
+                    <span className={`${styles.badge} ${styles.badge_horizonLong}`}>Acima da meta</span>
+                  ) : null}
                 </strong>
                 <span className={styles.rowSub}>
                   {formatMoney(data.accumulatedAmount)} de {formatMoney(data.goalAmount)}
@@ -94,7 +104,10 @@ export function ProjectDetailPage() {
               <strong>{formatPercent(data.progressPercent)}</strong>
             </div>
             <span className={styles.progress} aria-hidden>
-              <span className={styles.progressFill} style={{ width: `${Math.min(data.progressPercent, 100)}%` }} />
+              <span
+                className={`${styles.progressFill} ${projectFillClass(styles, data)}`}
+                style={{ width: `${Math.min(data.progressPercent, 100)}%` }}
+              />
             </span>
           </section>
 

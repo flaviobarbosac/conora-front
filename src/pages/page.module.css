@@ -538,6 +538,11 @@
   color: var(--danger);
 }
 
+.badge_horizonLong {
+  background: var(--horizon-long-bg);
+  color: var(--horizon-long);
+}
+
 .alert {
   display: flex;
   align-items: center;
@@ -663,6 +668,12 @@ button.compact {
   font-weight: var(--weight-semibold);
 }
 
+.segmentedWrap {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
 /* ---------- Progress ---------- */
 
 .progress {
@@ -690,6 +701,10 @@ button.compact {
 
 .progressFill_danger {
   background: var(--danger);
+}
+
+.progressFill_horizonLong {
+  background: var(--horizon-long);
 }
 
 .progressFill_info {
@@ -721,10 +736,24 @@ button.compact {
   opacity: 0.75;
 }
 
-.raioxFocus {
+.raioxFocus,
+.raioxFocusIncome {
   outline: 2px solid var(--primary);
   outline-offset: -2px;
   background: var(--selected) !important;
+}
+
+.raioxFocusDiscount,
+.raioxFocusLiability {
+  outline: 2px solid var(--danger);
+  outline-offset: -2px;
+  background: var(--danger-bg) !important;
+}
+
+.raioxFocusAsset {
+  outline: 2px solid var(--success);
+  outline-offset: -2px;
+  background: var(--success-bg) !important;
 }
 
 .heroCards {
@@ -747,9 +776,29 @@ button.compact {
 }
 
 .heroCard:hover,
-.heroCardActive {
+.heroCardActive,
+.heroCardIncome:hover,
+.heroCardIncomeActive {
   border-color: var(--primary);
   background: var(--selected);
+}
+
+.heroCardDiscount:hover,
+.heroCardDiscountActive {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.heroCardSpendable:hover,
+.heroCardSpendableActive {
+  border-color: var(--primary);
+  background: var(--surface);
+}
+
+.heroCardPatrimony:hover,
+.heroCardPatrimonyActive {
+  border-color: var(--success);
+  background: var(--success-bg);
 }
 
 .heroCard span {
@@ -813,13 +862,14 @@ button.compact {
 }
 
 .budgetSpread {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-4);
-  margin-bottom: var(--space-4);
 }
 
 .budgetSpreadBlock {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--border-subtle);
@@ -827,24 +877,118 @@ button.compact {
   background: var(--bg-app);
 }
 
-@media (min-width: 720px) {
-  .budgetSpread {
-    grid-template-columns: 1fr 1fr;
-  }
+.budgetSpreadBlock p {
+  margin: var(--space-1) 0 0;
+}
+
+.budgetSpreadTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.budgetSpreadBlock :global(button) {
+  align-self: flex-start;
+}
+
+.budgetSheet {
+  width: min(100%, 32rem);
+  max-height: min(92vh, 48rem);
+  padding: var(--space-5);
+}
+
+.budgetSheet .budgetSpreadBlock {
+  padding: var(--space-3);
+  gap: var(--space-2);
+}
+
+.budgetSheet .sectionTitle {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.budgetSheet :global(input[inputmode='numeric']),
+.budgetSheet :global(input[inputmode='decimal']) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 44px;
+}
+
+.budgetResult {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.budgetResult li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.budgetResult li span:last-child {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .budgetRow {
   grid-template-columns:
     2rem
     minmax(8rem, 1fr)
-    calc(var(--money-field-w) + var(--money-display-w) + var(--money-percent-w) + 2 * var(--space-4));
+    calc(
+      var(--money-field-w) + 2.5rem + var(--space-2) + var(--money-display-w) + var(--money-percent-w) +
+        2 * var(--space-4)
+    );
+  min-width: calc(
+    2rem + 8rem + var(--money-field-w) + 2.5rem + var(--space-2) + var(--money-display-w) + var(--money-percent-w) +
+      3 * var(--space-4) + var(--space-3)
+  );
 }
 
 .budgetTotals {
-  grid-template-columns: var(--money-field-w) var(--money-display-w) var(--money-percent-w);
+  grid-template-columns: calc(var(--money-field-w) + 2.5rem + var(--space-2)) var(--money-display-w) var(--money-percent-w);
   gap: var(--space-4);
   align-items: center;
   justify-items: end;
+}
+
+.budgetTotalsHead > span:first-child,
+.budgetAmountAlign {
+  padding-right: calc(2.5rem + var(--space-2));
+}
+
+.budgetPlannedCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.budgetSpreadIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.budgetSpreadIcon:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .raioxBudgetField {

@@ -21,6 +21,7 @@ export type IconName =
   | 'help'
   | 'logout'
   | 'trash'
+  | 'repeat'
 
 type IconDef = {
   label: string
@@ -141,5 +142,10 @@ export const ICON_CATALOG: Record<IconName, IconDef> = {
     label: 'Excluir',
     base: ['M5 7h14', 'M10 11v6', 'M14 11v6', 'M8 7V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2'],
     accent: ['M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12'],
+  },
+  repeat: {
+    label: 'Repetir ou parcelar',
+    base: ['M17 2l4 4-4 4', 'M3 11V9a4 4 0 0 1 4-4h14', 'M7 22l-4-4 4-4', 'M21 13v2a4 4 0 0 1-4 4H3'],
+    accent: [],
   },
 }

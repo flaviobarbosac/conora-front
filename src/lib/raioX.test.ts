@@ -3,6 +3,8 @@ import type { Budget, BudgetLine, ChartAccount } from '../api/finance'
 import {
   aggregateYearMonths,
   buildAmountMaps,
+  patrimonyStockMap,
+  sectionRealized,
   groupAccountsByParent,
   monthsEndingAt,
   progressPercent,
@@ -125,6 +127,43 @@ describe('sumBranch', () => {
     ])
 
     expect(sumBranch('root', byParent, planned, actual)).toEqual({ planned: 250, actual: 50 })
+  })
+})
+
+describe('patrimonyStockMap', () => {
+  it('rolls item amounts up the chart without a hidden balance', () => {
+    const apt = account({ id: 'apt', parentId: 'use', name: 'Apartamento', level: 'Analytical' })
+    const car = account({ id: 'car', parentId: 'use', name: 'Automóvel', level: 'Analytical' })
+    const use = account({ id: 'use', parentId: 'asset', name: 'Bens de Uso', level: 'Group' })
+    const idle = account({ id: 'idle', parentId: 'asset', name: 'Bens de Não Uso', level: 'Group' })
+    const asset = account({ id: 'asset', parentId: null, name: 'Ativo', level: 'Root', section: 'Asset' })
+    const byParent = groupAccountsByParent([asset, use, idle, apt, car])
+    const stock = patrimonyStockMap([
+      { chartAccountId: 'apt', amount: 850000 },
+      { chartAccountId: 'car', amount: 120000 },
+    ])
+
+    expect(sumBranch('use', byParent, new Map(), stock)).toEqual({ planned: 0, actual: 970000 })
+    expect(sumBranch('idle', byParent, new Map(), stock)).toEqual({ planned: 0, actual: 0 })
+    expect(sumBranch('asset', byParent, new Map(), stock)).toEqual({ planned: 0, actual: 970000 })
+  })
+})
+
+describe('sectionRealized', () => {
+  it('matches the tree root and ignores planned and diagnosis net', () => {
+    const salary = account({ id: 'salary', parentId: 'income', name: 'Salário', level: 'Analytical', section: 'Income' })
+    const income = account({ id: 'income', parentId: null, name: 'Receita', level: 'Root', section: 'Income' })
+    const inss = account({ id: 'inss', parentId: 'discount', name: 'INSS', level: 'Analytical', section: 'Discount' })
+    const discount = account({ id: 'discount', parentId: null, name: 'Desconto', level: 'Root', section: 'Discount' })
+    const byParent = groupAccountsByParent([income, salary, discount, inss])
+    const actual = new Map([
+      ['salary', 10000],
+      ['inss', 1500],
+    ])
+
+    expect(sectionRealized(byParent, actual, 'Income')).toBe(10000)
+    expect(sectionRealized(byParent, actual, 'Discount')).toBe(1500)
+    expect(sectionRealized(byParent, actual, 'Income') - sectionRealized(byParent, actual, 'Discount')).toBe(8500)
   })
 })
 
