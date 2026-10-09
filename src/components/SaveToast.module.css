@@ -1,0 +1,14 @@
+.toastOk {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 120;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / 12%));
+}

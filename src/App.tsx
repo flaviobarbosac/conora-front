@@ -3,6 +3,7 @@ import { lazy, useEffect, useState } from 'react'
 import { listenNativeShare } from './share/receiveShare'
 import { useAuth } from './auth/AuthProvider'
 import { ConfirmDialogHost } from './components/ConfirmDialog'
+import { SaveToastHost } from './components/SaveToast'
 import { Splash } from './components/Splash'
 import { UnsavedChangesProvider } from './hooks/useUnsavedChanges'
 import { AppShell } from './layouts/AppShell'
@@ -61,6 +62,7 @@ export default function App() {
     <UnsavedChangesProvider>
       {splashDone ? null : <Splash onFinished={() => setSplashDone(true)} />}
       <ConfirmDialogHost />
+      <SaveToastHost />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

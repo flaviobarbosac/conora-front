@@ -8,6 +8,7 @@ import { ErrorText, Loading } from '../components/ui/Feedback'
 import { AuthLayout } from '../layouts/AuthLayout'
 import { useAction } from '../hooks/useAction'
 import { errorMessage } from '../lib/format'
+import { showSaveToast } from '../lib/saveToast'
 import styles from './page.module.css'
 
 export function GroupInvitePage() {
@@ -58,6 +59,7 @@ export function GroupInvitePage() {
 
   async function onAccept() {
     if (await accept.run(() => familyApi.acceptInvite(token))) {
+      showSaveToast('Convite aceito.')
       setAccepted(true)
     }
   }

@@ -8,6 +8,7 @@ import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { confirmDestructive } from '../lib/confirm'
+import { showSaveToast } from '../lib/saveToast'
 import { formatDateTime } from '../lib/format'
 import styles from './page.module.css'
 
@@ -32,6 +33,7 @@ export function MembersPage() {
       return
     }
     if (await profileAction.run(() => familyApi.updateProfile(name))) {
+      showSaveToast('Perfil salvo.')
       setDisplayName('')
       profile.reload()
       group.reload()
@@ -47,6 +49,7 @@ export function MembersPage() {
       return
     }
     if (await inviteAction.run(() => familyApi.invite(email))) {
+      showSaveToast('Convite enviado.')
       setInviteEmail('')
       group.reload()
     }

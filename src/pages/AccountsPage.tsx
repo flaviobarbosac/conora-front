@@ -24,6 +24,7 @@ import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
+import { showSaveToast } from '../lib/saveToast'
 import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
 import styles from './page.module.css'
 
@@ -76,6 +77,7 @@ export function AccountsPage() {
       return
     }
     if (await archive.run(() => accountsApi.archive(account.id, !account.isArchived))) {
+      showSaveToast(account.isArchived ? 'Conta reativada.' : 'Conta arquivada.')
       refresh()
     }
   }
@@ -224,6 +226,7 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
         }),
       )
     ) {
+      showSaveToast('Conta criada.')
       setName('')
       setKind('Checking')
       setBankCode('021')
@@ -330,6 +333,7 @@ function TransferForm({ accounts, onSaved }: { accounts: Account[]; onSaved: () 
       return
     }
     if (await action.run(() => accountsApi.transfer(from, to, value, dateToApi(date)))) {
+      showSaveToast('Transferência registrada.')
       setAmount('')
       onSaved()
     }
@@ -399,6 +403,7 @@ function CardForm({ accounts, onSaved }: { accounts: Account[]; onSaved: () => v
       cardsApi.create(name.trim(), limitTotal, Number(closing), Number(due), paymentAccountId || undefined),
     )
     if (saved) {
+      showSaveToast('Cartão criado.')
       setName('')
       setLimit('')
       setClosing('')
@@ -519,6 +524,7 @@ function PurchaseForm({
       }),
     )
     if (saved) {
+      showSaveToast('Compra registrada.')
       onSaved()
     }
   }
@@ -567,6 +573,7 @@ function Invoices({ card, accounts, onPaid }: { card: Card; accounts: Account[];
 
   async function pay(competenceYm: string) {
     if (await action.run(() => cardsApi.payInvoice(card.id, competenceYm, accountId || undefined))) {
+      showSaveToast('Fatura paga.')
       invoices.reload()
       onPaid()
     }

@@ -9,6 +9,7 @@ import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
+import { showSaveToast } from '../lib/saveToast'
 import { ThemeName, useTheme } from '../theme/ThemeProvider'
 import styles from './page.module.css'
 
@@ -40,6 +41,7 @@ export function SettingsPage() {
   async function onSaveName(event: FormEvent) {
     event.preventDefault()
     if (await saveProfile.run(() => familyApi.updateProfile(name.trim()))) {
+      showSaveToast('Nome salvo.')
       profile.reload()
       window.dispatchEvent(new Event('conora:profile-changed'))
     }

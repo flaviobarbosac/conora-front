@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { familyApi, projectsApi, type LifeProject, type LifeProjectScope } from '../api/finance'
 import { ChartAccountSelect } from '../components/ChartAccountSelect'
@@ -15,6 +15,7 @@ import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
+import { showSaveToast } from '../lib/saveToast'
 import {
   currentCompetence,
   dateToApi,
@@ -182,6 +183,7 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
         }),
       )
     ) {
+      showSaveToast('Projeto salvo.')
       onSaved()
     }
   }
@@ -273,14 +275,14 @@ function ContributeForm({ data, onSaved }: { data: LifeProject; onSaved: () => v
   const [chartAccountId, setChartAccountId] = useState(data.chartAccountId ?? '')
   const initialDate = useState(todayInput)[0]
   const isDirty = useMemo(
-    () =>
-      amount.trim() !== '' ||
-      date !== initialDate ||
-      accountId !== '' ||
-      chartAccountId !== (data.chartAccountId ?? ''),
-    [amount, date, initialDate, accountId, chartAccountId, data.chartAccountId],
+    () => amount.trim() !== '' || date !== initialDate || accountId !== '',
+    [amount, date, initialDate, accountId],
   )
   useRegisterDirty(`project-contribute:${data.id}`, isDirty)
+
+  useEffect(() => {
+    setChartAccountId(data.chartAccountId ?? '')
+  }, [data.chartAccountId])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -308,6 +310,7 @@ function ContributeForm({ data, onSaved }: { data: LifeProject; onSaved: () => v
       )
     ) {
       setAmount('')
+      showSaveToast('Aporte registrado com sucesso.')
       onSaved()
       lookups.reloadAccounts()
     }
@@ -345,11 +348,11 @@ function ContributeForm({ data, onSaved }: { data: LifeProject; onSaved: () => v
           label="Conta do plano"
           name="contribChartAccount"
           required
+          disabled
           value={chartAccountId}
           onChange={setChartAccountId}
           options={lifeAccounts}
           tree={lookups.chartAccounts}
-          emptyLabel="Selecione"
         />
         <div className={styles.formWide}>
           <ErrorText message={contribute.error} />

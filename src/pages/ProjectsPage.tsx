@@ -27,6 +27,7 @@ import {
   shiftCompetence,
 } from '../lib/format'
 import { horizonFillClass, LIFE_HORIZONS, type HorizonKey } from '../lib/lifeHorizon'
+import { showSaveToast } from '../lib/saveToast'
 import styles from './page.module.css'
 
 function isHorizon(value: string | null): value is HorizonKey {
@@ -267,6 +268,7 @@ function ProjectForm({
         createdId = created.id
       })
     ) {
+      showSaveToast('Projeto criado.')
       onSaved(createdId)
     }
   }

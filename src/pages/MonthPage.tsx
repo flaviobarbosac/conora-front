@@ -8,6 +8,7 @@ import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { confirmDestructive } from '../lib/confirm'
+import { showSaveToast } from '../lib/saveToast'
 import { currentCompetence, formatDateTime } from '../lib/format'
 import styles from './page.module.css'
 
@@ -29,6 +30,7 @@ export function MonthPage() {
       return
     }
     if (await action.run(() => monthsApi.close(ym))) {
+      showSaveToast('Mês fechado.')
       status.reload()
     }
   }
@@ -36,6 +38,7 @@ export function MonthPage() {
   async function reopen(event: FormEvent) {
     event.preventDefault()
     if (await action.run(() => monthsApi.reopen(ym, reason.trim()))) {
+      showSaveToast('Mês reaberto.')
       setReason('')
       status.reload()
     }

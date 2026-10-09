@@ -10,6 +10,7 @@ import { MoneyField } from '../components/ui/MoneyField'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { confirmDestructive } from '../lib/confirm'
+import { showSaveToast } from '../lib/saveToast'
 import { currentCompetence, formatMoney, parseMoney } from '../lib/format'
 import styles from './page.module.css'
 
@@ -93,6 +94,7 @@ function SourceForm({ ym, onSaved }: { ym: string; onSaved: () => void }) {
       return
     }
     if (await action.run(() => diagnosisApi.create({ name: name.trim(), competenceYm: ym, ...values }))) {
+      showSaveToast('Fonte de renda salva.')
       setName('')
       setGross('')
       setInss('')

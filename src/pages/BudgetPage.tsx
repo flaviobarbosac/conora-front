@@ -15,6 +15,7 @@ import { MoneyField } from '../components/ui/MoneyField'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import { showSaveToast } from '../lib/saveToast'
 import { chartAccountLabel } from '../lib/chartLabel'
 import { CASH_FLOW_SECTIONS, compareChartSiblings } from '../lib/chartOrder'
 import {
@@ -69,6 +70,7 @@ export function BudgetPage() {
       return
     }
     if (await copy.run(() => budgetsApi.copyPrevious(ym))) {
+      showSaveToast('Orçamento copiado do mês anterior.')
       budget.reload()
       yearData.reload()
     }
@@ -125,7 +127,6 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [pendingId, setPendingId] = useState<string | null>(null)
-  const [toast, setToast] = useState(false)
   const [yearAccountId, setYearAccountId] = useState<string | null>(null)
   const saveAction = useAction()
 
@@ -191,14 +192,6 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
 
   useRegisterDirty('budget-tree', dirtyIds.size > 0)
 
-  useEffect(() => {
-    if (!toast) {
-      return
-    }
-    const timer = window.setTimeout(() => setToast(false), 2000)
-    return () => window.clearTimeout(timer)
-  }, [toast])
-
   const needle = query.trim().toLowerCase()
   const matches = needle
     ? new Set(
@@ -237,7 +230,7 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
     )
     setPendingId(null)
     if (ok) {
-      setToast(true)
+      showSaveToast('Orçamento salvo.')
       onSaved()
     }
   }
@@ -303,11 +296,6 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
           loading={yearLoading && !yearData}
           onClose={() => setYearAccountId(null)}
         />
-      ) : null}
-      {toast ? (
-        <div className={styles.toastOk} role="status">
-          Registro salvo com sucesso.
-        </div>
       ) : null}
     </section>
   )

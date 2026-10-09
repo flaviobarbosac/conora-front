@@ -9,6 +9,7 @@ import { TextArea } from '../components/ui/TextArea'
 import { useAction } from '../hooks/useAction'
 import { useLookups } from '../hooks/useLookups'
 import { formatDate, formatMoney } from '../lib/format'
+import { showSaveToast } from '../lib/saveToast'
 import styles from './page.module.css'
 
 export function ImportPage() {
@@ -44,13 +45,16 @@ export function ImportPage() {
     if (!preview) {
       return
     }
-    await commitAction.run(async () => {
+    const saved = await commitAction.run(async () => {
       const done = await importsApi.commit(preview.batchId, accountId, expenseChartAccountId || undefined, incomeChartAccountId || undefined)
       setResult(`${done.imported} lançamento(s) importado(s), ${done.skipped} ignorado(s).`)
       setPreview(null)
       setContent('')
       lookups.reloadAccounts()
     })
+    if (saved) {
+      showSaveToast('Importação confirmada.')
+    }
   }
 
   return (

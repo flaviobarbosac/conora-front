@@ -13,6 +13,7 @@ import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
 import { confirmDestructive } from '../lib/confirm'
+import { showSaveToast } from '../lib/saveToast'
 import { formatMoney, parseMoney } from '../lib/format'
 import styles from './page.module.css'
 
@@ -139,6 +140,7 @@ function ItemForm({ onSaved }: { onSaved: () => void }) {
       return
     }
     if (await action.run(() => patrimonyApi.create(chartAccountId, name.trim(), value))) {
+      showSaveToast('Item de patrimônio salvo.')
       setChartAccountId('')
       setName('')
       setAmount('')

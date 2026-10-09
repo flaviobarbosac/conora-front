@@ -5,6 +5,7 @@ import { Badge, ErrorText, Loading } from '../components/ui/Feedback'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { formatDate, formatMoney } from '../lib/format'
+import { showSaveToast } from '../lib/saveToast'
 import styles from './page.module.css'
 
 const STATUS_LABEL: Record<SubscriptionStatus, string> = {
@@ -25,6 +26,7 @@ export function PlanPage() {
 
   async function choose(kind: PlanKind) {
     if (await subscribe.run(() => planApi.subscribe(kind))) {
+      showSaveToast('Plano ativado.')
       plan.reload()
     }
   }

@@ -14,6 +14,7 @@ import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
+import { showSaveToast } from '../lib/saveToast'
 import { chartAccountLabel } from '../lib/chartLabel'
 import { compareChartSiblings } from '../lib/chartOrder'
 import styles from './page.module.css'
@@ -103,6 +104,7 @@ export function ChartAccountsPage() {
       return
     }
     if (await action.run(() => chartAccountsApi.create(name, parentId))) {
+      showSaveToast('Conta salva.')
       setDraftName('')
       setDraftParentId(null)
       accounts.reload()
@@ -115,6 +117,7 @@ export function ChartAccountsPage() {
       return
     }
     if (await action.run(() => chartAccountsApi.update(account.id, name, account.isActive))) {
+      showSaveToast('Conta salva.')
       setRenameId(null)
       accounts.reload()
     }
@@ -132,6 +135,7 @@ export function ChartAccountsPage() {
 
   async function deactivate(account: ChartAccount) {
     if (await action.run(() => chartAccountsApi.update(account.id, account.name, false))) {
+      showSaveToast('Conta desativada.')
       accounts.reload()
     }
   }

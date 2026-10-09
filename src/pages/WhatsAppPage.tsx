@@ -15,6 +15,7 @@ import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
 import { confirmDestructive } from '../lib/confirm'
+import { showSaveToast } from '../lib/saveToast'
 import { formatMoney } from '../lib/format'
 import styles from './page.module.css'
 
@@ -37,6 +38,7 @@ export function WhatsAppPage() {
   async function saveLink(event: FormEvent) {
     event.preventDefault()
     if (await linkAction.run(() => whatsappApi.setLink(phone.trim()))) {
+      showSaveToast('Número vinculado.')
       setPhone('')
       link.reload()
     }
@@ -62,6 +64,7 @@ export function WhatsAppPage() {
         whatsappApi.confirm(draft.id, accountId || undefined, chartAccountId || undefined),
       )
     ) {
+      showSaveToast('Lançamento gravado.')
       drafts.reload()
     }
   }

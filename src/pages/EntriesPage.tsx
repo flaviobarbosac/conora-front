@@ -17,6 +17,7 @@ import { useLookups } from '../hooks/useLookups'
 import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import { scanReceipt } from '../camera/scanReceipt'
 import { confirmDestructive } from '../lib/confirm'
+import { showSaveToast } from '../lib/saveToast'
 import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
 import { isNativeApp } from '../lib/platform'
 import { peekPendingShare } from '../share/pendingShare'
@@ -361,6 +362,7 @@ function EntryForm({ accounts, categories, tree, onDirtyChange, onSaved }: FormP
     }
 
     if (await action.run(() => entriesApi.create(input))) {
+      showSaveToast('Lançamento salvo.')
       onSaved()
     }
   }

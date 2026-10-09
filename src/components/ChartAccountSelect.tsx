@@ -144,10 +144,15 @@ export function ChartAccountSelect({
         type="button"
         className={styles.trigger}
         disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={listId}
-        onClick={() => setOpen((current) => !current)}
+        aria-readonly={disabled || undefined}
+        aria-haspopup={disabled ? undefined : 'listbox'}
+        aria-expanded={disabled ? undefined : open}
+        aria-controls={disabled ? undefined : listId}
+        onClick={() => {
+          if (!disabled) {
+            setOpen((current) => !current)
+          }
+        }}
         onKeyDown={onTriggerKeyDown}
       >
         <span className={styles.value}>
@@ -160,9 +165,11 @@ export function ChartAccountSelect({
             </>
           )}
         </span>
-        <span className={styles.chevron} aria-hidden>
-          {open ? '▲' : '▼'}
-        </span>
+        {disabled ? null : (
+          <span className={styles.chevron} aria-hidden>
+            {open ? '▲' : '▼'}
+          </span>
+        )}
       </button>
 
       {open ? (
