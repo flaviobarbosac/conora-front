@@ -1,0 +1,221 @@
+﻿import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { patrimonyApi, type PatrimonyItem } from '../api/finance'
+import { ChartAccountSelect } from '../components/ChartAccountSelect'
+import { PageHeader } from '../components/PageHeader'
+import { Pager } from '../components/Pager'
+import { Button } from '../components/ui/Button'
+import { DeleteIconButton } from '../components/ui/DeleteIconButton'
+import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
+import { Field } from '../components/ui/Field'
+import { MoneyField } from '../components/ui/MoneyField'
+import { useAction } from '../hooks/useAction'
+import { useClientPagination } from '../hooks/useClientPagination'
+import { useLoad } from '../hooks/useLoad'
+import { useLookups } from '../hooks/useLookups'
+import { confirmDestructive } from '../lib/confirm'
+import { showSaveToast } from '../lib/saveToast'
+import { formatMoney, parseMoney } from '../lib/format'
+import styles from './page.module.css'
+
+export function PatrimonyPage() {
+  const [searchParams] = useSearchParams()
+  const filterAccountId = searchParams.get('chartAccountId')
+  const summary = useLoad(() => patrimonyApi.get(), [])
+  const remove = useAction()
+  const data = summary.data
+  const items = useMemo(() => {
+    const list = data?.items ?? []
+    if (!filterAccountId) {
+      return list
+    }
+    return list.filter((item) => item.chartAccountId === filterAccountId)
+  }, [data?.items, filterAccountId])
+  const pagination = useClientPagination(items, 10)
+
+  async function removeItem(item: PatrimonyItem) {
+    if (!(await confirmDestructive(`Excluir "${item.name}"?`, { title: 'Excluir item' }))) {
+      return
+    }
+    if (await remove.run(() => patrimonyApi.remove(item.id))) {
+      showSaveToast('Item excluído.')
+      summary.reload()
+    }
+  }
+
+  return (
+    <div className={styles.page}>
+      <PageHeader secondary title="Patrimônio" />
+      <ErrorText message={summary.error ?? remove.error} />
+      {summary.loading && !data ? <Loading /> : null}
+      {data ? (
+        <>
+          <section className={styles.hero}>
+            <div className={styles.heroTop}>
+              <span>Composição</span>
+            </div>
+            <div className={styles.heroCards} aria-label="Saldos de patrimônio">
+              <div className={styles.heroCard}>
+                <span>Ativo</span>
+                <strong className={`${styles.moneyValue} ${styles.positive}`}>
+                  {formatMoney(data.assetsTotal)}
+                </strong>
+                <span className={styles.muted}>
+                  Uso {formatMoney(data.assetsInUse)} · não uso {formatMoney(data.assetsNotInUse)}
+                </span>
+              </div>
+              <div className={styles.heroCard}>
+                <span>Passivo</span>
+                <strong className={`${styles.moneyValue} ${styles.negative}`}>
+                  {formatMoney(data.liabilitiesTotal)}
+                </strong>
+                <span className={styles.muted}>Itens de passivo</span>
+              </div>
+              <div className={`${styles.heroCard} ${styles.heroCardPatrimonyActive}`}>
+                <span>Patrimônio líquido</span>
+                <strong className={`${styles.moneyValue} ${data.netWorth < 0 ? styles.negative : ''}`}>
+                  {formatMoney(data.netWorth)}
+                </strong>
+                <span className={styles.muted}>Ativo − passivo</span>
+              </div>
+            </div>
+          </section>
+          {data.groups.length > 0 ? (
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>Totais por grupo</h2>
+              <ul className={styles.list}>
+                {data.groups.map((group) => (
+                  <li key={`${group.section}-${group.groupName}`} className={styles.row}>
+                    <span className={styles.rowMain}>
+                      <strong>{group.groupName}</strong>
+                      <span className={styles.rowSub}>{group.section === 'Asset' ? 'Ativo' : 'Passivo'}</span>
+                    </span>
+                    <span className={`${styles.amount} ${styles.moneyValue}`}>{formatMoney(group.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>
+              Itens{filterAccountId ? ' · filtrados pela conta do Raio-X' : ''}
+            </h2>
+            {items.length === 0 ? <Empty>Nenhum item cadastrado.</Empty> : null}
+            <ul className={styles.list}>
+              {pagination.pageItems.map((item) => (
+                <li key={item.id} className={styles.row}>
+                  <span className={styles.rowMain}>
+                    <strong>{item.name}</strong>
+                    <span className={styles.rowSub}>
+                      {item.chartAccountName} · {item.groupName}
+                    </span>
+                  </span>
+                  <span className={styles.rowEnd}>
+                    <Badge tone={item.section === 'Asset' ? 'ok' : 'danger'}>
+                      {item.section === 'Asset' ? 'Ativo' : 'Passivo'}
+                    </Badge>
+                    <span className={`${styles.amount} ${styles.moneyValue}`}>{formatMoney(item.amount)}</span>
+                    <DeleteIconButton disabled={remove.busy} onClick={() => void removeItem(item)} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <Pager
+              page={pagination.page}
+              pageCount={pagination.pageCount}
+              total={pagination.total}
+              pageSize={pagination.pageSize}
+              onPageChange={pagination.setPage}
+            />
+          </section>
+        </>
+      ) : null}
+      <ItemForm
+        initialChartAccountId={filterAccountId}
+        onSaved={() => {
+          summary.reload()
+        }}
+      />
+    </div>
+  )
+}
+
+function ItemForm({
+  onSaved,
+  initialChartAccountId,
+}: {
+  onSaved: () => void
+  initialChartAccountId: string | null
+}) {
+  const lookups = useLookups()
+  const options = lookups.patrimonyAccounts
+  const [chartAccountId, setChartAccountId] = useState(initialChartAccountId ?? '')
+  const [name, setName] = useState('')
+  const [amount, setAmount] = useState('')
+  const action = useAction()
+
+  useEffect(() => {
+    if (initialChartAccountId) {
+      setChartAccountId(initialChartAccountId)
+    }
+  }, [initialChartAccountId])
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    const value = parseMoney(amount)
+    if (!chartAccountId) {
+      action.setError('Escolha a conta do plano.')
+      return
+    }
+    if (!name.trim()) {
+      action.setError('Informe o nome do item.')
+      return
+    }
+    if (!Number.isFinite(value) || value < 0) {
+      action.setError('Valor inválido.')
+      return
+    }
+    if (await action.run(() => patrimonyApi.create(chartAccountId, name.trim(), value))) {
+      showSaveToast('Item de patrimônio salvo.')
+      setChartAccountId(initialChartAccountId ?? '')
+      setName('')
+      setAmount('')
+      onSaved()
+    }
+  }
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.sectionTitle}>Novo item</h2>
+      <form className={styles.form} onSubmit={(event) => void submit(event)}>
+        <ChartAccountSelect
+          label="Conta do plano"
+          name="patrimonyAccount"
+          required
+          value={chartAccountId}
+          onChange={setChartAccountId}
+          options={options}
+          tree={lookups.chartAccounts}
+          emptyLabel="Selecione"
+        />
+        <Field
+          label="Nome do item"
+          name="patrimonyName"
+          required
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Ex.: Civic 2018, apartamento, empréstimo X"
+        />
+        <MoneyField label="Valor (R$)" name="patrimonyAmount" required value={amount} onChange={setAmount} />
+        <div className={styles.formWide}>
+          <ErrorText message={action.error} />
+        </div>
+        <div className={styles.formActions}>
+          <Button type="submit" disabled={action.busy || options.length === 0}>
+            Adicionar
+          </Button>
+        </div>
+      </form>
+    </section>
+  )
+}

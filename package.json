@@ -1,0 +1,51 @@
+{
+  "name": "conora-frontend",
+  "private": true,
+  "version": "0.1.43",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build && node scripts/bump-version.mjs",
+    "build:android": "tsc -b && vite build --mode android && node scripts/bump-version.mjs",
+    "build:ios": "tsc -b && vite build --mode ios && node scripts/bump-version.mjs",
+    "lint": "oxlint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "preview": "vite preview",
+    "cap:sync": "npm run build:android && node scripts/sync-android-google-auth.mjs --mode android && node scripts/patch-android-share-intent.mjs && npx cap sync android",
+    "cap:sync:ios": "npm run build:ios && node scripts/sync-ios-google-auth.mjs && npx cap sync ios",
+    "cap:open": "npx cap open android",
+    "cap:open:ios": "npx cap open ios",
+    "cap:run:android": "npx cap run android",
+    "android:env": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/android-env.ps1",
+    "android:keystore": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/generate-android-upload-keystore.ps1",
+    "android:sha1": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/print-android-release-sha1.ps1",
+    "android:bundle": "powershell -NoProfile -ExecutionPolicy Bypass -Command \". ./scripts/android-env.ps1; npm run cap:sync; Set-Location mobile/android; ./gradlew bundleRelease\""
+  },
+  "dependencies": {
+    "@capacitor-community/apple-sign-in": "^7.1.0",
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/camera": "^8.2.4",
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/ios": "^8.5.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@codetrix-studio/capacitor-google-auth": "3.4.0-rc.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.4",
+    "send-intent": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.1",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "oxlint": "^1.81.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^3.2.7"
+  }
+}
