@@ -12,13 +12,16 @@ import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
+import { IntegerField } from '../components/ui/IntegerField'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import { chartAccountLabel } from '../lib/chartLabel'
 import { CASH_FLOW_SECTIONS, compareChartSiblings } from '../lib/chartOrder'
 import {
+  competencesFrom,
   currentCompetence,
   formatCompetence,
   formatMoney,
@@ -69,8 +72,26 @@ export function BudgetPage() {
     if (isDirty && !(await confirmLeave())) {
       return
     }
-    if (await copy.run(() => budgetsApi.copyPrevious(ym))) {
-      showSaveToast('Orçamento copiado do mês anterior.')
+    const hasPlanned = (budget.data?.lines ?? []).some(
+      (line) => !line.isGroup && Math.abs(line.plannedAmount) > 0.001,
+    )
+    let overwrite = false
+    if (hasPlanned) {
+      overwrite = await confirmDestructive(
+        'Este mês já tem valores previstos. Deseja sobrescrever com o mês anterior?',
+        {
+          title: 'Copiar mês anterior',
+          confirmLabel: 'Sobrescrever',
+          cancelLabel: 'Só contas vazias',
+          danger: false,
+        },
+      )
+      // cancelLabel path: confirmDestructive returns false → copy without overwrite
+    }
+    if (await copy.run(() => budgetsApi.copyPrevious(ym, overwrite))) {
+      showSaveToast(
+        overwrite ? 'Orçamento copiado do mês anterior.' : 'Contas vazias preenchidas com o mês anterior.',
+      )
       budget.reload()
       yearData.reload()
     }
@@ -126,7 +147,6 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [drafts, setDrafts] = useState<Record<string, string>>({})
-  const [pendingId, setPendingId] = useState<string | null>(null)
   const [yearAccountId, setYearAccountId] = useState<string | null>(null)
   const saveAction = useAction()
 
@@ -171,7 +191,6 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
       initial[id] = formatMoneyInput(amount)
     }
     setDrafts(initial)
-    setPendingId(null)
     saveAction.setError(null)
   }, [ym, plannedSignature])
 
@@ -213,22 +232,30 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
     })
   }
 
-  async function saveLine(accountId: string) {
-    const text = drafts[accountId] ?? ''
-    const parsed = text.trim() ? parseMoney(text) : 0
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      saveAction.setError('Informe um valor válido (zero ou positivo).')
+  function cancelEdits() {
+    const initial: Record<string, string> = {}
+    for (const [id, amount] of planned.entries()) {
+      initial[id] = formatMoneyInput(amount)
+    }
+    setDrafts(initial)
+    saveAction.setError(null)
+  }
+
+  async function saveAll() {
+    const lines: { chartAccountId: string; plannedAmount: number }[] = []
+    for (const accountId of dirtyIds) {
+      const text = drafts[accountId] ?? ''
+      const parsed = text.trim() ? parseMoney(text) : 0
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        saveAction.setError('Informe um valor válido (zero ou positivo).')
+        return
+      }
+      lines.push({ chartAccountId: accountId, plannedAmount: parsed })
+    }
+    if (lines.length === 0) {
       return
     }
-    const server = planned.get(accountId) ?? 0
-    if (Math.abs(parsed - server) < 0.001) {
-      return
-    }
-    setPendingId(accountId)
-    const ok = await saveAction.run(() =>
-      budgetsApi.upsert(ym, 'Detailed', [{ chartAccountId: accountId, plannedAmount: parsed }]),
-    )
-    setPendingId(null)
+    const ok = await saveAction.run(() => budgetsApi.upsert(ym, 'Detailed', lines))
     if (ok) {
       showSaveToast('Orçamento salvo.')
       onSaved()
@@ -242,10 +269,24 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
 
   return (
     <section className={styles.section}>
-      <p className={styles.muted}>
-        Informe o previsto em cada conta. O valor grava ao sair do campo. Toque no nome para ver o ano. Realizado vem
-        dos lançamentos.
-      </p>
+      <div className={styles.budgetSaveBar}>
+        <p className={styles.muted}>
+          Edite o previsto e salve. Em cada conta: <strong>Repetir / parcelar</strong>.
+        </p>
+        <div className={styles.budgetSaveActions}>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={saveAction.busy || dirtyIds.size === 0}
+            onClick={cancelEdits}
+          >
+            Cancelar
+          </Button>
+          <Button type="button" disabled={saveAction.busy || dirtyIds.size === 0} onClick={() => void saveAll()}>
+            Salvar
+          </Button>
+        </div>
+      </div>
       <Field
         label="Buscar conta"
         name="budgetSearch"
@@ -257,12 +298,12 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
       {roots.length === 0 ? <Loading /> : null}
       {roots.length > 0 ? (
         <div className={styles.raioxList}>
-          <div className={`${styles.raioxRow} ${styles.raioxHead}`}>
+          <div className={`${styles.raioxRow} ${styles.budgetRow} ${styles.raioxHead}`}>
             <span />
             <span>Conta</span>
-            <span className={styles.raioxTotals}>
-              <span>Realizado</span>
+            <span className={`${styles.raioxTotals} ${styles.budgetTotals}`}>
               <span>Previsto</span>
+              <span>Realizado</span>
               <span>% do previsto</span>
             </span>
           </div>
@@ -277,24 +318,36 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading,
               drafts={drafts}
               open={open}
               matches={matches}
-              pendingId={pendingId}
               busy={saveAction.busy}
               onToggle={toggle}
               onOpenYear={setYearAccountId}
               onDraftChange={(id, value) => setDrafts((current) => ({ ...current, [id]: value }))}
-              onSaveLine={(id) => void saveLine(id)}
             />
           ))}
         </div>
       ) : null}
       {yearAccount ? (
         <BudgetYearSheet
+          ym={ym}
           year={year}
           account={yearAccount}
           months={yearData?.months ?? []}
           line={yearLine}
           loading={yearLoading && !yearData}
+          plannedAmount={(() => {
+            const draft = drafts[yearAccount.id]
+            if (draft != null && draft.trim()) {
+              const parsed = parseMoney(draft)
+              if (Number.isFinite(parsed) && parsed >= 0) {
+                return parsed
+              }
+            }
+            return planned.get(yearAccount.id) ?? 0
+          })()}
           onClose={() => setYearAccountId(null)}
+          onChanged={() => {
+            onSaved()
+          }}
         />
       ) : null}
     </section>
@@ -311,11 +364,11 @@ function BudgetTotalsCell({
   const percent = progressPercent(totals)
   const tone = progressTone(percent, totals)
   return (
-    <span className={styles.raioxTotals}>
-      <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.actual)}</span>
+    <span className={`${styles.raioxTotals} ${styles.budgetTotals}`}>
       {edit ?? (
         <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.planned)}</span>
       )}
+      <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.actual)}</span>
       <span className={`${styles.raioxPercent} ${toneClass(tone)}`}>
         {percent === null ? '—' : formatPercent(percent)}
       </span>
@@ -336,12 +389,10 @@ function BudgetAccountBlock({
   drafts,
   open,
   matches,
-  pendingId,
   busy,
   onToggle,
   onOpenYear,
   onDraftChange,
-  onSaveLine,
 }: {
   account: ChartAccount
   depth: number
@@ -351,12 +402,10 @@ function BudgetAccountBlock({
   drafts: Record<string, string>
   open: Set<string>
   matches: Set<string> | null
-  pendingId: string | null
   busy: boolean
   onToggle: (id: string) => void
   onOpenYear: (id: string) => void
   onDraftChange: (id: string, value: string) => void
-  onSaveLine: (id: string) => void
 }) {
   const children = byParent.get(account.id) ?? []
   const groups = children.filter((child) => child.level === 'Group')
@@ -392,15 +441,18 @@ function BudgetAccountBlock({
     }
     return (
       <div
-        className={`${styles.raioxRow} ${rowClass}`}
+        className={`${styles.raioxRow} ${styles.budgetRow} ${rowClass}`}
         style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
       >
         <span />
-        <button type="button" className={styles.budgetAccountName} onClick={() => onOpenYear(account.id)}>
+        <span className={styles.budgetAccountCell}>
           <strong className={styles.raioxAccountName}>{chartAccountLabel(account)}</strong>
-        </button>
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => onOpenYear(account.id)}>
+            Repetir / parcelar
+          </Button>
+        </span>
         <BudgetTotalsCell
-          totals={{ planned: planned.get(account.id) ?? 0, actual: lineTotals.actual }}
+          totals={{ planned: lineTotals.planned, actual: lineTotals.actual }}
           edit={
             <span className={styles.raioxBudgetField}>
               <MoneyField
@@ -408,9 +460,8 @@ function BudgetAccountBlock({
                 label={`Orçamento ${chartAccountLabel(account)}`}
                 name={`budget-${account.id}`}
                 value={draft}
-                disabled={busy && pendingId === account.id}
+                disabled={busy}
                 onChange={(value) => onDraftChange(account.id, value)}
-                onCommit={() => onSaveLine(account.id)}
               />
             </span>
           }
@@ -423,7 +474,7 @@ function BudgetAccountBlock({
     <>
       <button
         type="button"
-        className={`${styles.raioxRow} ${rowClass}`}
+        className={`${styles.raioxRow} ${styles.budgetRow} ${rowClass}`}
         style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
         onClick={() => (expandable ? onToggle(account.id) : undefined)}
         aria-expanded={expandable ? expanded : undefined}
@@ -446,12 +497,10 @@ function BudgetAccountBlock({
               drafts={drafts}
               open={open}
               matches={matches}
-              pendingId={pendingId}
               busy={busy}
               onToggle={onToggle}
               onOpenYear={onOpenYear}
               onDraftChange={onDraftChange}
-              onSaveLine={onSaveLine}
             />
           ))
         : null}
@@ -467,12 +516,10 @@ function BudgetAccountBlock({
               drafts={drafts}
               open={open}
               matches={matches}
-              pendingId={pendingId}
               busy={busy}
               onToggle={onToggle}
               onOpenYear={onOpenYear}
               onDraftChange={onDraftChange}
-              onSaveLine={onSaveLine}
             />
           ))
         : null}
@@ -500,21 +547,35 @@ function groupHasMatch(
 }
 
 function BudgetYearSheet({
+  ym,
   year,
   account,
   months,
   line,
   loading,
+  plannedAmount,
   onClose,
+  onChanged,
 }: {
+  ym: string
   year: number
   account: ChartAccount
   months: string[]
   line: BudgetYear['lines'][number] | null | undefined
   loading: boolean
+  plannedAmount: number
   onClose: () => void
+  onChanged: () => void
 }) {
   const titleId = useId()
+  const action = useAction()
+  const [repeatMonths, setRepeatMonths] = useState('3')
+  const [installmentCount, setInstallmentCount] = useState('3')
+  const [installmentTotal, setInstallmentTotal] = useState(() => formatMoneyInput(plannedAmount))
+
+  useEffect(() => {
+    setInstallmentTotal(formatMoneyInput(plannedAmount))
+  }, [plannedAmount, account.id])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -531,6 +592,66 @@ function BudgetYearSheet({
       document.body.style.overflow = previousOverflow
     }
   }, [onClose])
+
+  function hasConflict(fromYm: string, count: number, skipStart: boolean): boolean {
+    const targets = competencesFrom(fromYm, count).slice(skipStart ? 1 : 0)
+    return targets.some((monthYm) => {
+      if (monthYm === ym && skipStart) {
+        return false
+      }
+      const cell = line?.months.find((month) => month.competenceYm === monthYm)
+      return Math.abs(cell?.plannedAmount ?? 0) > 0.001
+    })
+  }
+
+  async function resolveOverwrite(needsAsk: boolean): Promise<boolean> {
+    if (!needsAsk) {
+      return false
+    }
+    return confirmDestructive('Alguns meses já têm previsto. Deseja sobrescrever?', {
+      title: 'Meses com previsto',
+      confirmLabel: 'Sobrescrever',
+      cancelLabel: 'Só vazios',
+      danger: false,
+    })
+  }
+
+  async function runRepeat() {
+    const count = Number(repeatMonths)
+    if (!Number.isFinite(count) || count < 2) {
+      action.setError('Informe quantos meses (mínimo 2).')
+      return
+    }
+    if (plannedAmount <= 0) {
+      action.setError('Informe um previsto neste mês antes de repetir.')
+      return
+    }
+    const overwrite = await resolveOverwrite(hasConflict(ym, count, true))
+    if (
+      await action.run(() => budgetsApi.repeat(ym, account.id, count, overwrite, plannedAmount))
+    ) {
+      showSaveToast('Previsto repetido nos meses seguintes.')
+      onChanged()
+    }
+  }
+
+  async function runInstallments() {
+    const count = Number(installmentCount)
+    const total = parseMoney(installmentTotal)
+    if (!Number.isFinite(count) || count < 2) {
+      action.setError('Informe a quantidade de parcelas (mínimo 2).')
+      return
+    }
+    if (!Number.isFinite(total) || total <= 0) {
+      action.setError('Informe o valor total a parcelar.')
+      return
+    }
+    const overwrite = await resolveOverwrite(hasConflict(ym, count, false))
+    if (await action.run(() => budgetsApi.installments(ym, account.id, total, count, overwrite))) {
+      showSaveToast('Parcelas gravadas no orçamento.')
+      onChanged()
+    }
+  }
 
   return (
     <div
@@ -551,6 +672,41 @@ function BudgetYearSheet({
             Fechar
           </Button>
         </div>
+        <div className={styles.budgetSpread}>
+          <div className={styles.budgetSpreadBlock}>
+            <IntegerField
+              label="Repetir por quantos meses?"
+              hint="Copia o previsto deste mês para os seguintes."
+              name="budgetRepeat"
+              maxLength={3}
+              value={repeatMonths}
+              onChange={setRepeatMonths}
+            />
+            <Button type="button" variant="secondary" disabled={action.busy} onClick={() => void runRepeat()}>
+              Repetir
+            </Button>
+          </div>
+          <div className={styles.budgetSpreadBlock}>
+            <MoneyField
+              label="Valor total a parcelar"
+              name="budgetInstallmentTotal"
+              value={installmentTotal}
+              onChange={setInstallmentTotal}
+            />
+            <IntegerField
+              label="Parcelas"
+              hint="Divide o total a partir deste mês."
+              name="budgetInstallments"
+              maxLength={3}
+              value={installmentCount}
+              onChange={setInstallmentCount}
+            />
+            <Button type="button" variant="secondary" disabled={action.busy} onClick={() => void runInstallments()}>
+              Parcelar
+            </Button>
+          </div>
+        </div>
+        <ErrorText message={action.error} />
         {loading ? <Loading /> : null}
         {!loading && months.length === 0 ? <p className={styles.muted}>Sem dados para este ano.</p> : null}
         {!loading && months.length > 0 ? (

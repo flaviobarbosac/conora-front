@@ -7,6 +7,7 @@ import { SaveToastHost } from './components/SaveToast'
 import { Splash } from './components/Splash'
 import { UnsavedChangesProvider } from './hooks/useUnsavedChanges'
 import { AppShell } from './layouts/AppShell'
+import { AdminPage } from './pages/AdminPage'
 import { AiPage } from './pages/AiPage'
 import { ApresentacaoPage } from './pages/ApresentacaoPage'
 import { ApresentacaoVariantesPage } from './pages/apresentacao/ApresentacaoVariantesPage'
@@ -88,6 +89,7 @@ export default function App() {
             <Route path="/patrimonio" element={<PatrimonyPage />} />
             <Route path="/membros" element={<MembersPage />} />
             <Route path="/plano" element={<PlanPage />} />
+            <Route path="/operacao" element={<AdminPage />} />
             <Route path="/ajuda" element={<HelpPage />} />
             <Route path="/configuracoes" element={<SettingsPage />} />
             <Route path="/ia" element={<AiPage />} />

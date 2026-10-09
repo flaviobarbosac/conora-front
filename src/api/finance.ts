@@ -329,7 +329,30 @@ export const budgetsApi = {
   getYear: (year: number) => apiFetch<BudgetYear>(`/budgets/year/${year}`),
   upsert: (ym: string, mode: BudgetMode, lines: { chartAccountId: string; plannedAmount: number }[]) =>
     apiFetch<Budget>(`/budgets/${ym}`, json('PUT', { mode, lines })),
-  copyPrevious: (ym: string) => apiFetch<Budget>(`/budgets/${ym}/copy-previous`, json('POST')),
+  copyPrevious: (ym: string, overwrite = false) =>
+    apiFetch<Budget>(`/budgets/${ym}/copy-previous`, json('POST', { overwrite })),
+  repeat: (
+    ym: string,
+    chartAccountId: string,
+    monthCount: number,
+    overwrite = false,
+    plannedAmount?: number,
+  ) =>
+    apiFetch<Budget>(
+      `/budgets/${ym}/repeat`,
+      json('POST', { chartAccountId, monthCount, overwrite, plannedAmount }),
+    ),
+  installments: (
+    ym: string,
+    chartAccountId: string,
+    totalAmount: number,
+    installmentCount: number,
+    overwrite = false,
+  ) =>
+    apiFetch<Budget>(
+      `/budgets/${ym}/installments`,
+      json('POST', { chartAccountId, totalAmount, installmentCount, overwrite }),
+    ),
   removeLine: (ym: string, chartAccountId: string) =>
     apiFetch<void>(`/budgets/${ym}/lines/${chartAccountId}`, json('DELETE')),
 }
@@ -550,6 +573,11 @@ export type Plan = {
 export const planApi = {
   get: () => apiFetch<Plan>('/plan'),
   subscribe: (plan: PlanKind) => apiFetch<Plan>('/plan/subscribe', json('POST', { plan })),
+}
+
+export const feedbackApi = {
+  submit: (tried: string, blocked: string) =>
+    apiFetch<void>('/feedback', json('POST', { tried, blocked })),
 }
 
 /* ---------- Help / AI ---------- */

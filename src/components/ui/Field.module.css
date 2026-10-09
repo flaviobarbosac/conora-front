@@ -42,8 +42,11 @@
 
 .input[inputmode='numeric'],
 .input[inputmode='decimal'] {
-  min-width: 14.5rem;
+  width: var(--money-field-w);
+  min-width: var(--money-field-w);
+  max-width: 100%;
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .input:focus {

@@ -1,6 +1,6 @@
 import type { Budget, BudgetSectionBlock, ChartSection, PatrimonySummary } from '../api/finance'
 import { CASH_FLOW_SECTIONS } from './chartOrder'
-import { progressPercent, progressTone, type ProgressTone } from './raioX'
+import { progressPercent, progressTone, spendableIncomeBox, type ProgressTone } from './raioX'
 
 export type RaioXHomeInsight = {
   planned: number
@@ -39,13 +39,15 @@ export function buildRaioXHomeInsight(budget: Budget): RaioXHomeInsight {
   const planned = cashSections.reduce((sum, block) => sum + Math.abs(block.plannedAmount), 0)
   const actual = cashSections.reduce((sum, block) => sum + Math.abs(block.actualAmount), 0)
   const monthPercent = progressPercent({ planned, actual })
+  const gastavel = spendableIncomeBox(budget)
   return {
     planned,
     actual,
     monthPercent,
     topDeviation: pickTopDeviation(cashSections),
     received: budget.receivedIncome,
-    spendable: budget.spendableIncome,
+    /** Renda gastável do mês = receita − descontos (not diagnosis net). */
+    spendable: gastavel.actual > 0 ? gastavel.actual : gastavel.planned,
   }
 }
 

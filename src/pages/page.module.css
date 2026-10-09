@@ -496,8 +496,6 @@
   font-variant-numeric: tabular-nums;
   font-size: clamp(0.85rem, 2.8vw + 0.35rem, 1em);
   line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .positive {
@@ -694,6 +692,10 @@ button.compact {
   background: var(--danger);
 }
 
+.progressFill_info {
+  background: var(--accent);
+}
+
 .progressFillPlanned {
   background: color-mix(in srgb, var(--primary) 45%, var(--border-subtle));
 }
@@ -792,20 +794,76 @@ button.compact {
   box-shadow: 0 0 0 1px var(--border-subtle);
 }
 
+.budgetSaveBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.budgetSaveBar p {
+  margin: 0;
+}
+
+.budgetSaveActions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.budgetSpread {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.budgetSpreadBlock {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+}
+
+@media (min-width: 720px) {
+  .budgetSpread {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.budgetRow {
+  grid-template-columns:
+    2rem
+    minmax(8rem, 1fr)
+    calc(var(--money-field-w) + var(--money-display-w) + var(--money-percent-w) + 2 * var(--space-4));
+}
+
+.budgetTotals {
+  grid-template-columns: var(--money-field-w) var(--money-display-w) var(--money-percent-w);
+  gap: var(--space-4);
+  align-items: center;
+  justify-items: end;
+}
+
 .raioxBudgetField {
-  width: 14.5rem;
-  flex-shrink: 0;
+  width: var(--money-field-w);
+  min-width: var(--money-field-w);
+  max-width: var(--money-field-w);
   justify-self: end;
 }
 
-.raioxBudgetField :global(input) {
-  width: 100%;
+.raioxBudgetField :global(input[inputmode='numeric']) {
+  width: var(--money-field-w);
+  min-width: var(--money-field-w);
+  max-width: var(--money-field-w);
   text-align: right;
 }
 
 @media (min-width: 900px) {
   .heroCards {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -991,11 +1049,17 @@ button.compact {
 
 .raioxRow {
   display: grid;
-  grid-template-columns: 2rem minmax(8rem, 1fr) minmax(28rem, 1.8fr);
+  grid-template-columns:
+    2rem
+    minmax(8rem, 1fr)
+    calc(var(--money-display-w) + var(--money-display-w) + var(--money-percent-w) + 2 * var(--space-4));
   gap: var(--space-3);
   align-items: center;
   width: 100%;
-  min-width: 46rem;
+  min-width: calc(
+    2rem + 8rem + var(--money-display-w) + var(--money-display-w) + var(--money-percent-w) + 2 * var(--space-4) +
+      2 * var(--space-4)
+  );
   padding: var(--space-3) var(--space-4);
   border: 0;
   border-bottom: 1px solid var(--border-subtle);
@@ -1035,9 +1099,10 @@ button.compact {
 
 .raioxTotals {
   display: grid;
-  grid-template-columns: minmax(12rem, 1fr) minmax(12rem, 1fr) minmax(6.5rem, 0.6fr);
+  grid-template-columns: var(--money-display-w) var(--money-display-w) var(--money-percent-w);
   gap: var(--space-4);
   align-items: baseline;
+  justify-items: end;
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1045,10 +1110,10 @@ button.compact {
 
 .raioxAmount,
 .raioxPercent {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  width: 100%;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  overflow: visible;
 }
 
 .raioxHead .raioxTotals {
@@ -1239,6 +1304,21 @@ button.compact {
 
 .budgetAccountName:hover strong {
   color: var(--primary);
+}
+
+.budgetAccountCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.budgetAccountCell :global(button) {
+  padding: 0;
+  height: auto;
+  min-height: 0;
+  font-size: var(--text-sm);
 }
 
 .budgetAmountWrap {

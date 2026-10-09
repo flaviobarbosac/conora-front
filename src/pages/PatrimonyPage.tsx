@@ -1,4 +1,5 @@
-﻿import { useState, type FormEvent } from 'react'
+﻿import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { patrimonyApi, type PatrimonyItem } from '../api/finance'
 import { ChartAccountSelect } from '../components/ChartAccountSelect'
 import { PageHeader } from '../components/PageHeader'
@@ -18,11 +19,19 @@ import { formatMoney, parseMoney } from '../lib/format'
 import styles from './page.module.css'
 
 export function PatrimonyPage() {
+  const [searchParams] = useSearchParams()
+  const filterAccountId = searchParams.get('chartAccountId')
   const summary = useLoad(() => patrimonyApi.get(), [])
   const reserve = useLoad(() => patrimonyApi.reserve(), [])
   const remove = useAction()
   const data = summary.data
-  const items = data?.items ?? []
+  const items = useMemo(() => {
+    const list = data?.items ?? []
+    if (!filterAccountId) {
+      return list
+    }
+    return list.filter((item) => item.chartAccountId === filterAccountId)
+  }, [data?.items, filterAccountId])
   const pagination = useClientPagination(items, 10)
 
   async function removeItem(item: PatrimonyItem) {
@@ -30,7 +39,9 @@ export function PatrimonyPage() {
       return
     }
     if (await remove.run(() => patrimonyApi.remove(item.id))) {
+      showSaveToast('Item excluído.')
       summary.reload()
+      reserve.reload()
     }
   }
 
@@ -42,15 +53,35 @@ export function PatrimonyPage() {
       {data ? (
         <>
           <section className={styles.hero}>
-            <span>Patrimônio líquido</span>
-            <strong className={`${styles.moneyValue} ${data.netWorth < 0 ? styles.negative : ''}`}>
-              {formatMoney(data.netWorth)}
-            </strong>
-            <span>
-              Contas {formatMoney(data.accountsBalance)} + uso {formatMoney(data.assetsInUse)} + não uso{' '}
-              {formatMoney(data.assetsNotInUse)} − passivos {formatMoney(data.liabilitiesTotal)} − faturas{' '}
-              {formatMoney(data.unpaidCardInvoices)}
-            </span>
+            <div className={styles.heroTop}>
+              <span>Composição</span>
+            </div>
+            <div className={styles.heroCards} aria-label="Saldos de patrimônio">
+              <div className={styles.heroCard}>
+                <span>Ativo</span>
+                <strong className={`${styles.moneyValue} ${styles.positive}`}>
+                  {formatMoney(data.assetsTotal)}
+                </strong>
+                <span className={styles.muted}>
+                  Contas {formatMoney(data.accountsBalance)} · uso {formatMoney(data.assetsInUse)} · não uso{' '}
+                  {formatMoney(data.assetsNotInUse)}
+                </span>
+              </div>
+              <div className={styles.heroCard}>
+                <span>Passivo</span>
+                <strong className={`${styles.moneyValue} ${styles.negative}`}>
+                  {formatMoney(data.liabilitiesTotal)}
+                </strong>
+                <span className={styles.muted}>Inclui faturas {formatMoney(data.unpaidCardInvoices)}</span>
+              </div>
+              <div className={`${styles.heroCard} ${styles.heroCardActive}`}>
+                <span>Patrimônio líquido</span>
+                <strong className={`${styles.moneyValue} ${data.netWorth < 0 ? styles.negative : ''}`}>
+                  {formatMoney(data.netWorth)}
+                </strong>
+                <span className={styles.muted}>Ativo − passivo</span>
+              </div>
+            </div>
           </section>
           {data.groups.length > 0 ? (
             <section className={styles.section}>
@@ -75,8 +106,10 @@ export function PatrimonyPage() {
             </div>
           ) : null}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Itens</h2>
-            {data.items.length === 0 ? <Empty>Nenhum item cadastrado.</Empty> : null}
+            <h2 className={styles.sectionTitle}>
+              Itens{filterAccountId ? ' · filtrados pela conta do Raio-X' : ''}
+            </h2>
+            {items.length === 0 ? <Empty>Nenhum item cadastrado.</Empty> : null}
             <ul className={styles.list}>
               {pagination.pageItems.map((item) => (
                 <li key={item.id} className={styles.row}>
@@ -107,6 +140,7 @@ export function PatrimonyPage() {
         </>
       ) : null}
       <ItemForm
+        initialChartAccountId={filterAccountId}
         onSaved={() => {
           summary.reload()
           reserve.reload()
@@ -116,13 +150,25 @@ export function PatrimonyPage() {
   )
 }
 
-function ItemForm({ onSaved }: { onSaved: () => void }) {
+function ItemForm({
+  onSaved,
+  initialChartAccountId,
+}: {
+  onSaved: () => void
+  initialChartAccountId: string | null
+}) {
   const lookups = useLookups()
   const options = lookups.patrimonyAccounts
-  const [chartAccountId, setChartAccountId] = useState('')
+  const [chartAccountId, setChartAccountId] = useState(initialChartAccountId ?? '')
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const action = useAction()
+
+  useEffect(() => {
+    if (initialChartAccountId) {
+      setChartAccountId(initialChartAccountId)
+    }
+  }, [initialChartAccountId])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -141,7 +187,7 @@ function ItemForm({ onSaved }: { onSaved: () => void }) {
     }
     if (await action.run(() => patrimonyApi.create(chartAccountId, name.trim(), value))) {
       showSaveToast('Item de patrimônio salvo.')
-      setChartAccountId('')
+      setChartAccountId(initialChartAccountId ?? '')
       setName('')
       setAmount('')
       onSaved()

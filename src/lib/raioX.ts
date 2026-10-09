@@ -170,12 +170,14 @@ export function yearsNeededForMonths(monthList: string[]): number[] {
   return [...years].sort((a, b) => a - b)
 }
 
-export type RaioXFocus = 'income' | 'spendable' | 'patrimony' | null
+export type RaioXFocus = 'income' | 'discount' | 'spendable' | 'patrimony' | null
 
 export function focusSections(focus: RaioXFocus): ChartSection[] {
   switch (focus) {
     case 'income':
       return ['Income']
+    case 'discount':
+      return ['Discount']
     case 'spendable':
       return ['Income', 'Discount']
     case 'patrimony':
@@ -192,11 +194,14 @@ export function isBudgetEditableSection(section: ChartSection): boolean {
 export function patrimonyRootAmounts(summary: PatrimonySummary): {
   assets: number
   liabilities: number
+  netWorth: number
+  /** @deprecated Prefer netWorth (signed). */
   netWorthAbs: number
 } {
   return {
     assets: Math.abs(summary.assetsTotal),
     liabilities: Math.abs(summary.liabilitiesTotal),
+    netWorth: summary.netWorth,
     netWorthAbs: Math.abs(summary.netWorth),
   }
 }

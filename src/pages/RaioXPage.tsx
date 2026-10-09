@@ -10,6 +10,7 @@ import {
   type ChartAccount,
   type ChartSection,
   type Entry,
+  type PatrimonyItem,
   type PatrimonySummary,
 } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
@@ -18,10 +19,12 @@ import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
 import { chartAccountLabel } from '../lib/chartLabel'
 import { compareChartSiblings, isCashFlowSection } from '../lib/chartOrder'
+import { buildBudgetMacroBars, buildPatrimonyMacroBars } from '../lib/homeInsights'
 import { currentCompetence, formatCompetence, formatMoney, formatPercent } from '../lib/format'
 import {
   aggregateYearMonths,
   buildAmountMaps,
+  discountTotals,
   focusSections,
   groupAccountsByParent,
   incomePlanned,
@@ -161,10 +164,36 @@ export function RaioXPage() {
     return (entries.data?.items ?? []).filter((entry) => entry.chartAccountId === accountId)
   }
 
+  function patrimonyItemsFor(accountId: string): PatrimonyItem[] {
+    return (patrimony.data?.items ?? []).filter((item) => item.chartAccountId === accountId)
+  }
+
+  function openOrigin(account: ChartAccount, entry?: Entry) {
+    if (account.section === 'Asset' || account.section === 'Liability') {
+      const params = new URLSearchParams()
+      params.set('chartAccountId', account.id)
+      navigate(`/patrimonio?${params.toString()}`)
+      return
+    }
+    if (account.section === 'LifeProject') {
+      navigate('/projetos')
+      return
+    }
+    const params = new URLSearchParams({ competenceYm: ym })
+    if (entry?.chartAccountId || account.level === 'Analytical') {
+      params.set('chartAccountId', entry?.chartAccountId ?? account.id)
+    }
+    navigate(`/lancamentos?${params.toString()}`)
+  }
+
   function openEntry(entry: Entry) {
     const params = new URLSearchParams({ competenceYm: ym })
     if (entry.chartAccountId) {
       params.set('chartAccountId', entry.chartAccountId)
+    }
+    if (entry.type === 'ProjectContribution' || entry.type === 'Contribution') {
+      navigate('/projetos')
+      return
     }
     navigate(`/lancamentos?${params.toString()}`)
   }
@@ -210,6 +239,7 @@ export function RaioXPage() {
           ym={ym}
         />
       ) : null}
+      {data ? <RaioXCharts budget={data} patrimony={patrimony.data} /> : null}
       {accounts.loading && !accounts.data ? <Loading /> : null}
       {roots.length > 0 ? (
         <div className={styles.raioxList}>
@@ -233,7 +263,9 @@ export function RaioXPage() {
               open={open}
               onToggle={toggle}
               entriesFor={entriesFor}
+              patrimonyItemsFor={patrimonyItemsFor}
               onOpenEntry={openEntry}
+              onOpenOrigin={openOrigin}
               highlighted={highlighted}
               patrimony={patrimony.data}
               showEntries={months === 1}
@@ -262,8 +294,9 @@ function RaioXHero({
 }) {
   const receitaPrevista = incomePlanned(budget)
   const receitaRecebida = Math.abs(budget.receivedIncome)
+  const desconto = discountTotals(budget)
   const gastavel = spendableIncomeBox(budget)
-  const liquido = patrimony ? patrimonyRootAmounts(patrimony).netWorthAbs : 0
+  const liquido = patrimony ? patrimonyRootAmounts(patrimony).netWorth : 0
   const periodLabel =
     months === 1 ? formatCompetence(budget.competenceYm) : `${months} meses até ${formatCompetence(ym)}`
 
@@ -280,18 +313,11 @@ function RaioXHero({
           onFocus={() => onFocus('income')}
           onClick={() => onFocus('income')}
         >
-          <span>Receita prevista</span>
-          <strong className={styles.moneyValue}>{formatMoney(receitaPrevista)}</strong>
-        </button>
-        <button
-          type="button"
-          className={`${styles.heroCard} ${focus === 'income' ? styles.heroCardActive : ''}`}
-          onMouseEnter={() => onFocus('income')}
-          onFocus={() => onFocus('income')}
-          onClick={() => onFocus('income')}
-        >
-          <span>Receita recebida</span>
-          <strong className={styles.moneyValue}>{formatMoney(receitaRecebida)}</strong>
+          <span>Receita</span>
+          <strong className={styles.moneyValue}>{formatMoney(receitaRecebida || receitaPrevista)}</strong>
+          <span className={styles.muted}>
+            Prevista {formatMoney(receitaPrevista)} · recebida {formatMoney(receitaRecebida)}
+          </span>
         </button>
         <button
           type="button"
@@ -301,7 +327,13 @@ function RaioXHero({
           onClick={() => onFocus('spendable')}
         >
           <span>Renda gastável</span>
-          <strong className={styles.moneyValue}>{formatMoney(months === 1 ? gastavel.planned : gastavel.actual || gastavel.planned)}</strong>
+          <strong className={styles.moneyValue}>
+            {formatMoney(months === 1 ? gastavel.planned : gastavel.actual || gastavel.planned)}
+          </strong>
+          <span className={styles.muted}>
+            Previsto {formatMoney(gastavel.planned)} · realizado {formatMoney(gastavel.actual)}
+            {desconto.actual > 0 ? ` · desconto ${formatMoney(desconto.actual)}` : ''}
+          </span>
         </button>
         <button
           type="button"
@@ -311,10 +343,87 @@ function RaioXHero({
           onClick={() => onFocus('patrimony')}
         >
           <span>Patrimônio líquido</span>
-          <strong className={styles.moneyValue}>{formatMoney(liquido)}</strong>
+          <strong className={`${styles.moneyValue} ${liquido < 0 ? styles.negative : ''}`}>
+            {formatMoney(liquido)}
+          </strong>
+          <span className={styles.muted}>Ativo − passivo</span>
         </button>
       </div>
     </section>
+  )
+}
+
+function RaioXCharts({
+  budget,
+  patrimony,
+}: {
+  budget: Budget
+  patrimony: PatrimonySummary | null | undefined
+}) {
+  const bars = buildBudgetMacroBars(budget)
+  const patBars = patrimony ? buildPatrimonyMacroBars(patrimony) : []
+
+  return (
+    <div className={styles.macroGrid}>
+      <section className={styles.macroCard} aria-label="Previsto versus realizado">
+        <div className={styles.macroHead}>
+          <strong>Previsto × realizado</strong>
+        </div>
+        {bars.length === 0 ? (
+          <p className={styles.muted}>Sem valores de fluxo neste mês.</p>
+        ) : (
+          <ul className={styles.macroBars}>
+            {bars.map((bar) => (
+              <li key={bar.section}>
+                <span className={styles.macroBarLabel}>
+                  <strong>{bar.name}</strong>
+                  <span className={styles.moneyValue}>
+                    {formatMoney(bar.actual)} / {formatMoney(bar.planned)}
+                  </span>
+                </span>
+                <span className={styles.progress} aria-hidden>
+                  <span
+                    className={`${styles.progressFill} ${
+                      bar.tone === 'over'
+                        ? styles.progressFill_danger
+                        : bar.tone === 'muted'
+                          ? styles.progressFillMuted
+                          : styles.progressFillActual
+                    }`}
+                    style={{ width: `${bar.progressPct}%` }}
+                  />
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      {patBars.length > 0 ? (
+        <section className={styles.macroCard} aria-label="Composição patrimonial">
+          <div className={styles.macroHead}>
+            <strong>Ativo e passivo</strong>
+          </div>
+          <ul className={styles.macroBars}>
+            {patBars.map((bar) => (
+              <li key={bar.key}>
+                <span className={styles.macroBarLabel}>
+                  <strong>{bar.label}</strong>
+                  <span className={styles.moneyValue}>{formatMoney(bar.amount)}</span>
+                </span>
+                <span className={styles.progress} aria-hidden>
+                  <span
+                    className={`${styles.progressFill} ${
+                      bar.key === 'assets' ? styles.progressFill_ok : styles.progressFill_danger
+                    }`}
+                    style={{ width: `${bar.pct}%` }}
+                  />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </div>
   )
 }
 
@@ -327,7 +436,9 @@ function AccountBlock({
   open,
   onToggle,
   entriesFor,
+  patrimonyItemsFor,
   onOpenEntry,
+  onOpenOrigin,
   highlighted,
   patrimony,
   showEntries,
@@ -340,16 +451,20 @@ function AccountBlock({
   open: Set<string>
   onToggle: (id: string) => void
   entriesFor: (accountId: string) => Entry[]
+  patrimonyItemsFor: (accountId: string) => PatrimonyItem[]
   onOpenEntry: (entry: Entry) => void
+  onOpenOrigin: (account: ChartAccount, entry?: Entry) => void
   highlighted: ChartSection[]
   patrimony: PatrimonySummary | null | undefined
   showEntries: boolean
 }) {
   const children = byParent.get(account.id) ?? []
-  const monthEntries = showEntries && account.level === 'Analytical' ? entriesFor(account.id) : []
-  const expandable = children.length > 0 || monthEntries.length > 0
+  const isPatSection = account.section === 'Asset' || account.section === 'Liability'
+  const monthEntries = showEntries && account.level === 'Analytical' && !isPatSection ? entriesFor(account.id) : []
+  const patItems = isPatSection && account.level === 'Analytical' ? patrimonyItemsFor(account.id) : []
+  const expandable = children.length > 0 || monthEntries.length > 0 || patItems.length > 0
   const expanded = open.has(account.id)
-  const isPatRoot = account.level === 'Root' && (account.section === 'Asset' || account.section === 'Liability')
+  const isPatRoot = account.level === 'Root' && isPatSection
   const totals: RaioXTotals = isPatRoot && patrimony
     ? account.section === 'Asset'
       ? { planned: patrimonyRootAmounts(patrimony).assets, actual: patrimonyRootAmounts(patrimony).assets }
@@ -364,22 +479,41 @@ function AccountBlock({
         : styles.raioxLeaf
   const focused = highlighted.includes(account.section)
 
+  function onRowClick() {
+    if (expandable) {
+      onToggle(account.id)
+      return
+    }
+    if (account.level === 'Analytical') {
+      onOpenOrigin(account)
+    }
+  }
+
   return (
     <>
       <button
         type="button"
         className={`${styles.raioxRow} ${rowClass} ${focused ? styles.raioxFocus : ''}`}
         style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
-        onClick={() => (expandable ? onToggle(account.id) : undefined)}
+        onClick={onRowClick}
         aria-expanded={expandable ? expanded : undefined}
       >
         <span className={styles.raioxToggle} aria-hidden>
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
         <strong className={styles.raioxAccountName}>{chartAccountLabel(account)}</strong>
-        <TotalsCell totals={totals} />
+        <TotalsCell
+          totals={
+            account.level === 'Analytical' && isPatSection
+              ? {
+                  planned: patItems.reduce((sum, item) => sum + Math.abs(item.amount), 0),
+                  actual: patItems.reduce((sum, item) => sum + Math.abs(item.amount), 0),
+                }
+              : totals
+          }
+        />
       </button>
-      {expanded && !isPatRoot
+      {expanded
         ? children.map((child) => (
             <AccountBlock
               key={child.id}
@@ -391,7 +525,9 @@ function AccountBlock({
               open={open}
               onToggle={onToggle}
               entriesFor={entriesFor}
+              patrimonyItemsFor={patrimonyItemsFor}
               onOpenEntry={onOpenEntry}
+              onOpenOrigin={onOpenOrigin}
               highlighted={highlighted}
               patrimony={patrimony}
               showEntries={showEntries}
@@ -422,13 +558,39 @@ function AccountBlock({
             </button>
           ))
         : null}
-      {expanded && !isPatRoot && children.length === 0 && monthEntries.length === 0 ? (
+      {expanded && patItems.length > 0
+        ? patItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`${styles.raioxRow} ${styles.raioxEntry}`}
+              style={{ paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }}
+              onClick={() => onOpenOrigin(account)}
+            >
+              <span />
+              <span className={styles.rowMain}>
+                <strong>{item.name}</strong>
+                <span className={styles.rowSub}>{item.groupName}</span>
+              </span>
+              <span className={styles.raioxTotals}>
+                <span className={styles.raioxAmount} />
+                <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>
+                  {formatMoney(Math.abs(item.amount))}
+                </span>
+                <span className={styles.raioxPercent} />
+              </span>
+            </button>
+          ))
+        : null}
+      {expanded && children.length === 0 && monthEntries.length === 0 && patItems.length === 0 ? (
         <div
           className={`${styles.raioxRow} ${styles.raioxEntry}`}
           style={{ paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }}
         >
           <span />
-          <span className={styles.muted}>Nenhum lançamento nesta conta.</span>
+          <span className={styles.muted}>
+            {isPatSection ? 'Nenhum item de patrimônio nesta conta.' : 'Nenhum lançamento nesta conta.'}
+          </span>
           <span />
         </div>
       ) : null}

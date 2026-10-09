@@ -15,6 +15,7 @@ import styles from './page.module.css'
 const TILES: ReadonlyArray<{ to: string; title: string; text: string }> = [
   { to: '/diagnostico', title: 'Diagnóstico', text: 'Fontes de renda e valor líquido' },
   { to: '/plano', title: 'Plano', text: 'Assinatura e situação' },
+  { to: '/operacao', title: 'Operação', text: 'Auditoria, feedback e saúde' },
   { to: '/ajuda', title: 'Central de ajuda', text: 'Módulos, campos e glossário' },
   { to: '/ia', title: 'Perguntar à IA', text: 'Dúvidas sobre seu mês' },
   { to: '/importar', title: 'Importar extrato', text: 'CSV ou OFX' },

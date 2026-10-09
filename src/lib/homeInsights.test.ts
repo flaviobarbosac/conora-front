@@ -70,6 +70,22 @@ describe('buildRaioXHomeInsight', () => {
     expect(insight.topDeviation?.percent).toBeCloseTo(0)
   })
 
+  it('computes spendable as received income minus discount actual', () => {
+    const insight = buildRaioXHomeInsight(
+      budget({
+        totalPlanned: 5200,
+        totalActual: 1100,
+        spendableIncome: 9999,
+        receivedIncome: 1000,
+        sections: [
+          section('Receita', 5000, 1000, 'Income'),
+          section('Desconto', 200, 100, 'Discount'),
+        ],
+      }),
+    )
+    expect(insight.spendable).toBeCloseTo(900)
+  })
+
   it('returns Sem orçamento signal via null monthPercent', () => {
     const insight = buildRaioXHomeInsight(
       budget({ totalPlanned: 0, totalActual: 0, sections: [] }),

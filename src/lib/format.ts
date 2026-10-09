@@ -58,6 +58,18 @@ export function shiftCompetence(ym: string, delta: number): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
+/** Lists N competences starting at startYm (inclusive). */
+export function competencesFrom(startYm: string, count: number): string[] {
+  if (count <= 0) {
+    return []
+  }
+  const list: string[] = []
+  for (let i = 0; i < count; i++) {
+    list.push(shiftCompetence(startYm, i))
+  }
+  return list
+}
+
 export function monthsInclusive(fromYm: string, toYm: string): string[] {
   if (!fromYm || !toYm || fromYm > toYm) {
     return []

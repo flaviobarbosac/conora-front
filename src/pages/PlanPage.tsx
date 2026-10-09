@@ -25,8 +25,14 @@ export function PlanPage() {
   const data = plan.data
 
   async function choose(kind: PlanKind) {
+    if (import.meta.env.PROD) {
+      subscribe.setError(
+        'A cobrança com cartão ainda não está liberada. Em produção o plano não é ativado sem o gateway.',
+      )
+      return
+    }
     if (await subscribe.run(() => planApi.subscribe(kind))) {
-      showSaveToast('Plano ativado.')
+      showSaveToast('Plano ativado (ambiente de desenvolvimento).')
       plan.reload()
     }
   }

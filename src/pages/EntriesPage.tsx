@@ -7,7 +7,6 @@ import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
-import { IntegerField } from '../components/ui/IntegerField'
 import { MoneyField } from '../components/ui/MoneyField'
 import { ChartAccountSelect } from '../components/ChartAccountSelect'
 import { Select } from '../components/ui/Select'
@@ -292,8 +291,6 @@ function EntryForm({ accounts, categories, tree, onDirtyChange, onSaved }: FormP
   const [accountId, setAccountId] = useState('')
   const [contraAccountId, setContraAccountId] = useState('')
   const [chartAccountId, setChartAccountId] = useState('')
-  const [installments, setInstallments] = useState('')
-  const [repeat, setRepeat] = useState('')
   const action = useAction()
   const initialDate = useState(todayInput)[0]
   const initialDescription = useState(pendingReceipt ? pendingReceipt.fileName.replace(/\.[^.]+$/, '') : '')[0]
@@ -308,9 +305,7 @@ function EntryForm({ accounts, categories, tree, onDirtyChange, onSaved }: FormP
       description !== initialDescription ||
       accountId !== '' ||
       contraAccountId !== '' ||
-      chartAccountId !== '' ||
-      installments.trim() !== '' ||
-      repeat.trim() !== ''
+      chartAccountId !== ''
     onDirtyChange?.(dirty)
   }, [
     type,
@@ -320,8 +315,6 @@ function EntryForm({ accounts, categories, tree, onDirtyChange, onSaved }: FormP
     accountId,
     contraAccountId,
     chartAccountId,
-    installments,
-    repeat,
     initialDate,
     initialDescription,
     onDirtyChange,
@@ -356,8 +349,6 @@ function EntryForm({ accounts, categories, tree, onDirtyChange, onSaved }: FormP
       accountId: accountId || undefined,
       contraAccountId: type === 'Transfer' ? contraAccountId || undefined : undefined,
       chartAccountId: type === 'Transfer' ? undefined : chartAccountId || undefined,
-      installmentCount: Number(installments) > 1 ? Number(installments) : undefined,
-      repeatMonths: Number(repeat) > 1 ? Number(repeat) : undefined,
       confirmDuplicate,
     }
 
@@ -436,26 +427,6 @@ function EntryForm({ accounts, categories, tree, onDirtyChange, onSaved }: FormP
             emptyLabel="Sem conta"
           />
         )}
-        {type === 'Expense' ? (
-          <IntegerField
-            label="Parcelas (opcional)"
-            hint="Divide o valor, uma parte por mês."
-            name="installments"
-            maxLength={2}
-            value={installments}
-            onChange={setInstallments}
-          />
-        ) : null}
-        {type !== 'Transfer' ? (
-          <IntegerField
-            label="Repetir por meses (opcional)"
-            hint="Repete o valor cheio a cada mês."
-            name="repeat"
-            maxLength={2}
-            value={repeat}
-            onChange={setRepeat}
-          />
-        ) : null}
         <div className={styles.formWide}>
           <ErrorText message={action.error} />
         </div>

@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
   chartAccountsApi,
@@ -8,7 +8,7 @@ import {
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
-import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
+import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
@@ -44,8 +44,9 @@ export function ChartAccountsPage() {
   const action = useAction()
   const [query, setQuery] = useState('')
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(SECTION_ORDER.map((section) => [section, true])),
+    Object.fromEntries(SECTION_ORDER.map((section) => [section, false])),
   )
+  const [showAll, setShowAll] = useState(false)
   const [draftParentId, setDraftParentId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
   const [renameId, setRenameId] = useState<string | null>(null)
@@ -83,6 +84,12 @@ export function ChartAccountsPage() {
           .map((account) => account.id),
       )
     : null
+
+  useEffect(() => {
+    if (matches || showAll) {
+      setOpenSections(Object.fromEntries(SECTION_ORDER.map((section) => [section, true])))
+    }
+  }, [matches, showAll])
 
   function sectionVisible(root: ChartAccount): boolean {
     if (!matches) {
@@ -170,15 +177,11 @@ export function ChartAccountsPage() {
           ) : (
             <>
               <strong>{chartAccountLabel(account)}</strong>
-              <span className={styles.rowSub}>
-                {account.isSystem ? 'Padrão' : 'Sua conta'}
-                {account.isActive ? '' : ' · Inativa'}
-              </span>
+              {!account.isActive ? <span className={styles.rowSub}>Inativa</span> : null}
             </>
           )}
         </span>
         <span className={styles.rowEnd}>
-          {account.isSystem ? <Badge>Padrão</Badge> : <Badge tone="ok">Sua conta</Badge>}
           {!account.isSystem && !renaming ? (
             <>
               <Button
@@ -231,9 +234,7 @@ export function ChartAccountsPage() {
           }
           return (
             <div key={group.id} className={styles.section} style={{ marginLeft: 12 }}>
-              <h3 className={styles.sectionTitle}>
-                {chartAccountLabel(group)} <Badge>Soma</Badge>
-              </h3>
+              <h3 className={styles.sectionTitle}>{chartAccountLabel(group)}</h3>
               <ul className={styles.list}>{visibleLeaves.map((leaf) => renderAnalytical(leaf))}</ul>
               {draftParentId === group.id ? (
                 <form
@@ -348,18 +349,31 @@ export function ChartAccountsPage() {
         O lançamento entra na conta analítica. As contas de cima só somam.{' '}
         <Link to="/ajuda#plano-de-contas">Central de ajuda</Link>
       </p>
-      <Field
-        label="Buscar"
-        name="chartSearch"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Ex.: aluguel, salário…"
-      />
+      <div className={styles.budgetSaveBar}>
+        <Field
+          label="Buscar"
+          name="chartSearch"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Ex.: aluguel, salário…"
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => {
+            const next = !showAll
+            setShowAll(next)
+            setOpenSections(Object.fromEntries(SECTION_ORDER.map((section) => [section, next])))
+          }}
+        >
+          {showAll ? 'Recolher' : 'Ver todas'}
+        </Button>
+      </div>
       <ErrorText message={accounts.error ?? action.error} />
       {accounts.loading && !accounts.data ? <Loading /> : null}
       {!accounts.loading && roots.length === 0 ? <Empty>Nenhuma conta.</Empty> : null}
       {roots.filter(sectionVisible).map((root) => {
-        const open = openSections[root.section] ?? true
+        const open = Boolean(matches) || (openSections[root.section] ?? false)
         return (
           <section key={root.id} className={styles.section}>
             <button
@@ -369,9 +383,9 @@ export function ChartAccountsPage() {
               onClick={() => setOpenSections((current) => ({ ...current, [root.section]: !open }))}
             >
               <span>
-                {chartAccountLabel(root)} — {SECTION_HINT[root.section]}
+                {open ? '−' : '+'} {chartAccountLabel(root)}
               </span>
-              <Badge>Soma</Badge>
+              <span className={styles.muted}>{SECTION_HINT[root.section]}</span>
             </button>
             {open ? renderChildren(root) : null}
           </section>

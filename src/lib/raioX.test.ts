@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { BudgetLine, ChartAccount } from '../api/finance'
+import type { Budget, BudgetLine, ChartAccount } from '../api/finance'
 import {
   aggregateYearMonths,
   buildAmountMaps,
@@ -7,6 +7,7 @@ import {
   monthsEndingAt,
   progressPercent,
   progressTone,
+  spendableIncomeBox,
   sumBranch,
   variationPercent,
 } from './raioX'
@@ -124,6 +125,42 @@ describe('sumBranch', () => {
     ])
 
     expect(sumBranch('root', byParent, planned, actual)).toEqual({ planned: 250, actual: 50 })
+  })
+})
+
+describe('spendableIncomeBox', () => {
+  it('subtracts discount from income for planned and actual', () => {
+    const budget: Budget = {
+      competenceYm: '2026-10',
+      mode: 'Detailed',
+      totalPlanned: 0,
+      totalActual: 0,
+      projectedExpense: 0,
+      spendableIncome: 9999,
+      receivedIncome: 4000,
+      monthResult: 0,
+      incomeSources: [],
+      lines: [],
+      sections: [
+        {
+          section: 'Income',
+          name: 'Receita',
+          plannedAmount: 5000,
+          actualAmount: 4000,
+          percentOfSpendable: null,
+          lines: [],
+        },
+        {
+          section: 'Discount',
+          name: 'Desconto',
+          plannedAmount: 500,
+          actualAmount: 300,
+          percentOfSpendable: null,
+          lines: [],
+        },
+      ],
+    }
+    expect(spendableIncomeBox(budget)).toEqual({ planned: 4500, actual: 3700 })
   })
 })
 
