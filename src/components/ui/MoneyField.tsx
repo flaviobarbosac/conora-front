@@ -7,6 +7,8 @@ type Props = {
   name: string
   value: string
   onChange: (value: string) => void
+  /** Called after blur formatting (use for per-field persist). */
+  onCommit?: (value: string) => void
   required?: boolean
   disabled?: boolean
   hint?: ReactNode
@@ -16,12 +18,13 @@ type Props = {
   compact?: boolean
 }
 
-/** Text money input (pt-BR). Formats as the user types. Does not persist — caller saves via Salvar. */
+/** Text money input (pt-BR). Formats as the user types. Persist via onCommit or a Salvar action. */
 export function MoneyField({
   label,
   name,
   value,
   onChange,
+  onCommit,
   required,
   disabled,
   hint,
@@ -45,15 +48,21 @@ export function MoneyField({
       value={value}
       onChange={(event) => onChange(sanitizeMoneyTyping(event.target.value))}
       onBlur={() => {
-        if (!value.trim()) {
-          return
-        }
-        const parsed = parseMoney(value)
-        if (Number.isFinite(parsed)) {
-          const next = formatMoneyInput(parsed)
-          if (next !== value) {
-            onChange(next)
+        let next = value
+        if (value.trim()) {
+          const parsed = parseMoney(value)
+          if (Number.isFinite(parsed)) {
+            next = formatMoneyInput(parsed)
+            if (next !== value) {
+              onChange(next)
+            }
           }
+        }
+        onCommit?.(next)
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.currentTarget.blur()
         }
       }}
     />

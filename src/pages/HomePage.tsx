@@ -190,28 +190,22 @@ function BudgetMacroChart({ budget, loading }: { budget: Budget | null | undefin
                     {formatMoney(bar.actual)} / {formatMoney(bar.planned)}
                   </span>
                 </span>
-                <span className={styles.macroBarTracks} aria-hidden>
-                  <span className={styles.progress}>
-                    <span className={`${styles.progressFill} ${styles.progressFillPlanned}`} style={{ width: `${bar.plannedPct}%` }} />
-                  </span>
-                  <span className={styles.progress}>
-                    <span className={`${styles.progressFill} ${styles.progressFillActual}`} style={{ width: `${bar.actualPct}%` }} />
-                  </span>
+                <span className={styles.progress} aria-hidden>
+                  <span
+                    className={`${styles.progressFill} ${
+                      bar.tone === 'over'
+                        ? styles.progressFill_danger
+                        : bar.tone === 'muted'
+                          ? styles.progressFillMuted
+                          : styles.progressFillActual
+                    }`}
+                    style={{ width: `${bar.progressPct}%` }}
+                  />
                 </span>
               </Link>
             </li>
           ))}
         </ul>
-      ) : null}
-      {!loading && bars.length > 0 ? (
-        <p className={styles.macroLegend}>
-          <span>
-            <i className={`${styles.macroDot} ${styles.progressFillPlanned}`} /> Previsto
-          </span>
-          <span>
-            <i className={`${styles.macroDot} ${styles.progressFillActual}`} /> Realizado
-          </span>
-        </p>
       ) : null}
     </section>
   )

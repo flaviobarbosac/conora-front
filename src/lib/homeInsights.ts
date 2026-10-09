@@ -1,5 +1,6 @@
 import type { Budget, BudgetSectionBlock, ChartSection, PatrimonySummary } from '../api/finance'
-import { CASH_FLOW_SECTIONS, compareChartSections } from './chartOrder'
+import { CASH_FLOW_SECTIONS } from './chartOrder'
+import { progressPercent, progressTone, type ProgressTone } from './raioX'
 
 export type RaioXHomeInsight = {
   planned: number
@@ -21,8 +22,9 @@ export type BudgetMacroBar = {
   name: string
   planned: number
   actual: number
-  plannedPct: number
-  actualPct: number
+  /** Single progress bar width 0–100 (capped). */
+  progressPct: number
+  tone: ProgressTone
 }
 
 export type PatrimonyMacroBar = {
@@ -34,9 +36,9 @@ export type PatrimonyMacroBar = {
 
 export function buildRaioXHomeInsight(budget: Budget): RaioXHomeInsight {
   const cashSections = budget.sections.filter((block) => CASH_FLOW_SECTIONS.includes(block.section))
-  const planned = cashSections.reduce((sum, block) => sum + block.plannedAmount, 0)
-  const actual = cashSections.reduce((sum, block) => sum + block.actualAmount, 0)
-  const monthPercent = planned > 0 ? (actual / planned) * 100 : null
+  const planned = cashSections.reduce((sum, block) => sum + Math.abs(block.plannedAmount), 0)
+  const actual = cashSections.reduce((sum, block) => sum + Math.abs(block.actualAmount), 0)
+  const monthPercent = progressPercent({ planned, actual })
   return {
     planned,
     actual,
@@ -52,11 +54,18 @@ export function pickTopDeviation(
 ): { name: string; percent: number } | null {
   let top: { name: string; percent: number } | null = null
   for (const section of sections) {
-    if (section.plannedAmount <= 0) {
+    const planned = Math.abs(section.plannedAmount)
+    if (planned <= 0) {
       continue
     }
-    const percent = ((section.actualAmount - section.plannedAmount) / section.plannedAmount) * 100
-    if (!top || Math.abs(percent) > Math.abs(top.percent)) {
+    const percent = progressPercent({
+      planned,
+      actual: Math.abs(section.actualAmount),
+    })
+    if (percent === null) {
+      continue
+    }
+    if (!top || Math.abs(percent - 100) > Math.abs(top.percent - 100)) {
       top = { name: section.name, percent }
     }
   }
@@ -71,37 +80,61 @@ export function buildPatrimonyHomeInsight(summary: PatrimonySummary): PatrimonyH
   }
 }
 
-/** Planned × actual bars for cash-flow sections (Home macro chart). */
+/** One progress bar per cash-flow section (Income + despesas). */
 export function buildBudgetMacroBars(budget: Budget): BudgetMacroBar[] {
-  const blocks = budget.sections
-    .filter((block) => CASH_FLOW_SECTIONS.includes(block.section))
-    .slice()
-    .sort((a, b) => compareChartSections(a.section, b.section))
-  const max = Math.max(1, ...blocks.flatMap((block) => [block.plannedAmount, block.actualAmount]))
-  return blocks.map((block) => ({
-    section: block.section,
-    name: block.name,
-    planned: block.plannedAmount,
-    actual: block.actualAmount,
-    plannedPct: Math.min(100, (block.plannedAmount / max) * 100),
-    actualPct: Math.min(100, (block.actualAmount / max) * 100),
-  }))
+  const bySection = new Map(budget.sections.map((block) => [block.section, block]))
+  return CASH_FLOW_SECTIONS.map((section) => {
+    const block = bySection.get(section)
+    const planned = Math.abs(block?.plannedAmount ?? 0)
+    const actual = Math.abs(block?.actualAmount ?? 0)
+    const percent = progressPercent({ planned, actual })
+    const tone = progressTone(percent, { planned, actual })
+    return {
+      section,
+      name: block?.name ?? sectionLabel(section),
+      planned,
+      actual,
+      progressPct: percent === null ? 0 : Math.min(100, percent),
+      tone,
+    }
+  }).filter((bar) => bar.planned > 0 || bar.actual > 0 || bySection.has(bar.section))
+}
+
+function sectionLabel(section: ChartSection): string {
+  switch (section) {
+    case 'Income':
+      return 'Receita'
+    case 'Discount':
+      return 'Desconto'
+    case 'LifeProject':
+      return 'Projetos de vida'
+    case 'Essential':
+      return 'Essencial'
+    case 'Social':
+      return 'Social'
+    case 'Asset':
+      return 'Ativo'
+    case 'Liability':
+      return 'Passivo'
+    default:
+      return section
+  }
 }
 
 export function buildPatrimonyMacroBars(summary: PatrimonySummary): PatrimonyMacroBar[] {
-  const max = Math.max(1, summary.assetsTotal, summary.liabilitiesTotal)
+  const max = Math.max(1, Math.abs(summary.assetsTotal), Math.abs(summary.liabilitiesTotal))
   return [
     {
       key: 'assets',
       label: 'Ativo',
-      amount: summary.assetsTotal,
-      pct: Math.min(100, (summary.assetsTotal / max) * 100),
+      amount: Math.abs(summary.assetsTotal),
+      pct: Math.min(100, (Math.abs(summary.assetsTotal) / max) * 100),
     },
     {
       key: 'liabilities',
       label: 'Passivo',
-      amount: summary.liabilitiesTotal,
-      pct: Math.min(100, (summary.liabilitiesTotal / max) * 100),
+      amount: Math.abs(summary.liabilitiesTotal),
+      pct: Math.min(100, (Math.abs(summary.liabilitiesTotal) / max) * 100),
     },
   ]
 }

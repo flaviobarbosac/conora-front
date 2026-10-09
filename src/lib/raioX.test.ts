@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { BudgetLine, ChartAccount } from '../api/finance'
 import {
+  aggregateYearMonths,
   buildAmountMaps,
   groupAccountsByParent,
+  monthsEndingAt,
+  progressPercent,
+  progressTone,
   sumBranch,
   variationPercent,
 } from './raioX'
@@ -44,15 +48,33 @@ function line(
   }
 }
 
-describe('variationPercent', () => {
-  it('returns percent delta of planned', () => {
-    expect(variationPercent({ planned: 3000, actual: 0 })).toBeCloseTo(-100)
-    expect(variationPercent({ planned: 100, actual: 150 })).toBeCloseTo(50)
+describe('progressPercent', () => {
+  it('returns actual/planned as positive progress', () => {
+    expect(progressPercent({ planned: 100, actual: 150 })).toBeCloseTo(150)
+    expect(progressPercent({ planned: 100, actual: 0 })).toBeCloseTo(0)
+    expect(progressPercent({ planned: 3000, actual: 1500 })).toBeCloseTo(50)
   })
 
-  it('returns 0 for zero/zero and null when actual without planned', () => {
-    expect(variationPercent({ planned: 0, actual: 0 })).toBe(0)
-    expect(variationPercent({ planned: 0, actual: 10 })).toBeNull()
+  it('returns null when there is no planned base', () => {
+    expect(progressPercent({ planned: 0, actual: 0 })).toBeNull()
+    expect(progressPercent({ planned: 0, actual: 10 })).toBeNull()
+  })
+
+  it('variationPercent aliases progressPercent', () => {
+    expect(variationPercent({ planned: 100, actual: 50 })).toBeCloseTo(50)
+  })
+})
+
+describe('progressTone', () => {
+  it('marks over 100 as over and up to 100 as ok', () => {
+    expect(progressTone(100)).toBe('ok')
+    expect(progressTone(80)).toBe('ok')
+    expect(progressTone(100.1)).toBe('over')
+  })
+
+  it('mutes empty or undefined percent', () => {
+    expect(progressTone(null)).toBe('muted')
+    expect(progressTone(0, { planned: 0, actual: 0 })).toBe('muted')
   })
 })
 
@@ -102,5 +124,42 @@ describe('sumBranch', () => {
     ])
 
     expect(sumBranch('root', byParent, planned, actual)).toEqual({ planned: 250, actual: 50 })
+  })
+})
+
+describe('monthsEndingAt', () => {
+  it('lists inclusive months ending at the competence', () => {
+    expect(monthsEndingAt('2026-10', 1)).toEqual(['2026-10'])
+    expect(monthsEndingAt('2026-10', 2)).toEqual(['2026-09', '2026-10'])
+    expect(monthsEndingAt('2026-02', 3)).toEqual(['2025-12', '2026-01', '2026-02'])
+  })
+})
+
+describe('aggregateYearMonths', () => {
+  it('sums cells for selected months only', () => {
+    const maps = aggregateYearMonths(
+      [
+        {
+          year: 2026,
+          months: ['2026-01', '2026-02'],
+          lines: [
+            {
+              chartAccountId: 'a',
+              chartAccountName: 'A',
+              groupName: '',
+              section: 'Essential',
+              months: [
+                { competenceYm: '2026-01', plannedAmount: 100, actualAmount: 40 },
+                { competenceYm: '2026-02', plannedAmount: 50, actualAmount: 10 },
+              ],
+            },
+          ],
+          totals: [],
+        },
+      ],
+      ['2026-01', '2026-02'],
+    )
+    expect(maps.planned.get('a')).toBe(150)
+    expect(maps.actual.get('a')).toBe(50)
   })
 })

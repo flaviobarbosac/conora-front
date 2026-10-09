@@ -702,6 +702,128 @@ button.compact {
   background: var(--primary);
 }
 
+.progressFillMuted {
+  background: var(--border-subtle);
+}
+
+.raioxToneOk {
+  color: var(--primary);
+}
+
+.raioxToneOver {
+  color: var(--danger);
+}
+
+.raioxToneMuted {
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+.raioxFocus {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  background: var(--selected) !important;
+}
+
+.heroCards {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr 1fr;
+}
+
+.heroCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-app);
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.heroCard:hover,
+.heroCardActive {
+  border-color: var(--primary);
+  background: var(--selected);
+}
+
+.heroCard span {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.heroCard strong {
+  font-size: clamp(0.95rem, 2.5vw + 0.4rem, var(--text-h3));
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.periodSeg {
+  display: inline-flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--bg-app);
+  border-radius: var(--radius-md);
+}
+
+.periodSeg button {
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.periodSeg button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+  box-shadow: 0 0 0 1px var(--border-subtle);
+}
+
+.toastOk {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 120;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / 12%));
+}
+
+.raioxBudgetField {
+  width: 14.5rem;
+  flex-shrink: 0;
+  justify-self: end;
+}
+
+.raioxBudgetField :global(input) {
+  width: 100%;
+  text-align: right;
+}
+
+@media (min-width: 900px) {
+  .heroCards {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 .macroGrid {
   display: grid;
   gap: var(--space-3);

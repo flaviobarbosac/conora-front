@@ -1,21 +1,22 @@
-﻿import { useEffect, useId, useMemo, useState } from 'react'
+﻿import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import {
   budgetsApi,
   chartAccountsApi,
   type Budget,
   type BudgetYear,
   type ChartAccount,
-  type ChartSection,
 } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
-import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
+import { ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import { chartAccountLabel } from '../lib/chartLabel'
+import { CASH_FLOW_SECTIONS, compareChartSiblings } from '../lib/chartOrder'
 import {
   currentCompetence,
   formatCompetence,
@@ -23,17 +24,25 @@ import {
   formatMoneyInput,
   parseMoney,
 } from '../lib/format'
-import { chartAccountLabel } from '../lib/chartLabel'
-import { compareChartSiblings } from '../lib/chartOrder'
+import {
+  buildAmountMaps,
+  groupAccountsByParent,
+  progressPercent,
+  progressTone,
+  sumBranch,
+  type ProgressTone,
+  type RaioXTotals,
+} from '../lib/raioX'
 import styles from './page.module.css'
 
-const EXPENSE_SECTIONS: ChartSection[] = ['Discount', 'LifeProject', 'Essential', 'Social']
-
-const SECTION_HINT: Partial<Record<ChartSection, string>> = {
-  Discount: 'o que reduz a renda',
-  LifeProject: 'o que você separa para o futuro',
-  Essential: 'o que a casa precisa',
-  Social: 'o que é escolha',
+function toneClass(tone: ProgressTone): string {
+  if (tone === 'over') {
+    return styles.raioxToneOver
+  }
+  if (tone === 'muted') {
+    return styles.raioxToneMuted
+  }
+  return styles.raioxToneOk
 }
 
 export function BudgetPage() {
@@ -84,7 +93,7 @@ export function BudgetPage() {
       <ErrorText message={budget.error ?? copy.error ?? categories.error ?? yearData.error} />
       {budget.loading && !data ? <Loading /> : null}
       {data ? (
-        <BudgetEditor
+        <BudgetTreeEditor
           ym={ym}
           budget={data}
           categories={categories.data ?? []}
@@ -111,380 +120,181 @@ type EditorProps = {
   onSaved: () => void
 }
 
-function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onSaved }: EditorProps) {
+function BudgetTreeEditor({ ym, budget, categories, year, yearData, yearLoading, onSaved }: EditorProps) {
   const [query, setQuery] = useState('')
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(EXPENSE_SECTIONS.map((section) => [section, false])),
-  )
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [pendingId, setPendingId] = useState<string | null>(null)
+  const [toast, setToast] = useState(false)
   const [yearAccountId, setYearAccountId] = useState<string | null>(null)
-  const action = useAction()
+  const saveAction = useAction()
 
-  const plannedById = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const line of budget.lines) {
-      if (line.chartAccountId && !line.isGroup) {
-        map.set(line.chartAccountId, line.plannedAmount)
-      }
-    }
-    return map
-  }, [budget.lines])
-
-  const actualById = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const line of budget.lines) {
-      if (line.chartAccountId && !line.isGroup) {
-        map.set(line.chartAccountId, line.actualAmount)
-      }
-    }
-    return map
-  }, [budget.lines])
-
-  const plannedSignature = useMemo(
+  const cashAccounts = useMemo(
     () =>
-      [...plannedById.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([id, amount]) => `${id}=${amount}`)
-        .join('|'),
-    [plannedById],
-  )
-
-  useEffect(() => {
-    const initial: Record<string, string> = {}
-    for (const part of plannedSignature.split('|')) {
-      if (!part) {
-        continue
-      }
-      const [id, amountText] = part.split('=')
-      if (id) {
-        initial[id] = formatMoneyInput(Number(amountText))
-      }
-    }
-    setDrafts(initial)
-    action.setError(null)
-  }, [ym, plannedSignature])
-
-  const expenseAccounts = useMemo(
-    () => categories.filter((account) => EXPENSE_SECTIONS.includes(account.section) && account.isActive),
+      categories.filter(
+        (account) => CASH_FLOW_SECTIONS.includes(account.section) && account.isActive,
+      ),
     [categories],
   )
 
   const byParent = useMemo(() => {
-    const map = new Map<string | null, ChartAccount[]>()
-    for (const account of expenseAccounts) {
-      const key = account.parentId
-      const bucket = map.get(key) ?? []
-      bucket.push(account)
-      map.set(key, bucket)
-    }
+    const map = groupAccountsByParent(cashAccounts)
     for (const bucket of map.values()) {
       bucket.sort(compareChartSiblings)
     }
     return map
-  }, [expenseAccounts])
+  }, [cashAccounts])
 
-  const roots = EXPENSE_SECTIONS.map((section) =>
-    expenseAccounts.find((account) => account.level === 'Root' && account.section === section),
-  ).filter(Boolean) as ChartAccount[]
-
-  const editableIds = useMemo(
-    () => new Set(expenseAccounts.filter((account) => account.level === 'Analytical').map((account) => account.id)),
-    [expenseAccounts],
+  const roots = useMemo(
+    () =>
+      CASH_FLOW_SECTIONS.map((section) =>
+        cashAccounts.find((account) => account.level === 'Root' && account.section === section),
+      ).filter(Boolean) as ChartAccount[],
+    [cashAccounts],
   )
+
+  const { planned, actual } = useMemo(() => buildAmountMaps(budget.lines), [budget.lines])
+
+  const plannedSignature = useMemo(
+    () =>
+      [...planned.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([id, amount]) => `${id}=${amount}`)
+        .join('|'),
+    [planned],
+  )
+
+  useEffect(() => {
+    const initial: Record<string, string> = {}
+    for (const [id, amount] of planned.entries()) {
+      initial[id] = formatMoneyInput(amount)
+    }
+    setDrafts(initial)
+    setPendingId(null)
+    saveAction.setError(null)
+  }, [ym, plannedSignature])
+
+  const dirtyIds = useMemo(() => {
+    const dirty = new Set<string>()
+    for (const [id, text] of Object.entries(drafts)) {
+      const server = planned.get(id) ?? 0
+      const parsed = text.trim() ? parseMoney(text) : 0
+      if (!Number.isFinite(parsed)) {
+        continue
+      }
+      if (Math.abs(parsed - server) > 0.001) {
+        dirty.add(id)
+      }
+    }
+    return dirty
+  }, [drafts, planned])
+
+  useRegisterDirty('budget-tree', dirtyIds.size > 0)
+
+  useEffect(() => {
+    if (!toast) {
+      return
+    }
+    const timer = window.setTimeout(() => setToast(false), 2000)
+    return () => window.clearTimeout(timer)
+  }, [toast])
 
   const needle = query.trim().toLowerCase()
   const matches = needle
     ? new Set(
-        expenseAccounts
+        cashAccounts
           .filter((account) => chartAccountLabel(account).toLowerCase().includes(needle))
           .map((account) => account.id),
       )
     : null
 
-  function hasVisibleAnalytical(id: string): boolean {
-    const children = byParent.get(id) ?? []
-    return children.some((child) => {
-      if (child.level === 'Analytical') {
-        return editableIds.has(child.id) && (!matches || matches.has(child.id))
+  function toggle(id: string) {
+    setOpen((current) => {
+      const next = new Set(current)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
       }
-      return hasVisibleAnalytical(child.id)
+      return next
     })
   }
 
-  function collectAnalyticalIds(parentId: string): string[] {
-    const children = byParent.get(parentId) ?? []
-    const ids: string[] = []
-    for (const child of children) {
-      if (child.level === 'Analytical') {
-        if (editableIds.has(child.id)) {
-          ids.push(child.id)
-        }
-      } else {
-        ids.push(...collectAnalyticalIds(child.id))
-      }
-    }
-    return ids
-  }
-
-  function sumPlanned(accountIds: string[]): number {
-    return accountIds.reduce((total, id) => {
-      const text = drafts[id]
-      if (text !== undefined && text.trim()) {
-        const parsed = parseMoney(text)
-        return total + (Number.isFinite(parsed) ? parsed : 0)
-      }
-      return total + (plannedById.get(id) ?? 0)
-    }, 0)
-  }
-
-  function sumActual(accountIds: string[]): number {
-    return accountIds.reduce((total, id) => total + (actualById.get(id) ?? 0), 0)
-  }
-
-  const isDirty = useMemo(() => {
-    const ids = new Set<string>([...plannedById.keys(), ...Object.keys(drafts)])
-    for (const id of ids) {
-      const planned = plannedById.get(id)
-      const trimmed = (drafts[id] ?? '').trim()
-      if (!trimmed) {
-        if (planned !== undefined) {
-          return true
-        }
-        continue
-      }
-      const parsed = parseMoney(trimmed)
-      if (!Number.isFinite(parsed)) {
-        return true
-      }
-      if ((planned ?? 0) !== parsed) {
-        return true
-      }
-    }
-    return false
-  }, [drafts, plannedById])
-
-  useRegisterDirty(`budget:${ym}`, isDirty)
-
-  function isGroupOpen(groupId: string): boolean {
-    if (matches) {
-      return collectAnalyticalIds(groupId).some((id) => matches.has(id))
-    }
-    return openGroups[groupId] ?? false
-  }
-
-  function toggleGroup(groupId: string) {
-    setOpenGroups((current) => ({ ...current, [groupId]: !(current[groupId] ?? false) }))
-  }
-
-  function resetDraftsFromServer() {
-    const initial: Record<string, string> = {}
-    for (const [id, amount] of plannedById) {
-      initial[id] = formatMoneyInput(amount)
-    }
-    setDrafts(initial)
-    action.setError(null)
-  }
-
-  async function save() {
-    const lines: { chartAccountId: string; plannedAmount: number }[] = []
-    const toRemove: string[] = []
-    const ids = new Set<string>([...plannedById.keys(), ...Object.keys(drafts)])
-
-    for (const id of ids) {
-      const previous = plannedById.get(id)
-      const text = (drafts[id] ?? '').trim()
-      if (!text) {
-        if (previous !== undefined) {
-          toRemove.push(id)
-        }
-        continue
-      }
-      const plannedAmount = parseMoney(text)
-      if (!Number.isFinite(plannedAmount) || plannedAmount < 0) {
-        action.setError('Há um valor inválido no orçamento.')
-        return
-      }
-      if (previous !== plannedAmount) {
-        lines.push({ chartAccountId: id, plannedAmount })
-      }
-    }
-
-    if (lines.length === 0 && toRemove.length === 0) {
+  async function saveLine(accountId: string) {
+    const text = drafts[accountId] ?? ''
+    const parsed = text.trim() ? parseMoney(text) : 0
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      saveAction.setError('Informe um valor válido (zero ou positivo).')
       return
     }
-
-    if (
-      await action.run(async () => {
-        if (lines.length > 0) {
-          await budgetsApi.upsert(ym, 'Detailed', lines)
-        }
-        for (const id of toRemove) {
-          await budgetsApi.removeLine(ym, id)
-        }
-      })
-    ) {
+    const server = planned.get(accountId) ?? 0
+    if (Math.abs(parsed - server) < 0.001) {
+      return
+    }
+    setPendingId(accountId)
+    const ok = await saveAction.run(() =>
+      budgetsApi.upsert(ym, 'Detailed', [{ chartAccountId: accountId, plannedAmount: parsed }]),
+    )
+    setPendingId(null)
+    if (ok) {
+      setToast(true)
       onSaved()
     }
   }
 
-  function renderAnalytical(account: ChartAccount) {
-    if (!editableIds.has(account.id)) {
-      return null
-    }
-    if (matches && !matches.has(account.id)) {
-      return null
-    }
-    const actual = actualById.get(account.id) ?? 0
-    return (
-      <li key={account.id} className={styles.row}>
-        <span className={styles.rowMain}>
-          <button
-            type="button"
-            className={styles.budgetAccountName}
-            onClick={() => setYearAccountId(account.id)}
-          >
-            <strong>{chartAccountLabel(account)}</strong>
-          </button>
-          <span className={`${styles.rowSub} ${styles.moneyValue}`}>Realizado {formatMoney(actual)}</span>
-        </span>
-        <span className={styles.rowEnd}>
-          <span className={styles.budgetAmountWrap}>
-            <MoneyField
-              compact
-              label={`Orçamento ${chartAccountLabel(account)}`}
-              name={`budget-${account.id}`}
-              value={drafts[account.id] ?? ''}
-              disabled={action.busy}
-              onChange={(value) => setDrafts((current) => ({ ...current, [account.id]: value }))}
-            />
-          </span>
-        </span>
-      </li>
-    )
-  }
-
-  function groupHasVisibleContent(groupId: string): boolean {
-    return hasVisibleAnalytical(groupId)
-  }
-
-  function renderGroup(group: ChartAccount, depth = 1) {
-    if (!groupHasVisibleContent(group.id)) {
-      return null
-    }
-    const analyticalIds = collectAnalyticalIds(group.id)
-    const planned = sumPlanned(analyticalIds)
-    const actual = sumActual(analyticalIds)
-    const open = isGroupOpen(group.id)
-    const children = byParent.get(group.id) ?? []
-    const nestedGroups = children.filter((child) => child.level === 'Group')
-    const leaves = children.filter(
-      (child) => child.level === 'Analytical' && editableIds.has(child.id) && (!matches || matches.has(child.id)),
-    )
-
-    return (
-      <div key={group.id} className={styles.budgetGroup} style={{ marginLeft: depth > 1 ? 12 : 0 }}>
-        <button
-          type="button"
-          className={styles.budgetGroupToggle}
-          aria-expanded={open}
-          onClick={() => toggleGroup(group.id)}
-        >
-          <span className={styles.budgetGroupChevron} aria-hidden>
-            {open ? '−' : '+'}
-          </span>
-          <span className={styles.budgetGroupMain}>
-            <strong>{chartAccountLabel(group)}</strong>
-            <span className={styles.muted}>
-              Planejado {formatMoney(planned)} · Realizado {formatMoney(actual)}
-            </span>
-          </span>
-        </button>
-        {open ? (
-          <div className={styles.budgetGroupBody}>
-            {nestedGroups.map((nested) => renderGroup(nested, depth + 1))}
-            {leaves.length > 0 ? <ul className={styles.list}>{leaves.map((leaf) => renderAnalytical(leaf))}</ul> : null}
-          </div>
-        ) : null}
-      </div>
-    )
-  }
-
-  function renderChildren(parent: ChartAccount) {
-    const children = byParent.get(parent.id) ?? []
-    const groups = children.filter((child) => child.level === 'Group')
-    const leaves = children.filter((child) => child.level === 'Analytical')
-
-    return (
-      <>
-        {groups.map((group) => renderGroup(group))}
-        {leaves.length > 0 ? <ul className={styles.list}>{leaves.map((leaf) => renderAnalytical(leaf))}</ul> : null}
-      </>
-    )
-  }
-
-  const yearAccount = yearAccountId ? expenseAccounts.find((account) => account.id === yearAccountId) : null
+  const yearAccount = yearAccountId ? cashAccounts.find((account) => account.id === yearAccountId) : null
   const yearLine = yearAccountId
     ? yearData?.lines.find((line) => line.chartAccountId === yearAccountId)
     : null
-  const visibleRoots = roots.filter((root) => hasVisibleAnalytical(root.id))
 
   return (
     <section className={styles.section}>
-      <div className={styles.sectionHead}>
-        <h2 className={styles.sectionTitle}>Definir orçamento</h2>
-      </div>
       <p className={styles.muted}>
-        Informe o valor planejado em cada conta e use Salvar. Toque no nome da conta para ver o ano. O realizado vem
+        Informe o previsto em cada conta. O valor grava ao sair do campo. Toque no nome para ver o ano. Realizado vem
         dos lançamentos.
       </p>
       <Field
-        label="Buscar"
+        label="Buscar conta"
         name="budgetSearch"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Ex.: aluguel, mercado…"
+        placeholder="Nome da conta"
       />
-      <ErrorText message={action.error} />
-      {visibleRoots.length === 0 ? <Empty>Nenhuma conta de despesa.</Empty> : null}
-      {visibleRoots.map((root) => {
-        const open = Boolean(matches) || (openSections[root.section] ?? false)
-        const analyticalIds = collectAnalyticalIds(root.id)
-        const planned = sumPlanned(analyticalIds)
-        const actual = sumActual(analyticalIds)
-        return (
-          <section key={root.id} className={styles.section}>
-            <button
-              type="button"
-              className={styles.sectionTitle}
-              style={{
-                display: 'flex',
-                width: '100%',
-                alignItems: 'center',
-                gap: 8,
-                background: 'none',
-                border: 0,
-                padding: 0,
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-              onClick={() =>
-                setOpenSections((current) => ({ ...current, [root.section]: !(current[root.section] ?? false) }))
-              }
-            >
-              <span>
-                {chartAccountLabel(root)} — {SECTION_HINT[root.section]}
-              </span>
-            </button>
-            <p className={styles.muted}>
-              Planejado {formatMoney(planned)} · Realizado {formatMoney(actual)}
-            </p>
-            {open ? renderChildren(root) : null}
-          </section>
-        )
-      })}
-
-      {yearAccountId && yearAccount ? (
+      <ErrorText message={saveAction.error} />
+      {roots.length === 0 ? <Loading /> : null}
+      {roots.length > 0 ? (
+        <div className={styles.raioxList}>
+          <div className={`${styles.raioxRow} ${styles.raioxHead}`}>
+            <span />
+            <span>Conta</span>
+            <span className={styles.raioxTotals}>
+              <span>Realizado</span>
+              <span>Previsto</span>
+              <span>% do previsto</span>
+            </span>
+          </div>
+          {roots.map((root) => (
+            <BudgetAccountBlock
+              key={root.id}
+              account={root}
+              depth={0}
+              byParent={byParent}
+              planned={planned}
+              actual={actual}
+              drafts={drafts}
+              open={open}
+              matches={matches}
+              pendingId={pendingId}
+              busy={saveAction.busy}
+              onToggle={toggle}
+              onOpenYear={setYearAccountId}
+              onDraftChange={(id, value) => setDrafts((current) => ({ ...current, [id]: value }))}
+              onSaveLine={(id) => void saveLine(id)}
+            />
+          ))}
+        </div>
+      ) : null}
+      {yearAccount ? (
         <BudgetYearSheet
           year={year}
           account={yearAccount}
@@ -494,16 +304,210 @@ function BudgetEditor({ ym, budget, categories, year, yearData, yearLoading, onS
           onClose={() => setYearAccountId(null)}
         />
       ) : null}
-
-      <div className={styles.actions}>
-        <Button disabled={action.busy || !isDirty} onClick={() => void save()}>
-          Salvar
-        </Button>
-        <Button variant="secondary" disabled={action.busy || !isDirty} onClick={resetDraftsFromServer}>
-          Cancelar
-        </Button>
-      </div>
+      {toast ? (
+        <div className={styles.toastOk} role="status">
+          Registro salvo com sucesso.
+        </div>
+      ) : null}
     </section>
+  )
+}
+
+function BudgetTotalsCell({
+  totals,
+  edit,
+}: {
+  totals: RaioXTotals
+  edit?: ReactNode
+}) {
+  const percent = progressPercent(totals)
+  const tone = progressTone(percent, totals)
+  return (
+    <span className={styles.raioxTotals}>
+      <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.actual)}</span>
+      {edit ?? (
+        <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.planned)}</span>
+      )}
+      <span className={`${styles.raioxPercent} ${toneClass(tone)}`}>
+        {percent === null ? '—' : formatPercent(percent)}
+      </span>
+    </span>
+  )
+}
+
+function formatPercent(value: number): string {
+  return `${value.toFixed(1).replace('.', ',')}%`
+}
+
+function BudgetAccountBlock({
+  account,
+  depth,
+  byParent,
+  planned,
+  actual,
+  drafts,
+  open,
+  matches,
+  pendingId,
+  busy,
+  onToggle,
+  onOpenYear,
+  onDraftChange,
+  onSaveLine,
+}: {
+  account: ChartAccount
+  depth: number
+  byParent: Map<string | null, ChartAccount[]>
+  planned: Map<string, number>
+  actual: Map<string, number>
+  drafts: Record<string, string>
+  open: Set<string>
+  matches: Set<string> | null
+  pendingId: string | null
+  busy: boolean
+  onToggle: (id: string) => void
+  onOpenYear: (id: string) => void
+  onDraftChange: (id: string, value: string) => void
+  onSaveLine: (id: string) => void
+}) {
+  const children = byParent.get(account.id) ?? []
+  const groups = children.filter((child) => child.level === 'Group')
+  const leaves = children.filter((child) => child.level === 'Analytical')
+  const expandable = groups.length > 0 || leaves.length > 0
+  const expanded = open.has(account.id) || Boolean(matches)
+  const totals = sumBranch(account.id, byParent, planned, actual)
+  const rowClass =
+    account.level === 'Root'
+      ? styles.raioxRoot
+      : account.level === 'Group'
+        ? styles.raioxGroup
+        : styles.raioxLeaf
+
+  const visibleLeaves = leaves.filter((leaf) => !matches || matches.has(leaf.id))
+  const visibleGroups = groups.filter((group) => groupHasMatch(group.id, byParent, matches))
+
+  if (
+    matches &&
+    account.level !== 'Root' &&
+    !matches.has(account.id) &&
+    visibleLeaves.length === 0 &&
+    visibleGroups.length === 0
+  ) {
+    return null
+  }
+
+  if (account.level === 'Analytical') {
+    const draft = drafts[account.id] ?? formatMoneyInput(planned.get(account.id) ?? 0)
+    const lineTotals = {
+      planned: Math.abs(parseMoney(draft) || 0) || (planned.get(account.id) ?? 0),
+      actual: actual.get(account.id) ?? 0,
+    }
+    return (
+      <div
+        className={`${styles.raioxRow} ${rowClass}`}
+        style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
+      >
+        <span />
+        <button type="button" className={styles.budgetAccountName} onClick={() => onOpenYear(account.id)}>
+          <strong className={styles.raioxAccountName}>{chartAccountLabel(account)}</strong>
+        </button>
+        <BudgetTotalsCell
+          totals={{ planned: planned.get(account.id) ?? 0, actual: lineTotals.actual }}
+          edit={
+            <span className={styles.raioxBudgetField}>
+              <MoneyField
+                compact
+                label={`Orçamento ${chartAccountLabel(account)}`}
+                name={`budget-${account.id}`}
+                value={draft}
+                disabled={busy && pendingId === account.id}
+                onChange={(value) => onDraftChange(account.id, value)}
+                onCommit={() => onSaveLine(account.id)}
+              />
+            </span>
+          }
+        />
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className={`${styles.raioxRow} ${rowClass}`}
+        style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
+        onClick={() => (expandable ? onToggle(account.id) : undefined)}
+        aria-expanded={expandable ? expanded : undefined}
+      >
+        <span className={styles.raioxToggle} aria-hidden>
+          {expandable ? (expanded ? '−' : '+') : ''}
+        </span>
+        <strong className={styles.raioxAccountName}>{chartAccountLabel(account)}</strong>
+        <BudgetTotalsCell totals={totals} />
+      </button>
+      {expanded
+        ? visibleGroups.map((group) => (
+            <BudgetAccountBlock
+              key={group.id}
+              account={group}
+              depth={depth + 1}
+              byParent={byParent}
+              planned={planned}
+              actual={actual}
+              drafts={drafts}
+              open={open}
+              matches={matches}
+              pendingId={pendingId}
+              busy={busy}
+              onToggle={onToggle}
+              onOpenYear={onOpenYear}
+              onDraftChange={onDraftChange}
+              onSaveLine={onSaveLine}
+            />
+          ))
+        : null}
+      {expanded
+        ? visibleLeaves.map((leaf) => (
+            <BudgetAccountBlock
+              key={leaf.id}
+              account={leaf}
+              depth={depth + 1}
+              byParent={byParent}
+              planned={planned}
+              actual={actual}
+              drafts={drafts}
+              open={open}
+              matches={matches}
+              pendingId={pendingId}
+              busy={busy}
+              onToggle={onToggle}
+              onOpenYear={onOpenYear}
+              onDraftChange={onDraftChange}
+              onSaveLine={onSaveLine}
+            />
+          ))
+        : null}
+    </>
+  )
+}
+
+function groupHasMatch(
+  groupId: string,
+  byParent: Map<string | null, ChartAccount[]>,
+  matches: Set<string> | null,
+): boolean {
+  if (!matches) {
+    return true
+  }
+  if (matches.has(groupId)) {
+    return true
+  }
+  const children = byParent.get(groupId) ?? []
+  return children.some((child) =>
+    child.level === 'Analytical'
+      ? matches.has(child.id)
+      : groupHasMatch(child.id, byParent, matches),
   )
 }
 
@@ -570,12 +574,12 @@ function BudgetYearSheet({
                   <span className={styles.rowMain}>
                     <strong>{formatCompetence(monthYm)}</strong>
                     <span className={styles.rowSub}>
-                      Planejado {cell ? formatMoney(cell.plannedAmount) : '—'}
+                      Planejado {cell ? formatMoney(Math.abs(cell.plannedAmount)) : '—'}
                     </span>
                   </span>
                   <span className={styles.rowEnd}>
                     <span className={styles.rowSub}>
-                      Realizado {cell ? formatMoney(cell.actualAmount) : '—'}
+                      Realizado {cell ? formatMoney(Math.abs(cell.actualAmount)) : '—'}
                     </span>
                   </span>
                 </li>

@@ -39,14 +39,14 @@ function budget(partial: Partial<Budget> & Pick<Budget, 'totalPlanned' | 'totalA
 }
 
 describe('pickTopDeviation', () => {
-  it('picks the largest absolute section deviation', () => {
+  it('picks the section farthest from 100% progress', () => {
     const top = pickTopDeviation([
       section('Essencial', 1000, 900),
       section('Social', 100, 300),
       section('Desconto', 0, 50),
     ])
     expect(top?.name).toBe('Social')
-    expect(top?.percent).toBeCloseTo(200)
+    expect(top?.percent).toBeCloseTo(300)
   })
 
   it('ignores sections without planned amount', () => {
@@ -67,7 +67,7 @@ describe('buildRaioXHomeInsight', () => {
     )
     expect(insight.monthPercent).toBeCloseTo(25)
     expect(insight.topDeviation?.name).toBe('Projetos de vida / Investimentos')
-    expect(insight.topDeviation?.percent).toBeCloseTo(-100)
+    expect(insight.topDeviation?.percent).toBeCloseTo(0)
   })
 
   it('returns Sem orçamento signal via null monthPercent', () => {
@@ -100,7 +100,7 @@ describe('buildPatrimonyHomeInsight', () => {
 })
 
 describe('buildBudgetMacroBars', () => {
-  it('keeps cash-flow sections and scales bars to the max value', () => {
+  it('builds one progress bar per cash-flow section with data', () => {
     const bars = buildBudgetMacroBars(
       budget({
         totalPlanned: 300,
@@ -113,8 +113,9 @@ describe('buildBudgetMacroBars', () => {
       }),
     )
     expect(bars.map((bar) => bar.section)).toEqual(['Income', 'Essential'])
-    expect(bars[0]?.plannedPct).toBe(100)
-    expect(bars[1]?.plannedPct).toBe(50)
+    expect(bars[0]?.progressPct).toBe(50)
+    expect(bars[1]?.progressPct).toBe(50)
+    expect(bars[0]?.tone).toBe('ok')
   })
 })
 
