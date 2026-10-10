@@ -1,7 +1,7 @@
-﻿import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { patrimonyApi, type PatrimonyItem } from '../api/finance'
-import { ChartAccountSelect } from '../components/ChartAccountSelect'
+import { CategorySelect } from '../components/CategorySelect'
 import { PageHeader } from '../components/PageHeader'
 import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
@@ -13,24 +13,53 @@ import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
+import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
-import { formatMoney, parseMoney } from '../lib/format'
+import { formatMoney, formatMoneyInput, parseMoney } from '../lib/format'
 import styles from './page.module.css'
 
 export function PatrimonyPage() {
-  const [searchParams] = useSearchParams()
-  const filterAccountId = searchParams.get('chartAccountId')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filterAccountId = searchParams.get('categoryId')
   const summary = useLoad(() => patrimonyApi.get(), [])
   const remove = useAction()
+  const [editing, setEditing] = useState<PatrimonyItem | null>(null)
+  const [search, setSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
   const data = summary.data
-  const items = useMemo(() => {
-    const list = data?.items ?? []
-    if (!filterAccountId) {
-      return list
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams)
+    let changed = false
+    const searchQuery = searchParams.get('search')
+    if (searchQuery != null && searchQuery !== '') {
+      setSearch(searchQuery)
+      setAppliedSearch(searchQuery.trim())
+      next.delete('search')
+      changed = true
     }
-    return list.filter((item) => item.chartAccountId === filterAccountId)
-  }, [data?.items, filterAccountId])
+    if (changed) {
+      setSearchParams(next, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
+
+  const items = useMemo(() => {
+    let list = data?.items ?? []
+    if (filterAccountId) {
+      list = list.filter((item) => item.categoryId === filterAccountId)
+    }
+    const needle = appliedSearch.trim().toLowerCase()
+    if (needle) {
+      list = list.filter(
+        (item) =>
+          item.name.toLowerCase().includes(needle) ||
+          item.groupName.toLowerCase().includes(needle) ||
+          (item.categoryName?.toLowerCase().includes(needle) ?? false),
+      )
+    }
+    return list
+  }, [data?.items, filterAccountId, appliedSearch])
   const pagination = useClientPagination(items, 10)
 
   async function removeItem(item: PatrimonyItem) {
@@ -39,8 +68,16 @@ export function PatrimonyPage() {
     }
     if (await remove.run(() => patrimonyApi.remove(item.id))) {
       showSaveToast('Item excluído.')
+      if (editing?.id === item.id) {
+        setEditing(null)
+      }
       summary.reload()
     }
+  }
+
+  function loadItem(item: PatrimonyItem) {
+    setEditing(item)
+    showSaveToast('Item carregado. Pronto para editar.', 1000)
   }
 
   return (
@@ -100,16 +137,28 @@ export function PatrimonyPage() {
             <h2 className={styles.sectionTitle}>
               Itens{filterAccountId ? ' · filtrados pela conta do Raio-X' : ''}
             </h2>
+            <form
+              className={styles.toolbar}
+              onSubmit={(event) => {
+                event.preventDefault()
+                setAppliedSearch(search.trim())
+              }}
+            >
+              <Field label="Buscar" name="search" value={search} onChange={(event) => setSearch(event.target.value)} />
+              <Button type="submit" variant="secondary">
+                Buscar
+              </Button>
+            </form>
             {items.length === 0 ? <Empty>Nenhum item cadastrado.</Empty> : null}
             <ul className={styles.list}>
               {pagination.pageItems.map((item) => (
                 <li key={item.id} className={styles.row}>
-                  <span className={styles.rowMain}>
+                  <button type="button" className={styles.rowMain} onClick={() => loadItem(item)}>
                     <strong>{item.name}</strong>
                     <span className={styles.rowSub}>
-                      {item.chartAccountName} · {item.groupName}
+                      {item.categoryName} · {item.groupName}
                     </span>
-                  </span>
+                  </button>
                   <span className={styles.rowEnd}>
                     <Badge tone={item.section === 'Asset' ? 'ok' : 'danger'}>
                       {item.section === 'Asset' ? 'Ativo' : 'Passivo'}
@@ -131,8 +180,12 @@ export function PatrimonyPage() {
         </>
       ) : null}
       <ItemForm
-        initialChartAccountId={filterAccountId}
+        key={editing?.id ?? 'new'}
+        editing={editing}
+        initialCategoryId={filterAccountId}
+        onCancel={() => setEditing(null)}
         onSaved={() => {
+          setEditing(null)
           summary.reload()
         }}
       />
@@ -141,30 +194,48 @@ export function PatrimonyPage() {
 }
 
 function ItemForm({
+  editing,
   onSaved,
-  initialChartAccountId,
+  onCancel,
+  initialCategoryId,
 }: {
+  editing: PatrimonyItem | null
   onSaved: () => void
-  initialChartAccountId: string | null
+  onCancel: () => void
+  initialCategoryId: string | null
 }) {
   const lookups = useLookups()
   const options = lookups.patrimonyAccounts
-  const [chartAccountId, setChartAccountId] = useState(initialChartAccountId ?? '')
-  const [name, setName] = useState('')
-  const [amount, setAmount] = useState('')
+  const [categoryId, setCategoryId] = useState(
+    () => editing?.categoryId ?? initialCategoryId ?? '',
+  )
+  const [name, setName] = useState(() => editing?.name ?? '')
+  const [amount, setAmount] = useState(() => (editing ? formatMoneyInput(editing.amount) : ''))
   const action = useAction()
 
+  const dirty =
+    editing !== null
+      ? categoryId !== editing.categoryId ||
+        name !== editing.name ||
+        parseMoney(amount) !== editing.amount
+      : categoryId !== (initialCategoryId ?? '') || name.trim() !== '' || amount.trim() !== ''
+
+  useRegisterDirty('patrimony-item-form', dirty)
+
   useEffect(() => {
-    if (initialChartAccountId) {
-      setChartAccountId(initialChartAccountId)
+    if (editing) {
+      return
     }
-  }, [initialChartAccountId])
+    if (initialCategoryId) {
+      setCategoryId(initialCategoryId)
+    }
+  }, [initialCategoryId, editing])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     const value = parseMoney(amount)
-    if (!chartAccountId) {
-      action.setError('Escolha a conta do plano.')
+    if (!categoryId) {
+      action.setError('Escolha a categoria.')
       return
     }
     if (!name.trim()) {
@@ -175,27 +246,32 @@ function ItemForm({
       action.setError('Valor inválido.')
       return
     }
-    if (await action.run(() => patrimonyApi.create(chartAccountId, name.trim(), value))) {
-      showSaveToast('Item de patrimônio salvo.')
-      setChartAccountId(initialChartAccountId ?? '')
-      setName('')
-      setAmount('')
+    const saved = editing
+      ? await action.run(() => patrimonyApi.update(editing.id, categoryId, name.trim(), value))
+      : await action.run(() => patrimonyApi.create(categoryId, name.trim(), value))
+    if (saved) {
+      showSaveToast(editing ? 'Item de patrimônio salvo.' : 'Item de patrimônio adicionado.')
+      if (!editing) {
+        setCategoryId(initialCategoryId ?? '')
+        setName('')
+        setAmount('')
+      }
       onSaved()
     }
   }
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Novo item</h2>
+      <h2 className={styles.sectionTitle}>{editing ? 'Editar item' : 'Novo item'}</h2>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
-        <ChartAccountSelect
-          label="Conta do plano"
+        <CategorySelect
+          label="Categoria"
           name="patrimonyAccount"
           required
-          value={chartAccountId}
-          onChange={setChartAccountId}
+          value={categoryId}
+          onChange={setCategoryId}
           options={options}
-          tree={lookups.chartAccounts}
+          tree={lookups.categories}
           emptyLabel="Selecione"
         />
         <Field
@@ -212,8 +288,13 @@ function ItemForm({
         </div>
         <div className={styles.formActions}>
           <Button type="submit" disabled={action.busy || options.length === 0}>
-            Adicionar
+            {editing ? 'Salvar' : 'Adicionar'}
           </Button>
+          {editing ? (
+            <Button type="button" variant="ghost" onClick={onCancel}>
+              Cancelar
+            </Button>
+          ) : null}
         </div>
       </form>
     </section>

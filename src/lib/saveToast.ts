@@ -1,4 +1,4 @@
-type SaveToastHandler = (message: string) => void
+type SaveToastHandler = (message: string, durationMs: number) => void
 
 let handler: SaveToastHandler | null = null
 
@@ -7,7 +7,7 @@ export function registerSaveToastHandler(next: SaveToastHandler | null) {
   handler = next
 }
 
-/** Shows the standard success toast. It closes itself after 2 seconds. */
-export function showSaveToast(message = 'Registro salvo com sucesso.') {
-  handler?.(message)
+/** Shows the standard success toast. Default duration: 2 seconds. */
+export function showSaveToast(message = 'Registro salvo com sucesso.', durationMs = 2000) {
+  handler?.(message, durationMs)
 }

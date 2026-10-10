@@ -68,7 +68,6 @@ export default defineConfig(({ mode }) => {
           '/users',
           '/me',
           '/categories',
-          '/chart-accounts',
           '/family',
           '/diagnosis',
           '/accounts',

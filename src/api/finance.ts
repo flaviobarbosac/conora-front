@@ -4,8 +4,8 @@ import { apiBlob, apiFetch } from './client'
 
 export type AccountKind = 'Checking' | 'Cash' | 'Other' | 'Savings' | 'Investment'
 export type BudgetMode = 'Simple' | 'Detailed'
-export type ChartAccountLevel = 'Root' | 'Group' | 'Analytical'
-export type ChartSection =
+export type CategoryLevel = 'Root' | 'Group' | 'Analytical'
+export type CategorySection =
   | 'Income'
   | 'Discount'
   | 'LifeProject'
@@ -13,6 +13,9 @@ export type ChartSection =
   | 'Social'
   | 'Asset'
   | 'Liability'
+  | 'Budget'
+  | 'Expense'
+  | 'Patrimony'
 export type EntryType =
   | 'Expense'
   | 'Income'
@@ -44,35 +47,31 @@ function query(params: Record<string, string | number | boolean | undefined | nu
 
 const json = (method: string, body?: unknown) => ({ method, body })
 
-/* ---------- Chart of accounts ---------- */
+/* ---------- Categories ---------- */
 
-export type ChartAccount = {
+export type Category = {
   id: string
   parentId: string | null
   name: string
   code: string | null
   displayNumber: string | null
-  level: ChartAccountLevel
-  section: ChartSection
+  level: CategoryLevel
+  section: CategorySection
   isSystem: boolean
   isActive: boolean
   sortOrder: number
   acceptsPosting: boolean
 }
 
-export const chartAccountsApi = {
-  list: (section?: ChartSection, includeInactive = false, analyticalOnly = false) =>
-    apiFetch<ChartAccount[]>(`/chart-accounts${query({ section, includeInactive, analyticalOnly })}`),
+export const categoriesApi = {
+  list: (section?: CategorySection, includeInactive = false, analyticalOnly = false) =>
+    apiFetch<Category[]>(`/categories${query({ section, includeInactive, analyticalOnly })}`),
   create: (name: string, parentId: string) =>
-    apiFetch<ChartAccount>('/chart-accounts', json('POST', { name, parentId })),
+    apiFetch<Category>('/categories', json('POST', { name, parentId })),
   update: (id: string, name: string, isActive: boolean) =>
-    apiFetch<ChartAccount>(`/chart-accounts/${id}`, json('PUT', { name, isActive })),
-  remove: (id: string) => apiFetch<void>(`/chart-accounts/${id}`, json('DELETE')),
+    apiFetch<Category>(`/categories/${id}`, json('PUT', { name, isActive })),
+  remove: (id: string) => apiFetch<void>(`/categories/${id}`, json('DELETE')),
 }
-
-/** @deprecated alias while pages migrate */
-export type Category = ChartAccount
-export const categoriesApi = chartAccountsApi
 
 /* ---------- Accounts ---------- */
 
@@ -140,7 +139,7 @@ export type CardPurchaseInput = {
   amount: number
   purchasedAt: string
   installments: number
-  chartAccountId: string
+  categoryId: string
   description: string
 }
 
@@ -166,7 +165,7 @@ export type Entry = {
   competenceYm: string
   accountId: string | null
   contraAccountId: string | null
-  chartAccountId: string | null
+  categoryId: string | null
   incomeSourceId: string | null
   creditCardId: string | null
   lifeProjectId: string | null
@@ -185,7 +184,7 @@ export type EntryInput = {
   competenceYm?: string
   accountId?: string
   contraAccountId?: string
-  chartAccountId?: string
+  categoryId?: string
   memberId?: string
   installmentCount?: number
   repeatMonths?: number
@@ -200,7 +199,7 @@ export type EntryUpdateInput = {
   competenceYm?: string
   accountId?: string
   contraAccountId?: string
-  chartAccountId?: string
+  categoryId?: string
   incomeSourceId?: string
   memberId?: string
   confirmDuplicate?: boolean
@@ -209,7 +208,7 @@ export type EntryUpdateInput = {
 export type EntryFilter = {
   competenceYm?: string
   type?: EntryType
-  chartAccountId?: string
+  categoryId?: string
   accountId?: string
   search?: string
   skip?: number
@@ -224,7 +223,7 @@ export const entriesApi = {
   remove: (id: string) => apiFetch<void>(`/entries/${id}`, json('DELETE')),
   duplicate: (id: string) => apiFetch<Entry[]>(`/entries/${id}/duplicate`, json('POST')),
   suggestAccount: (description: string) =>
-    apiFetch<{ chartAccountId: string | null; chartAccountName: string | null }>(
+    apiFetch<{ categoryId: string | null; categoryName: string | null }>(
       `/entries/suggest-account${query({ description })}`,
     ),
 }
@@ -235,7 +234,7 @@ export type Alert = {
   code: string
   severity: string
   message: string
-  chartAccountId: string | null
+  categoryId: string | null
   percent: number | null
 }
 
@@ -255,7 +254,7 @@ export type Dashboard = {
 
 export type MonthlyReport = {
   summary: Dashboard
-  byAccount: { chartAccountId: string | null; chartAccountName: string; amount: number }[]
+  byAccount: { categoryId: string | null; categoryName: string; amount: number }[]
   previousYm: string
   previousExpenseTotal: number
   expenseDelta: number
@@ -276,12 +275,12 @@ export const exportApi = {
 /* ---------- Budgets ---------- */
 
 export type BudgetLine = {
-  chartAccountId: string | null
-  chartAccountName: string
+  categoryId: string | null
+  categoryName: string
   parentId: string | null
   groupName: string
-  section: ChartSection
-  level: ChartAccountLevel
+  section: CategorySection
+  level: CategoryLevel
   plannedAmount: number
   actualAmount: number
   remaining: number
@@ -291,7 +290,7 @@ export type BudgetLine = {
 }
 
 export type BudgetSectionBlock = {
-  section: ChartSection
+  section: CategorySection
   name: string
   plannedAmount: number
   actualAmount: number
@@ -326,10 +325,10 @@ export type BudgetYearMonthCell = {
 }
 
 export type BudgetYearLine = {
-  chartAccountId: string | null
-  chartAccountName: string
+  categoryId: string | null
+  categoryName: string
   groupName: string
-  section: ChartSection
+  section: CategorySection
   months: BudgetYearMonthCell[]
 }
 
@@ -343,34 +342,34 @@ export type BudgetYear = {
 export const budgetsApi = {
   get: (ym: string) => apiFetch<Budget>(`/budgets/${ym}`),
   getYear: (year: number) => apiFetch<BudgetYear>(`/budgets/year/${year}`),
-  upsert: (ym: string, mode: BudgetMode, lines: { chartAccountId: string; plannedAmount: number }[]) =>
+  upsert: (ym: string, mode: BudgetMode, lines: { categoryId: string; plannedAmount: number }[]) =>
     apiFetch<Budget>(`/budgets/${ym}`, json('PUT', { mode, lines })),
   copyPrevious: (ym: string, overwrite = false) =>
     apiFetch<Budget>(`/budgets/${ym}/copy-previous`, json('POST', { overwrite })),
   repeat: (
     ym: string,
-    chartAccountId: string,
+    categoryId: string,
     monthCount: number,
     overwrite = false,
     plannedAmount?: number,
   ) =>
     apiFetch<Budget>(
       `/budgets/${ym}/repeat`,
-      json('POST', { chartAccountId, monthCount, overwrite, plannedAmount }),
+      json('POST', { categoryId, monthCount, overwrite, plannedAmount }),
     ),
   installments: (
     ym: string,
-    chartAccountId: string,
+    categoryId: string,
     totalAmount: number,
     installmentCount: number,
     overwrite = false,
   ) =>
     apiFetch<Budget>(
       `/budgets/${ym}/installments`,
-      json('POST', { chartAccountId, totalAmount, installmentCount, overwrite }),
+      json('POST', { categoryId, totalAmount, installmentCount, overwrite }),
     ),
-  removeLine: (ym: string, chartAccountId: string) =>
-    apiFetch<void>(`/budgets/${ym}/lines/${chartAccountId}`, json('DELETE')),
+  removeLine: (ym: string, categoryId: string) =>
+    apiFetch<void>(`/budgets/${ym}/lines/${categoryId}`, json('DELETE')),
 }
 
 /* ---------- Diagnosis ---------- */
@@ -428,8 +427,8 @@ export type LifeProject = {
   progressPercent: number
   scope: LifeProjectScope
   isOwner: boolean
-  chartAccountId: string | null
-  chartAccountName: string | null
+  categoryId: string | null
+  categoryName: string | null
   horizon: LifeProjectHorizon | null
 }
 
@@ -439,7 +438,7 @@ export type LifeProjectInput = {
   dueDate: string
   contributionStartYm: string
   scope: LifeProjectScope
-  chartAccountId: string
+  categoryId: string
   detailedDescription?: string
 }
 
@@ -453,7 +452,7 @@ export const projectsApi = {
   remove: (id: string) => apiFetch<void>(`/life-projects/${id}`, json('DELETE')),
   contribute: (
     id: string,
-    input: { amount: number; occurredAt: string; accountId: string; chartAccountId: string; description?: string },
+    input: { amount: number; occurredAt: string; accountId: string; categoryId: string; description?: string },
   ) => apiFetch<unknown>(`/life-projects/${id}/contributions`, json('POST', input)),
 }
 
@@ -461,17 +460,17 @@ export const projectsApi = {
 
 export type PatrimonyItem = {
   id: string
-  chartAccountId: string
-  chartAccountName: string
+  categoryId: string
+  categoryName: string
   name: string
-  section: ChartSection
+  section: CategorySection
   groupName: string
   amount: number
 }
 
 export type PatrimonyGroupTotal = {
   groupName: string
-  section: ChartSection
+  section: CategorySection
   amount: number
 }
 
@@ -497,10 +496,10 @@ export type Reserve = {
 export const patrimonyApi = {
   get: () => apiFetch<PatrimonySummary>('/patrimony'),
   reserve: (competenceYm?: string) => apiFetch<Reserve>(`/patrimony/reserve${query({ competenceYm })}`),
-  create: (chartAccountId: string, name: string, amount: number) =>
-    apiFetch<PatrimonyItem>('/patrimony/items', json('POST', { chartAccountId, name, amount })),
-  update: (id: string, name: string, amount: number) =>
-    apiFetch<PatrimonyItem>(`/patrimony/items/${id}`, json('PUT', { name, amount })),
+  create: (categoryId: string, name: string, amount: number) =>
+    apiFetch<PatrimonyItem>('/patrimony/items', json('POST', { categoryId, name, amount })),
+  update: (id: string, categoryId: string, name: string, amount: number) =>
+    apiFetch<PatrimonyItem>(`/patrimony/items/${id}`, json('PUT', { categoryId, name, amount })),
   remove: (id: string) => apiFetch<void>(`/patrimony/items/${id}`, json('DELETE')),
 }
 
@@ -642,8 +641,8 @@ export const whatsappApi = {
   setLink: (phone: string) => apiFetch<WhatsAppLink>('/whatsapp/link', json('POST', { phone })),
   unlink: () => apiFetch<void>('/whatsapp/link', json('DELETE')),
   drafts: (status?: WhatsAppDraftStatus) => apiFetch<WhatsAppDraft[]>(`/whatsapp/drafts${query({ status })}`),
-  confirm: (id: string, accountId?: string, chartAccountId?: string) =>
-    apiFetch<unknown>(`/whatsapp/drafts/${id}/confirm`, json('POST', { accountId, chartAccountId })),
+  confirm: (id: string, accountId?: string, categoryId?: string) =>
+    apiFetch<unknown>(`/whatsapp/drafts/${id}/confirm`, json('POST', { accountId, categoryId })),
   discard: (id: string) => apiFetch<unknown>(`/whatsapp/drafts/${id}/discard`, json('POST')),
 }
 
@@ -673,10 +672,10 @@ export const importsApi = {
     apiFetch<ImportPreview>('/imports/preview', json('POST', { fileName, format, content })),
   setRow: (batchId: string, rowId: string, willImport: boolean) =>
     apiFetch<ImportRow>(`/imports/${batchId}/rows/${rowId}`, json('PUT', { willImport })),
-  commit: (batchId: string, accountId: string, defaultExpenseChartAccountId?: string, defaultIncomeChartAccountId?: string) =>
+  commit: (batchId: string, accountId: string, defaultExpenseCategoryId?: string, defaultIncomeCategoryId?: string) =>
     apiFetch<{ batchId: string; imported: number; skipped: number }>(
       `/imports/${batchId}/commit`,
-      json('POST', { accountId, defaultExpenseChartAccountId, defaultIncomeChartAccountId }),
+      json('POST', { accountId, defaultExpenseCategoryId, defaultIncomeCategoryId }),
     ),
 }
 

@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   budgetsApi,
@@ -13,17 +13,22 @@ import {
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
-import { Badge, ErrorText, Skeleton } from '../components/ui/Feedback'
+import { ErrorText, Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
 import { currentCompetence, formatMoney, formatPercent } from '../lib/format'
 import {
   buildBudgetMacroBars,
-  buildPatrimonyHomeInsight,
-  buildPatrimonyMacroBars,
+  buildExpensePieSlices,
+  buildIncomeExpenseCompare,
+  buildIncomePieSlices,
   buildRaioXHomeInsight,
+  pieConicGradient,
+  type CompareBar,
+  type PieSlice,
 } from '../lib/homeInsights'
 import { horizonFillClass, LIFE_HORIZONS } from '../lib/lifeHorizon'
+import { patrimonyRootAmounts } from '../lib/raioX'
 import styles from './page.module.css'
 
 function firstName(fullName: string | undefined): string {
@@ -44,7 +49,6 @@ export function HomePage() {
   const profile = useLoad(() => familyApi.profile(), [])
   const name = firstName(profile.data?.name)
   const data = dashboard.data
-  const emptyMonth = data && data.incomeTotal === 0 && data.expenseTotal === 0
 
   return (
     <div className={styles.page}>
@@ -74,31 +78,7 @@ export function HomePage() {
 
       {data ? (
         <>
-          <section className={styles.hero} aria-labelledby="day-photo">
-            <div className={styles.heroTop}>
-              <span id="day-photo">Foto do dia · {ym}</span>
-              {data.isClosed ? <Badge tone="info">Mês fechado</Badge> : null}
-            </div>
-            <div className={styles.heroSplit} aria-label="Saldo e previsão">
-              <div>
-                <span>Saldo atual</span>
-                <strong
-                  className={`${styles.moneyValue} ${data.accountsBalance < 0 ? styles.negative : styles.positive}`}
-                >
-                  {formatMoney(data.accountsBalance)}
-                </strong>
-              </div>
-              <div>
-                <span>Previsão do mês</span>
-                <strong className={`${styles.moneyValue} ${data.result < 0 ? styles.negative : ''}`}>
-                  {formatMoney(budget.data?.monthResult ?? data.result)}
-                </strong>
-              </div>
-            </div>
-            {data.accountsBalance < 0 ? (
-              <p className={styles.muted}>Saldo negativo: revise o uso de limite ou cheque especial.</p>
-            ) : null}
-          </section>
+          <HomeRealizedCharts budget={budget.data} loading={budget.loading && !budget.data} />
 
           <section className={styles.macroGrid} aria-label="Visão macro">
             <BudgetMacroChart budget={budget.data} loading={budget.loading && !budget.data} />
@@ -107,51 +87,139 @@ export function HomePage() {
 
           <nav className={styles.homeBlocks} aria-label="Atalhos principais">
             <ProjectsHomeTile projects={projects.data ?? []} loading={projects.loading && !projects.data} />
-            <Link className={styles.homeBlock} to="/lancamentos?novo=1">
-              <Icon name="add" size={24} />
-              <strong>Lançar</strong>
-              <span>Registrar receita ou despesa</span>
-            </Link>
           </nav>
-
-          {emptyMonth ? (
-            <section className={styles.emptyCard}>
-              <h2>Comece pelo mês</h2>
-              <p className={styles.muted}>
-                Ainda não há lançamentos em {ym}. Registre a primeira receita ou despesa para ver o painel ganhar vida.
-              </p>
-              <div className={styles.quickActions}>
-                <Button onClick={() => navigate('/lancamentos?novo=1')}>Registrar lançamento</Button>
-                <Button variant="secondary" onClick={() => navigate('/raio-x')}>
-                  Ver Raio-X
-                </Button>
-              </div>
-            </section>
-          ) : (
-            <div className={styles.grid3}>
-              <div className={styles.stat}>
-                <span>Já recebido</span>
-                <strong className={`${styles.moneyValue} ${styles.positive}`}>
-                  {formatMoney(data.receivedIncome)}
-                </strong>
-              </div>
-              <div className={styles.stat}>
-                <span>Despesas</span>
-                <strong className={`${styles.moneyValue} ${styles.negative}`}>
-                  {formatMoney(data.expenseTotal)}
-                </strong>
-              </div>
-              <div className={styles.stat}>
-                <span>Cartão no mês</span>
-                <strong className={`${styles.moneyValue} ${styles.negative}`}>
-                  {formatMoney(data.cardPurchasesTotal)}
-                </strong>
-              </div>
-            </div>
-          )}
         </>
       ) : null}
     </div>
+  )
+}
+
+function HomeRealizedCharts({ budget, loading }: { budget: Budget | null | undefined; loading: boolean }) {
+  const incomeSlices = useMemo(() => (budget ? buildIncomePieSlices(budget) : []), [budget])
+  const expenseSlices = useMemo(() => (budget ? buildExpensePieSlices(budget) : []), [budget])
+  const compare = useMemo(() => (budget ? buildIncomeExpenseCompare(budget) : []), [budget])
+
+  return (
+    <section className={styles.homeCharts} aria-label="Receita e despesa do mês">
+      <div className={styles.homePieGrid}>
+        <PieCard title="Receita" slices={incomeSlices} loading={loading} empty="Sem receita neste mês." />
+        <PieCard title="Despesa" slices={expenseSlices} loading={loading} empty="Sem despesa neste mês." />
+      </div>
+      <CompareCard bars={compare} loading={loading} />
+    </section>
+  )
+}
+
+function PieCard({
+  title,
+  slices,
+  loading,
+  empty,
+}: {
+  title: string
+  slices: PieSlice[]
+  loading: boolean
+  empty: string
+}) {
+  return (
+    <section className={styles.macroCard} aria-label={title}>
+      <div className={styles.macroHead}>
+        <strong>{title}</strong>
+      </div>
+      {loading ? <Skeleton height={160} /> : null}
+      {!loading && slices.length === 0 ? <p className={styles.muted}>{empty}</p> : null}
+      {!loading && slices.length > 0 ? (
+        <div className={styles.pieLayout}>
+          <div
+            className={styles.pieChart}
+            style={{ background: pieConicGradient(slices) }}
+            role="img"
+            aria-label={`${title}: ${slices.map((slice) => `${slice.label} ${formatPercent(slice.pct)}`).join(', ')}`}
+          />
+          <ul className={styles.pieLegend}>
+            {slices.map((slice) => (
+              <li key={slice.key}>
+                <Link
+                  className={styles.pieLegendLink}
+                  to={
+                    slice.categoryId
+                      ? `/raio-x?conta=${encodeURIComponent(slice.categoryId)}`
+                      : slice.section
+                        ? `/raio-x?section=${encodeURIComponent(slice.section)}`
+                        : '/raio-x'
+                  }
+                >
+                  <span className={styles.pieSwatch} style={{ background: slice.color }} aria-hidden />
+                  <span>
+                    <strong>{slice.label}</strong>
+                    <span className={styles.moneyValue}>{formatMoney(slice.amount)}</span>
+                  </span>
+                  <span>{formatPercent(slice.pct)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function CompareCard({ bars, loading }: { bars: CompareBar[]; loading: boolean }) {
+  return (
+    <section className={styles.macroCard} aria-label="Receita versus despesa">
+      <div className={styles.macroHead}>
+        <strong>Receita × despesa</strong>
+        <span className={styles.macroHeadMeta}>Receita: % do orçado · Despesa: % da renda gastável</span>
+      </div>
+      {loading ? <Skeleton height={96} /> : null}
+      {!loading && bars.length === 0 ? (
+        <p className={styles.muted}>Sem orçamento ou movimento neste mês.</p>
+      ) : null}
+      {!loading && bars.length > 0 ? (
+        <ul className={styles.macroBars}>
+          {bars.map((bar) => (
+            <li key={bar.key}>
+              <Link
+                className={styles.macroBarLink}
+                to={
+                  bar.section === 'Expense'
+                    ? '/raio-x?section=Expense'
+                    : `/raio-x?section=${encodeURIComponent(bar.section)}`
+                }
+              >
+                <span className={styles.macroBarLabel}>
+                  <strong>{bar.label}</strong>
+                  <span>
+                    {bar.planned <= 0
+                      ? bar.actual > 0
+                        ? bar.key === 'expense'
+                          ? 'Sem renda gastável'
+                          : 'Sem orçamento'
+                        : '—'
+                      : formatPercent((bar.actual / bar.planned) * 100)}
+                  </span>
+                </span>
+                <span className={styles.progress} aria-hidden>
+                  <span
+                    className={`${styles.progressFill} ${
+                      bar.tone === 'over'
+                        ? styles.progressFill_danger
+                        : bar.tone === 'muted' || bar.tone === 'unbudgeted'
+                          ? styles.progressFillMuted
+                          : bar.key === 'income'
+                            ? styles.progressFill_ok
+                            : styles.progressFillActual
+                    }`}
+                    style={{ width: `${bar.progressPct}%` }}
+                  />
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
   )
 }
 
@@ -218,46 +286,42 @@ function PatrimonyMacroChart({
   summary: PatrimonySummary | null | undefined
   loading: boolean
 }) {
-  const insight = summary ? buildPatrimonyHomeInsight(summary) : null
-  const bars = summary ? buildPatrimonyMacroBars(summary) : []
+  const amounts = summary ? patrimonyRootAmounts(summary) : null
 
   return (
-    <section className={styles.macroCard}>
+    <section className={styles.macroCard} aria-label="Patrimônio">
       <div className={styles.macroHead}>
         <Link className={styles.homeBlockProjectsHead} to="/patrimonio">
           <Icon name="wallet" size={24} />
           <strong>Patrimônio</strong>
         </Link>
-        {insight ? (
-          <span className={`${styles.macroHeadMeta} ${styles.moneyValue} ${insight.netWorth < 0 ? styles.negative : ''}`}>
-            Líquido {formatMoney(insight.netWorth)}
-          </span>
-        ) : null}
       </div>
       {loading ? <Skeleton height={96} /> : null}
-      {!loading && bars.length > 0 ? (
-        <ul className={styles.macroBars}>
-          {bars.map((bar) => (
-            <li key={bar.key}>
-              <Link className={styles.macroBarLink} to="/patrimonio">
-                <span className={styles.macroBarLabel}>
-                  <strong>{bar.label}</strong>
-                  <span className={styles.moneyValue}>{formatMoney(bar.amount)}</span>
-                </span>
-                <span className={styles.progress} aria-hidden>
-                  <span
-                    className={`${styles.progressFill} ${
-                      bar.key === 'assets' ? styles.progressFill_ok : styles.progressFill_danger
-                    }`}
-                    style={{ width: `${bar.pct}%` }}
-                  />
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+      {!loading && amounts ? (
+        <div className={styles.heroCards}>
+          <Link className={styles.heroCard} to="/patrimonio">
+            <span>Ativo</span>
+            <strong className={`${styles.moneyValue} ${styles.positive}`}>{formatMoney(amounts.assets)}</strong>
+          </Link>
+          <Link className={styles.heroCard} to="/patrimonio">
+            <span>Passivo</span>
+            <strong className={`${styles.moneyValue} ${styles.negative}`}>
+              {formatMoney(amounts.liabilities)}
+            </strong>
+          </Link>
+          <Link
+            className={`${styles.heroCard} ${styles.heroCardPatrimonyActive}`}
+            to="/patrimonio"
+          >
+            <span>Patrimônio líquido</span>
+            <strong className={`${styles.moneyValue} ${amounts.netWorth < 0 ? styles.negative : ''}`}>
+              {formatMoney(amounts.netWorth)}
+            </strong>
+            <span className={styles.muted}>Ativo − passivo</span>
+          </Link>
+        </div>
       ) : null}
-      {!loading && !insight ? <p className={styles.muted}>Cadastre ativos e passivos para ver o gráfico.</p> : null}
+      {!loading && !amounts ? <p className={styles.muted}>Cadastre ativos e passivos para ver o patrimônio.</p> : null}
     </section>
   )
 }

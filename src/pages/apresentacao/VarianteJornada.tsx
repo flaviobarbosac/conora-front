@@ -20,7 +20,7 @@ const CHAPTERS: ReadonlyArray<Chapter> = [
   {
     verb: 'Registre',
     title: 'Tudo entra sem esforço',
-    text: 'Lance no app, importe o extrato do banco ou mande uma mensagem no WhatsApp. O Conora organiza no plano de contas.',
+    text: 'Lance no app, importe o extrato do banco ou mande uma mensagem no WhatsApp. O Conora organiza em categorias.',
     features: [feature('lancamentos'), feature('importar'), feature('whatsapp')],
     preview: <ChatPreview />,
   },

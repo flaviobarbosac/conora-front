@@ -1,4 +1,4 @@
-﻿import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
   accountsApi,
@@ -6,10 +6,10 @@ import {
   type Account,
   type AccountKind,
   type Card,
-  type ChartAccount,
+  type Category,
   type InvoiceStatus,
 } from '../api/finance'
-import { ChartAccountSelect } from '../components/ChartAccountSelect'
+import { CategorySelect } from '../components/CategorySelect'
 import { PageHeader } from '../components/PageHeader'
 import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
@@ -161,7 +161,7 @@ export function AccountsPage() {
                 card={card}
                 accounts={activeAccounts}
                 categories={lookups.expenseAccounts}
-                tree={lookups.chartAccounts}
+                tree={lookups.categories}
                 onChanged={() => {
                   cards.reload()
                   refresh()
@@ -444,8 +444,8 @@ function CardForm({ accounts, onSaved }: { accounts: Account[]; onSaved: () => v
 type PanelProps = {
   card: Card
   accounts: Account[]
-  categories: ChartAccount[]
-  tree: ChartAccount[]
+  categories: Category[]
+  tree: Category[]
   onChanged: () => void
 }
 
@@ -496,14 +496,14 @@ function PurchaseForm({
   onSaved,
 }: {
   card: Card
-  categories: ChartAccount[]
-  tree: ChartAccount[]
+  categories: Category[]
+  tree: Category[]
   onSaved: () => void
 }) {
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayInput)
   const [installments, setInstallments] = useState('1')
-  const [chartAccountId, setChartAccountId] = useState('')
+  const [categoryId, setCategoryId] = useState('')
   const [description, setDescription] = useState('')
   const action = useAction()
 
@@ -519,7 +519,7 @@ function PurchaseForm({
         amount: value,
         purchasedAt: dateToApi(date),
         installments: Math.max(1, Number(installments) || 1),
-        chartAccountId,
+        categoryId,
         description: description.trim(),
       }),
     )
@@ -540,12 +540,12 @@ function PurchaseForm({
         value={installments}
         onChange={setInstallments}
       />
-      <ChartAccountSelect
+      <CategorySelect
         label="Conta"
         name={`purchaseAccount-${card.id}`}
         required
-        value={chartAccountId}
-        onChange={setChartAccountId}
+        value={categoryId}
+        onChange={setCategoryId}
         options={categories}
         tree={tree}
         emptyLabel="Selecione"

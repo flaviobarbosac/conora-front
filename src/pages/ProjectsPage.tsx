@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { familyApi, projectsApi, type LifeProjectScope } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Pager } from '../components/Pager'
-import { ChartAccountSelect } from '../components/ChartAccountSelect'
+import { CategorySelect } from '../components/CategorySelect'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
@@ -49,8 +49,25 @@ export function ProjectsPage() {
   const projects = useLoad(() => projectsApi.list(), [])
   const [showForm, setShowForm] = useState(false)
   const [formDirty, setFormDirty] = useState(false)
+  const [search, setSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
 
   useRegisterDirty('projects-form', showForm && formDirty)
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams)
+    let changed = false
+    const searchQuery = searchParams.get('search')
+    if (searchQuery != null && searchQuery !== '') {
+      setSearch(searchQuery)
+      setAppliedSearch(searchQuery.trim())
+      next.delete('search')
+      changed = true
+    }
+    if (changed) {
+      setSearchParams(next, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   async function toggleForm() {
     if (showForm && formDirty && !(await confirmLeave())) {
@@ -63,21 +80,33 @@ export function ProjectsPage() {
   }
 
   const list = useMemo(() => {
-    const all = projects.data ?? []
-    if (!horizonte) {
-      return all
+    let all = projects.data ?? []
+    if (horizonte) {
+      all = all.filter((project) => project.horizon === horizonte)
     }
-    return all.filter((project) => project.horizon === horizonte)
-  }, [projects.data, horizonte])
+    const needle = appliedSearch.trim().toLowerCase()
+    if (needle) {
+      all = all.filter(
+        (project) =>
+          project.name.toLowerCase().includes(needle) ||
+          (project.categoryName?.toLowerCase().includes(needle) ?? false) ||
+          (project.detailedDescription?.toLowerCase().includes(needle) ?? false),
+      )
+    }
+    return all
+  }, [projects.data, horizonte, appliedSearch])
 
   const pagination = useClientPagination(list, 10)
 
   function setHorizonFilter(next: HorizonKey | null) {
-    if (!next) {
-      setSearchParams({})
-      return
+    const params = new URLSearchParams()
+    if (next) {
+      params.set('horizonte', next)
     }
-    setSearchParams({ horizonte: next })
+    if (appliedSearch) {
+      params.set('search', appliedSearch)
+    }
+    setSearchParams(params)
   }
 
   return (
@@ -143,10 +172,29 @@ export function ProjectsPage() {
         ))}
       </div>
 
+      <form
+        className={styles.toolbar}
+        onSubmit={(event) => {
+          event.preventDefault()
+          setAppliedSearch(search.trim())
+        }}
+      >
+        <Field label="Buscar" name="search" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <Button type="submit" variant="secondary">
+          Buscar
+        </Button>
+      </form>
+
       <ErrorText message={projects.error} />
       {projects.loading && !projects.data ? <Loading /> : null}
       {projects.data && list.length === 0 ? (
-        <Empty>{horizonte ? 'Nenhum projeto neste horizonte.' : 'Nenhum projeto ainda. Crie o primeiro abaixo.'}</Empty>
+        <Empty>
+          {appliedSearch
+            ? 'Nenhum projeto encontrado para a busca.'
+            : horizonte
+              ? 'Nenhum projeto neste horizonte.'
+              : 'Nenhum projeto ainda. Crie o primeiro abaixo.'}
+        </Empty>
       ) : null}
 
       {pagination.pageItems.map((project) => {
@@ -171,7 +219,7 @@ export function ProjectsPage() {
                 <span className={styles.rowSub}>
                   {formatMoney(project.accumulatedAmount)} de {formatMoney(project.goalAmount)}
                   {` · até ${formatDate(project.dueDate)}`}
-                  {project.chartAccountName ? ` · ${project.chartAccountName}` : ''}
+                  {project.categoryName ? ` · ${project.categoryName}` : ''}
                 </span>
               </span>
               <strong>{formatPercent(project.progressPercent)}</strong>
@@ -228,7 +276,7 @@ function ProjectForm({
   const [dueYm, setDueYm] = useState('')
   const [startYm, setStartYm] = useState(() => shiftCompetence(currentCompetence(), 1))
   const [scope, setScope] = useState<LifeProjectScope>('Personal')
-  const [chartAccountId, setChartAccountId] = useState('')
+  const [categoryId, setCategoryId] = useState('')
   const action = useAction()
   const hasFamilyGroup = Boolean(family.data?.groupId)
   const currentYm = currentCompetence()
@@ -245,9 +293,9 @@ function ProjectForm({
       dueYm !== '' ||
       startYm !== defaultStartYm ||
       scope !== 'Personal' ||
-      chartAccountId !== ''
+      categoryId !== ''
     onDirtyChange?.(dirty)
-  }, [name, detailedDescription, goal, dueYm, startYm, defaultStartYm, scope, chartAccountId, onDirtyChange])
+  }, [name, detailedDescription, goal, dueYm, startYm, defaultStartYm, scope, categoryId, onDirtyChange])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -255,8 +303,8 @@ function ProjectForm({
       action.setError('Informe uma meta maior que zero.')
       return
     }
-    if (!chartAccountId) {
-      action.setError('Escolha a conta do plano de contas.')
+    if (!categoryId) {
+      action.setError('Escolha a categoria.')
       return
     }
     if (!dueYm) {
@@ -281,7 +329,7 @@ function ProjectForm({
           dueDate: dateToApi(`${dueYm}-01`),
           contributionStartYm: startYm,
           scope: projectScope,
-          chartAccountId,
+          categoryId,
           detailedDescription: detailedDescription.trim() || undefined,
         })
         createdId = created.id
@@ -309,14 +357,14 @@ function ProjectForm({
             maxLength={4000}
           />
         </div>
-        <ChartAccountSelect
-          label="Conta do plano"
-          name="projectChartAccount"
+        <CategorySelect
+          label="Categoria"
+          name="projectCategory"
           required
-          value={chartAccountId}
-          onChange={setChartAccountId}
+          value={categoryId}
+          onChange={setCategoryId}
           options={lifeAccounts}
-          tree={lookups.chartAccounts}
+          tree={lookups.categories}
           emptyLabel="Selecione"
         />
         <Select

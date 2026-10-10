@@ -1,9 +1,9 @@
-﻿import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { importsApi, type ImportFormat, type ImportPreview } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { Badge, ErrorText } from '../components/ui/Feedback'
-import { ChartAccountSelect } from '../components/ChartAccountSelect'
+import { CategorySelect } from '../components/CategorySelect'
 import { Select } from '../components/ui/Select'
 import { TextArea } from '../components/ui/TextArea'
 import { useAction } from '../hooks/useAction'
@@ -18,8 +18,8 @@ export function ImportPage() {
   const [content, setContent] = useState('')
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [accountId, setAccountId] = useState('')
-  const [expenseChartAccountId, setExpenseChartAccountId] = useState('')
-  const [incomeChartAccountId, setIncomeChartAccountId] = useState('')
+  const [expenseCategoryId, setExpenseCategoryId] = useState('')
+  const [incomeCategoryId, setIncomeCategoryId] = useState('')
   const [result, setResult] = useState<string | null>(null)
   const previewAction = useAction()
   const commitAction = useAction()
@@ -46,7 +46,7 @@ export function ImportPage() {
       return
     }
     const saved = await commitAction.run(async () => {
-      const done = await importsApi.commit(preview.batchId, accountId, expenseChartAccountId || undefined, incomeChartAccountId || undefined)
+      const done = await importsApi.commit(preview.batchId, accountId, expenseCategoryId || undefined, incomeCategoryId || undefined)
       setResult(`${done.imported} lançamento(s) importado(s), ${done.skipped} ignorado(s).`)
       setPreview(null)
       setContent('')
@@ -126,22 +126,22 @@ export function ImportPage() {
               ))}
             </Select>
             <span />
-            <ChartAccountSelect
+            <CategorySelect
               label="Conta padrão de despesa"
               name="importExpenseAccount"
-              value={expenseChartAccountId}
-              onChange={setExpenseChartAccountId}
+              value={expenseCategoryId}
+              onChange={setExpenseCategoryId}
               options={lookups.expenseAccounts}
-              tree={lookups.chartAccounts}
+              tree={lookups.categories}
               emptyLabel="Automática"
             />
-            <ChartAccountSelect
+            <CategorySelect
               label="Conta padrão de receita"
               name="importIncomeAccount"
-              value={incomeChartAccountId}
-              onChange={setIncomeChartAccountId}
+              value={incomeCategoryId}
+              onChange={setIncomeCategoryId}
               options={lookups.incomeAccounts}
-              tree={lookups.chartAccounts}
+              tree={lookups.categories}
               emptyLabel="Automática"
             />
           </div>

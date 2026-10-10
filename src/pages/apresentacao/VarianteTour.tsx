@@ -16,7 +16,7 @@ type Stop = {
 const STOPS: ReadonlyArray<Stop> = [
   {
     feature: feature('orcamento'),
-    highlights: ['Previsto por conta do plano', 'Alertas quando passa do limite', 'Comparativo mês a mês'],
+    highlights: ['Previsto por categoria', 'Alertas quando passa do limite', 'Comparativo mês a mês'],
     preview: <BudgetPreview />,
   },
   {

@@ -1,36 +1,34 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import type { ChartAccount } from '../api/finance'
-import { filterChartAccountGroups, groupChartAccounts } from '../lib/chartAccountGroups'
-import styles from './ChartAccountSelect.module.css'
+import styles from './CategorySelect.module.css'
+
+export type SearchableOption = {
+  value: string
+  label: string
+  hint?: string
+}
 
 type Props = {
   label: string
   name: string
   value: string
   onChange: (value: string) => void
-  /** Analytical accounts available for selection. */
-  options: ChartAccount[]
-  /** Full chart tree used to resolve synthetic (group) parent names. */
-  tree: ChartAccount[]
+  options: SearchableOption[]
   emptyLabel?: string
-  required?: boolean
+  searchPlaceholder?: string
   disabled?: boolean
   id?: string
 }
 
-type FlatItem =
-  | { kind: 'empty' }
-  | { kind: 'account'; account: ChartAccount; groupName: string }
+type FlatItem = { kind: 'empty' } | { kind: 'option'; option: SearchableOption }
 
-export function ChartAccountSelect({
+export function SearchableSelect({
   label,
   name,
   value,
   onChange,
   options,
-  tree,
   emptyLabel,
-  required,
+  searchPlaceholder = 'Digite para filtrar…',
   disabled,
   id,
 }: Props) {
@@ -42,26 +40,27 @@ export function ChartAccountSelect({
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
 
-  const groups = useMemo(() => groupChartAccounts(options, tree), [options, tree])
-  const filtered = useMemo(() => filterChartAccountGroups(groups, query), [groups, query])
-
-  const selected = useMemo(() => options.find((account) => account.id === value) ?? null, [options, value])
-  const selectedGroupName = useMemo(() => {
-    if (!selected?.parentId) {
-      return null
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    if (!needle) {
+      return options
     }
-    return tree.find((account) => account.id === selected.parentId)?.name ?? null
-  }, [selected, tree])
+    return options.filter(
+      (option) =>
+        option.label.toLowerCase().includes(needle) ||
+        (option.hint?.toLowerCase().includes(needle) ?? false),
+    )
+  }, [options, query])
+
+  const selected = useMemo(() => options.find((option) => option.value === value) ?? null, [options, value])
 
   const flatItems = useMemo(() => {
     const items: FlatItem[] = []
     if (emptyLabel) {
       items.push({ kind: 'empty' })
     }
-    for (const group of filtered) {
-      for (const account of group.items) {
-        items.push({ kind: 'account', account, groupName: group.groupName })
-      }
+    for (const option of filtered) {
+      items.push({ kind: 'option', option })
     }
     return items
   }, [emptyLabel, filtered])
@@ -126,11 +125,11 @@ export function ChartAccountSelect({
       if (!item) {
         return
       }
-      selectValue(item.kind === 'empty' ? '' : item.account.id)
+      selectValue(item.kind === 'empty' ? '' : item.option.value)
     }
   }
 
-  const displayLabel = selected?.name ?? emptyLabel ?? 'Selecione'
+  const displayLabel = selected?.label ?? emptyLabel ?? 'Selecione'
   const showPlaceholder = !selected
 
   return (
@@ -138,13 +137,12 @@ export function ChartAccountSelect({
       <div className={styles.header}>
         <label htmlFor={inputId}>{label}</label>
       </div>
-      <input type="hidden" name={name} value={value} required={required && !value ? true : undefined} />
+      <input type="hidden" name={name} value={value} />
       <button
         id={inputId}
         type="button"
         className={styles.trigger}
         disabled={disabled}
-        aria-readonly={disabled || undefined}
         aria-haspopup={disabled ? undefined : 'listbox'}
         aria-expanded={disabled ? undefined : open}
         aria-controls={disabled ? undefined : listId}
@@ -160,8 +158,8 @@ export function ChartAccountSelect({
             <span className={styles.placeholder}>{displayLabel}</span>
           ) : (
             <>
-              <strong>{selected ? `${selected.displayNumber ? `${selected.displayNumber} ` : ''}${selected.name}` : ''}</strong>
-              {selectedGroupName ? <span>{selectedGroupName}</span> : null}
+              <strong>{selected?.label}</strong>
+              {selected?.hint ? <span>{selected.hint}</span> : null}
             </>
           )}
         </span>
@@ -179,7 +177,7 @@ export function ChartAccountSelect({
             className={styles.search}
             type="search"
             value={query}
-            placeholder="Buscar conta ou grupo…"
+            placeholder={searchPlaceholder}
             aria-label={`Buscar em ${label}`}
             autoComplete="off"
             onChange={(event) => {
@@ -210,42 +208,40 @@ export function ChartAccountSelect({
 
             {filtered.length === 0 ? (
               <li className={styles.noResults} role="presentation">
-                Nenhuma conta encontrada.
+                Nenhuma opção encontrada.
               </li>
             ) : null}
 
-            {filtered.map((group) => (
-              <li key={group.groupId}>
-                <div className={styles.groupLabel}>{group.groupName}</div>
-                <ul className={styles.groupItems} role="group" aria-label={group.groupName}>
-                  {group.items.map((account) => {
-                    const index = flatItems.findIndex(
-                      (item) => item.kind === 'account' && item.account.id === account.id,
-                    )
-                    const selectedOption = account.id === value
-                    const active = index === activeIndex
-                    return (
-                      <li key={account.id} role="option" aria-selected={selectedOption}>
-                        <button
-                          type="button"
-                          className={[
-                            styles.option,
-                            selectedOption ? styles.optionSelected : '',
-                            active ? styles.optionActive : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          onMouseEnter={() => setActiveIndex(index)}
-                          onClick={() => selectValue(account.id)}
-                        >
-                          {account.displayNumber ? `${account.displayNumber} ${account.name}` : account.name}
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </li>
-            ))}
+            <li>
+              <ul className={styles.groupItems} role="group" aria-label={label}>
+                {filtered.map((option) => {
+                  const index = flatItems.findIndex(
+                    (item) => item.kind === 'option' && item.option.value === option.value,
+                  )
+                  const selectedOption = option.value === value
+                  const active = index === activeIndex
+                  return (
+                    <li key={option.value} role="option" aria-selected={selectedOption}>
+                      <button
+                        type="button"
+                        className={[
+                          styles.option,
+                          selectedOption ? styles.optionSelected : '',
+                          active ? styles.optionActive : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                        onMouseEnter={() => setActiveIndex(index)}
+                        onClick={() => selectValue(option.value)}
+                      >
+                        {option.label}
+                        {option.hint ? <span className={styles.optionHint}>{option.hint}</span> : null}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </li>
           </ul>
         </div>
       ) : null}

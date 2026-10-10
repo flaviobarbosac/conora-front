@@ -8,8 +8,8 @@ export function alertTarget(alert: Alert, competenceYm: string): string {
   if (alert.code === 'NEGATIVE_RESULT') {
     return `/raio-x?competenceYm=${encodeURIComponent(competenceYm)}`
   }
-  if (alert.code.startsWith('BUDGET_') && alert.chartAccountId) {
-    return `/lancamentos?competenceYm=${encodeURIComponent(competenceYm)}&chartAccountId=${encodeURIComponent(alert.chartAccountId)}`
+  if (alert.code.startsWith('BUDGET_') && alert.categoryId) {
+    return `/lancamentos?competenceYm=${encodeURIComponent(competenceYm)}&categoryId=${encodeURIComponent(alert.categoryId)}`
   }
   return `/raio-x?competenceYm=${encodeURIComponent(competenceYm)}`
 }

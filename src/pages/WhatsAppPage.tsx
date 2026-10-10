@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import {
   whatsappApi,
-  type ChartAccount,
+  type Category,
   type WhatsAppDraft,
   type WhatsAppDraftPayload,
 } from '../api/finance'
@@ -9,7 +9,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
-import { ChartAccountSelect } from '../components/ChartAccountSelect'
+import { CategorySelect } from '../components/CategorySelect'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
@@ -58,10 +58,10 @@ export function WhatsAppPage() {
     }
   }
 
-  async function confirmDraft(draft: WhatsAppDraft, accountId: string, chartAccountId: string) {
+  async function confirmDraft(draft: WhatsAppDraft, accountId: string, categoryId: string) {
     if (
       await draftAction.run(() =>
-        whatsappApi.confirm(draft.id, accountId || undefined, chartAccountId || undefined),
+        whatsappApi.confirm(draft.id, accountId || undefined, categoryId || undefined),
       )
     ) {
       showSaveToast('Lançamento gravado.')
@@ -134,7 +134,7 @@ export function WhatsAppPage() {
               accounts={lookups.accounts}
               expenseAccounts={lookups.expenseAccounts}
               incomeAccounts={lookups.incomeAccounts}
-              tree={lookups.chartAccounts}
+              tree={lookups.categories}
               busy={draftAction.busy}
               onConfirm={confirmDraft}
               onDiscard={discardDraft}
@@ -158,17 +158,17 @@ function DraftRow({
 }: {
   draft: WhatsAppDraft
   accounts: { id: string; name: string }[]
-  expenseAccounts: ChartAccount[]
-  incomeAccounts: ChartAccount[]
-  tree: ChartAccount[]
+  expenseAccounts: Category[]
+  incomeAccounts: Category[]
+  tree: Category[]
   busy: boolean
-  onConfirm: (draft: WhatsAppDraft, accountId: string, chartAccountId: string) => Promise<void>
+  onConfirm: (draft: WhatsAppDraft, accountId: string, categoryId: string) => Promise<void>
   onDiscard: (draft: WhatsAppDraft) => Promise<void>
 }) {
   const payload = useMemo(() => parsePayload(draft.payloadJson), [draft.payloadJson])
   const [accountId, setAccountId] = useState('')
-  const [chartAccountId, setChartAccountId] = useState('')
-  const chartOptions = payload?.type === 'Income' ? incomeAccounts : expenseAccounts
+  const [categoryId, setCategoryId] = useState('')
+  const categoryOptions = payload?.type === 'Income' ? incomeAccounts : expenseAccounts
 
   if (!payload) {
     return (
@@ -209,17 +209,17 @@ function DraftRow({
             </option>
           ))}
         </Select>
-        <ChartAccountSelect
-          label="Conta do plano"
-          name={`wa-chart-${draft.id}`}
-          value={chartAccountId}
-          onChange={setChartAccountId}
-          options={chartOptions}
+        <CategorySelect
+          label="Categoria"
+          name={`wa-category-${draft.id}`}
+          value={categoryId}
+          onChange={setCategoryId}
+          options={categoryOptions}
           tree={tree}
           emptyLabel="Opcional"
         />
         <div className={styles.formActions}>
-          <Button disabled={busy} onClick={() => void onConfirm(draft, accountId, chartAccountId)}>
+          <Button disabled={busy} onClick={() => void onConfirm(draft, accountId, categoryId)}>
             Confirmar e gravar
           </Button>
           <Button variant="ghost" disabled={busy} onClick={() => void onDiscard(draft)}>

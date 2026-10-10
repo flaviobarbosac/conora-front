@@ -35,8 +35,8 @@ const AccountsPage = lazy(() =>
 const BudgetPage = lazy(() =>
   import('./pages/BudgetPage').then((m) => ({ default: m.BudgetPage })),
 )
-const ChartAccountsPage = lazy(() =>
-  import('./pages/ChartAccountsPage').then((m) => ({ default: m.ChartAccountsPage })),
+const CategoriesPage = lazy(() =>
+  import('./pages/CategoriesPage').then((m) => ({ default: m.CategoriesPage })),
 )
 const EntriesPage = lazy(() =>
   import('./pages/EntriesPage').then((m) => ({ default: m.EntriesPage })),
@@ -84,8 +84,8 @@ export default function App() {
             <Route path="/projetos/:id" element={<ProjectDetailPage />} />
             <Route path="/relatorios" element={<MorePage />} />
             <Route path="/diagnostico" element={<DiagnosisPage />} />
-            <Route path="/plano-de-contas" element={<ChartAccountsPage />} />
-            <Route path="/categorias" element={<Navigate to="/plano-de-contas" replace />} />
+            <Route path="/categorias" element={<CategoriesPage />} />
+            <Route path="/plano-de-contas" element={<Navigate to="/categorias" replace />} />
             <Route path="/patrimonio" element={<PatrimonyPage />} />
             <Route path="/membros" element={<MembersPage />} />
             <Route path="/plano" element={<PlanPage />} />

@@ -1,15 +1,15 @@
 import { useMemo } from 'react'
-import { accountsApi, chartAccountsApi, type Account, type ChartAccount, type ChartSection } from '../api/finance'
-import { chartAccountLabel } from '../lib/chartLabel'
-import { CASH_FLOW_SECTIONS } from '../lib/chartOrder'
+import { accountsApi, categoriesApi, type Account, type Category, type CategorySection } from '../api/finance'
+import { categoryLabel } from '../lib/categoryLabel'
+import { CASH_FLOW_SECTIONS } from '../lib/categoryOrder'
 import { useLoad } from './useLoad'
 
-const PATRIMONY_SECTIONS: ChartSection[] = ['Asset', 'Liability']
+const PATRIMONY_SECTIONS: CategorySection[] = ['Asset', 'Liability']
 
-/** Bank accounts and chart accounts used by selects and by id → name lookups. */
+/** Bank accounts and categories used by selects and by id → name lookups. */
 export function useLookups() {
   const accounts = useLoad(() => accountsApi.list(), [])
-  const chartAccounts = useLoad(() => chartAccountsApi.list(undefined, false, false), [])
+  const categories = useLoad(() => categoriesApi.list(undefined, false, false), [])
 
   const accountName = useMemo(() => {
     const map = new Map<string, string>()
@@ -17,15 +17,15 @@ export function useLookups() {
     return (id: string | null) => (id ? (map.get(id) ?? '—') : '—')
   }, [accounts.data])
 
-  const chartAccountName = useMemo(() => {
+  const categoryName = useMemo(() => {
     const map = new Map<string, string>()
-      chartAccounts.data?.forEach((account: ChartAccount) => map.set(account.id, chartAccountLabel(account)))
+      categories.data?.forEach((account: Category) => map.set(account.id, categoryLabel(account)))
     return (id: string | null) => (id ? (map.get(id) ?? '—') : 'Sem conta')
-  }, [chartAccounts.data])
+  }, [categories.data])
 
   const analytical = useMemo(
-    () => (chartAccounts.data ?? []).filter((account) => account.level === 'Analytical' && account.isActive),
-    [chartAccounts.data],
+    () => (categories.data ?? []).filter((account) => account.level === 'Analytical' && account.isActive),
+    [categories.data],
   )
 
   const cashFlowAccounts = useMemo(
@@ -53,17 +53,15 @@ export function useLookups() {
 
   return {
     accounts: accounts.data ?? [],
-    chartAccounts: chartAccounts.data ?? [],
-    categories: cashFlowAccounts,
+    categories: categories.data ?? [],
     cashFlowAccounts,
     expenseAccounts,
     incomeAccounts,
     patrimonyAccounts,
     accountName,
-    categoryName: chartAccountName,
-    chartAccountName,
+    categoryName,
     reloadAccounts: accounts.reload,
-    reloadChartAccounts: chartAccounts.reload,
-    loading: accounts.loading || chartAccounts.loading,
+    reloadCategories: categories.reload,
+    loading: accounts.loading || categories.loading,
   }
 }

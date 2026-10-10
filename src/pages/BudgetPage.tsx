@@ -1,13 +1,14 @@
-﻿import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import {
   budgetsApi,
-  chartAccountsApi,
+  categoriesApi,
   type Budget,
   type BudgetYear,
-  type ChartAccount,
+  type Category,
 } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
+import { ProgressToneLegend } from '../components/ProgressToneLegend'
 import { Button } from '../components/ui/Button'
 import { Icon } from '../components/ui/Icon'
 import { ErrorText, Loading } from '../components/ui/Feedback'
@@ -19,8 +20,8 @@ import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
-import { chartAccountLabel } from '../lib/chartLabel'
-import { CASH_FLOW_SECTIONS, compareChartSiblings } from '../lib/chartOrder'
+import { categoryLabel } from '../lib/categoryLabel'
+import { CASH_FLOW_SECTIONS, compareCategorySiblings } from '../lib/categoryOrder'
 import {
   competencesFrom,
   currentCompetence,
@@ -59,7 +60,7 @@ export function BudgetPage() {
   const budget = useLoad(() => budgetsApi.get(ym), [ym])
   const year = useMemo(() => Number(ym.slice(0, 4)), [ym])
   const yearData = useLoad(() => budgetsApi.getYear(year), [year])
-  const categories = useLoad(() => chartAccountsApi.list(undefined, false, false), [])
+  const categories = useLoad(() => categoriesApi.list(undefined, false, false), [])
   const copy = useAction()
 
   async function changeYm(next: string) {
@@ -139,7 +140,7 @@ export function BudgetPage() {
 type EditorProps = {
   ym: string
   budget: Budget
-  categories: ChartAccount[]
+  categories: Category[]
   year: number
   yearData: BudgetYear | null | undefined
   onSaved: () => void
@@ -163,7 +164,7 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: E
   const byParent = useMemo(() => {
     const map = groupAccountsByParent(cashAccounts)
     for (const bucket of map.values()) {
-      bucket.sort(compareChartSiblings)
+      bucket.sort(compareCategorySiblings)
     }
     return map
   }, [cashAccounts])
@@ -171,9 +172,15 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: E
   const roots = useMemo(
     () =>
       CASH_FLOW_SECTIONS.map((section) =>
-        cashAccounts.find((account) => account.level === 'Root' && account.section === section),
-      ).filter(Boolean) as ChartAccount[],
-    [cashAccounts],
+        cashAccounts.find((account) => {
+          if (account.section !== section || account.level === 'Analytical') {
+            return false
+          }
+          const parent = categories.find((item) => item.id === account.parentId)
+          return !parent || parent.section !== section
+        }),
+      ).filter(Boolean) as Category[],
+    [cashAccounts, categories],
   )
 
   const { planned, actual } = useMemo(() => buildAmountMaps(budget.lines), [budget.lines])
@@ -217,7 +224,7 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: E
   const matches = needle
     ? new Set(
         cashAccounts
-          .filter((account) => chartAccountLabel(account).toLowerCase().includes(needle))
+          .filter((account) => categoryLabel(account).toLowerCase().includes(needle))
           .map((account) => account.id),
       )
     : null
@@ -244,7 +251,7 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: E
   }
 
   async function saveAll() {
-    const lines: { chartAccountId: string; plannedAmount: number }[] = []
+    const lines: { categoryId: string; plannedAmount: number }[] = []
     for (const accountId of dirtyIds) {
       const text = drafts[accountId] ?? ''
       const parsed = text.trim() ? parseMoney(text) : 0
@@ -252,7 +259,7 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: E
         saveAction.setError('Informe um valor válido (zero ou positivo).')
         return
       }
-      lines.push({ chartAccountId: accountId, plannedAmount: parsed })
+      lines.push({ categoryId: accountId, plannedAmount: parsed })
     }
     if (lines.length === 0) {
       return
@@ -266,7 +273,7 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: E
 
   const yearAccount = yearAccountId ? cashAccounts.find((account) => account.id === yearAccountId) : null
   const yearLine = yearAccountId
-    ? yearData?.lines.find((line) => line.chartAccountId === yearAccountId)
+    ? yearData?.lines.find((line) => line.categoryId === yearAccountId)
     : null
 
   return (
@@ -288,26 +295,24 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: E
         </div>
       </div>
       <Field
-        label="Buscar conta"
+        label="Buscar categoria"
         name="budgetSearch"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Nome da conta"
+        placeholder="Ex.: aluguel, salário…"
       />
       <ErrorText message={saveAction.error} />
       {roots.length === 0 ? <Loading /> : null}
       {roots.length > 0 ? (
         <div className={styles.raioxList}>
-          <p className={styles.raioxLegend}>
-            <span className={styles.raioxLegendMark}>Amarelo</span> = sem orçamento lançado.
-          </p>
+          <ProgressToneLegend />
           <div className={`${styles.raioxRow} ${styles.budgetRow} ${styles.raioxHead}`}>
             <span />
-            <span>Conta</span>
+            <span>Categoria</span>
             <span className={`${styles.raioxTotals} ${styles.budgetTotals} ${styles.budgetTotalsHead}`}>
               <span>Previsto</span>
               <span>Realizado</span>
-              <span>% do previsto</span>
+              <span aria-hidden="true" />
             </span>
           </div>
           {roots.map((root) => (
@@ -396,9 +401,9 @@ function BudgetAccountBlock({
   onOpenYear,
   onDraftChange,
 }: {
-  account: ChartAccount
+  account: Category
   depth: number
-  byParent: Map<string | null, ChartAccount[]>
+  byParent: Map<string | null, Category[]>
   planned: Map<string, number>
   actual: Map<string, number>
   drafts: Record<string, string>
@@ -448,7 +453,7 @@ function BudgetAccountBlock({
       >
         <span />
         <span className={styles.budgetAccountCell}>
-          <strong className={styles.raioxAccountName}>{chartAccountLabel(account)}</strong>
+          <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
         </span>
         <BudgetTotalsCell
           totals={{ planned: lineTotals.planned, actual: lineTotals.actual }}
@@ -457,7 +462,7 @@ function BudgetAccountBlock({
               <span className={styles.raioxBudgetField}>
                 <MoneyField
                   compact
-                  label={`Orçamento ${chartAccountLabel(account)}`}
+                  label={`Orçamento ${categoryLabel(account)}`}
                   name={`budget-${account.id}`}
                   value={draft}
                   disabled={busy}
@@ -468,7 +473,7 @@ function BudgetAccountBlock({
                 type="button"
                 className={styles.budgetSpreadIcon}
                 disabled={busy}
-                aria-label={`Repetir ou parcelar ${chartAccountLabel(account)}`}
+                aria-label={`Repetir ou parcelar ${categoryLabel(account)}`}
                 title="Repetir ou parcelar"
                 onClick={() => onOpenYear(account.id)}
               >
@@ -493,7 +498,7 @@ function BudgetAccountBlock({
         <span className={styles.raioxToggle} aria-hidden>
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
-        <strong className={styles.raioxAccountName}>{chartAccountLabel(account)}</strong>
+        <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
         <BudgetTotalsCell totals={totals} />
       </button>
       {expanded
@@ -540,7 +545,7 @@ function BudgetAccountBlock({
 
 function groupHasMatch(
   groupId: string,
-  byParent: Map<string | null, ChartAccount[]>,
+  byParent: Map<string | null, Category[]>,
   matches: Set<string> | null,
 ): boolean {
   if (!matches) {
@@ -612,7 +617,7 @@ function BudgetYearSheet({
 }: {
   ym: string
   year: number
-  account: ChartAccount
+  account: Category
   line: BudgetYear['lines'][number] | null | undefined
   plannedAmount: number
   onClose: () => void
@@ -736,7 +741,7 @@ function BudgetYearSheet({
       <div className={`${styles.sheet} ${styles.budgetSheet}`} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className={styles.sectionHead}>
           <h2 id={titleId} className={styles.sectionTitle}>
-            {chartAccountLabel(account)} · {year}
+            {categoryLabel(account)} · {year}
           </h2>
           <Button variant="ghost" onClick={onClose}>
             Fechar

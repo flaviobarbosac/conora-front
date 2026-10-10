@@ -98,7 +98,7 @@ export function AlertsBell({ peerOpen = false, onOpen }: Props) {
                 const tone = toneFromSeverity(alert.severity)
                 const to = alertTarget(alert, ym)
                 return (
-                  <li key={`${alert.code}-${alert.chartAccountId ?? ''}-${alert.message}`}>
+                  <li key={`${alert.code}-${alert.categoryId ?? ''}-${alert.message}`}>
                     <Link
                       to={to}
                       className={styles.item}
