@@ -192,6 +192,20 @@ export type EntryInput = {
   confirmDuplicate?: boolean
 }
 
+/** Body for PUT /entries/{id} — type is immutable on the server. */
+export type EntryUpdateInput = {
+  amount: number
+  occurredAt: string
+  description: string
+  competenceYm?: string
+  accountId?: string
+  contraAccountId?: string
+  chartAccountId?: string
+  incomeSourceId?: string
+  memberId?: string
+  confirmDuplicate?: boolean
+}
+
 export type EntryFilter = {
   competenceYm?: string
   type?: EntryType
@@ -204,7 +218,9 @@ export type EntryFilter = {
 
 export const entriesApi = {
   list: (filter: EntryFilter) => apiFetch<Paged<Entry>>(`/entries${query({ ...filter })}`),
+  get: (id: string) => apiFetch<Entry>(`/entries/${id}`),
   create: (input: EntryInput) => apiFetch<Entry[]>('/entries', json('POST', input)),
+  update: (id: string, input: EntryUpdateInput) => apiFetch<Entry>(`/entries/${id}`, json('PUT', input)),
   remove: (id: string) => apiFetch<void>(`/entries/${id}`, json('DELETE')),
   duplicate: (id: string) => apiFetch<Entry[]>(`/entries/${id}/duplicate`, json('POST')),
   suggestAccount: (description: string) =>

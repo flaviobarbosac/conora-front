@@ -44,6 +44,9 @@ function toneClass(tone: ProgressTone): string {
   if (tone === 'over') {
     return styles.raioxToneOver
   }
+  if (tone === 'unbudgeted') {
+    return styles.raioxToneUnbudgeted
+  }
   if (tone === 'muted') {
     return styles.raioxToneMuted
   }
@@ -295,6 +298,9 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: E
       {roots.length === 0 ? <Loading /> : null}
       {roots.length > 0 ? (
         <div className={styles.raioxList}>
+          <p className={styles.raioxLegend}>
+            <span className={styles.raioxLegendMark}>Amarelo</span> = sem orçamento lançado.
+          </p>
           <div className={`${styles.raioxRow} ${styles.budgetRow} ${styles.raioxHead}`}>
             <span />
             <span>Conta</span>
@@ -358,6 +364,7 @@ function BudgetTotalsCell({
 }) {
   const percent = progressPercent(totals)
   const tone = progressTone(percent, totals)
+  const shown = percent === null ? 0 : percent
   return (
     <span className={`${styles.raioxTotals} ${styles.budgetTotals}`}>
       {edit ?? (
@@ -366,9 +373,7 @@ function BudgetTotalsCell({
         </span>
       )}
       <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.actual)}</span>
-      <span className={`${styles.raioxPercent} ${toneClass(tone)}`}>
-        {percent === null ? '—' : formatPercent(percent)}
-      </span>
+      <span className={`${styles.raioxPercent} ${toneClass(tone)}`}>{formatPercent(shown)}</span>
     </span>
   )
 }

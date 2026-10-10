@@ -12,7 +12,7 @@ type StyleMap = Record<string, string | undefined>
 
 /**
  * Horizon color is classification, not an alert.
- * Short = green, mid = yellow, long = red (horizon token, not --danger).
+ * Short = green, mid = yellow, long = blue (horizon token, not --danger).
  */
 export function horizonFillClass(styles: StyleMap, key: HorizonKey): string {
   if (key === 'short') return styles.progressFill_ok ?? ''
@@ -26,7 +26,7 @@ export function horizonBadgeClass(styles: StyleMap, key: HorizonKey): string {
   return styles.badge_horizonLong ?? ''
 }
 
-/** Accumulated above the goal. Same red as long term; the label is "Acima da meta". */
+/** Accumulated above the goal. Uses danger red; the label is "Acima da meta". */
 export function isProjectExtrapolated(project: {
   accumulatedAmount: number
   goalAmount: number
@@ -34,7 +34,7 @@ export function isProjectExtrapolated(project: {
   return project.goalAmount > 0 && project.accumulatedAmount > project.goalAmount + 0.004
 }
 
-/** Bar color for one project: long term or extrapolation is red; otherwise the horizon color. */
+/** Bar color for one project: extrapolation is red; otherwise the horizon color (long = blue). */
 export function projectFillClass(
   styles: StyleMap,
   project: {
@@ -43,10 +43,10 @@ export function projectFillClass(
     goalAmount: number
   },
 ): string {
-  if (isProjectExtrapolated(project) || project.horizon === 'long') {
-    return styles.progressFill_horizonLong ?? ''
+  if (isProjectExtrapolated(project)) {
+    return styles.progressFill_danger ?? ''
   }
-  if (project.horizon === 'short' || project.horizon === 'mid') {
+  if (project.horizon === 'short' || project.horizon === 'mid' || project.horizon === 'long') {
     return horizonFillClass(styles, project.horizon)
   }
   return ''

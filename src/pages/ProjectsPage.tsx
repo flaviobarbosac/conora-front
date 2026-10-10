@@ -123,7 +123,7 @@ export function ProjectsPage() {
           )
         })}
         <p className={styles.muted}>
-          Verde: curto prazo. Amarelo: médio prazo. Vermelho: longo prazo ou acima da meta.
+          Verde: curto prazo. Amarelo: médio prazo. Azul: longo prazo. Vermelho: acima da meta.
         </p>
       </section>
 
@@ -165,7 +165,7 @@ export function ProjectsPage() {
                     <span className={`${styles.badge} ${horizonBadgeClass(styles, project.horizon)}`}>{label}</span>
                   ) : null}
                   {extrapolated ? (
-                    <span className={`${styles.badge} ${styles.badge_horizonLong}`}>Acima da meta</span>
+                    <span className={`${styles.badge} ${styles.badge_danger}`}>Acima da meta</span>
                   ) : null}
                 </strong>
                 <span className={styles.rowSub}>

@@ -91,7 +91,7 @@ export function ProjectDetailPage() {
                     <span className={`${styles.badge} ${horizonBadgeClass(styles, data.horizon)}`}>{horizonLabel}</span>
                   ) : null}
                   {isProjectExtrapolated(data) ? (
-                    <span className={`${styles.badge} ${styles.badge_horizonLong}`}>Acima da meta</span>
+                    <span className={`${styles.badge} ${styles.badge_danger}`}>Acima da meta</span>
                   ) : null}
                 </strong>
                 <span className={styles.rowSub}>

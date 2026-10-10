@@ -75,9 +75,14 @@ describe('progressTone', () => {
     expect(progressTone(100.1)).toBe('over')
   })
 
-  it('mutes empty or undefined percent', () => {
-    expect(progressTone(null)).toBe('muted')
-    expect(progressTone(0, { planned: 0, actual: 0 })).toBe('muted')
+  it('marks missing planned amount as unbudgeted', () => {
+    expect(progressTone(null)).toBe('unbudgeted')
+    expect(progressTone(0, { planned: 0, actual: 0 })).toBe('unbudgeted')
+    expect(progressTone(null, { planned: 0, actual: 50 })).toBe('unbudgeted')
+  })
+
+  it('mutes zero progress when there is a planned base', () => {
+    expect(progressTone(0, { planned: 100, actual: 0 })).toBe('muted')
   })
 })
 
