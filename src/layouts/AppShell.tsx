@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { scanReceipt } from '../camera/scanReceipt'
 import { AlertsBell } from '../components/AlertsBell'
 import { BrandLockup } from '../components/BrandLockup'
+import { IanFloatingChat } from '../components/IanFloatingChat'
 import { Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
@@ -381,6 +382,7 @@ export function AppShell() {
       <span className={styles.mobileVersion} title={`Versão ${__APP_VERSION__}`}>
         v{__APP_VERSION__}
       </span>
+      <IanFloatingChat />
     </div>
   )
 }

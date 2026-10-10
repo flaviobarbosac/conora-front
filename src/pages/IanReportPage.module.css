@@ -1,0 +1,98 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.toolbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.insight {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-subtle, #e9ecef);
+  background: var(--surface-2, #f8f9fa);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  margin: 0 0 1.25rem;
+  border: 1px solid var(--border, #dee2e6);
+  border-radius: 0.5rem;
+  background: var(--surface, #fff);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.table th,
+.table td {
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle, #e9ecef);
+}
+
+.table th {
+  font-size: 0.8rem;
+  color: var(--muted, #868e96);
+  font-weight: 600;
+}
+
+.amountCell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  width: var(--money-display-w, 9rem);
+  white-space: nowrap;
+}
+
+.table th:last-child {
+  text-align: right;
+}
+
+.totalRow td {
+  font-weight: 600;
+  border-bottom: 0;
+}
+
+.chartSection {
+  border: 1px solid var(--border, #dee2e6);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: var(--surface, #fff);
+}
+
+.chartTitle {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+@media print {
+  .toolbar,
+  .noPrint {
+    display: none !important;
+  }
+
+  .printRoot {
+    background: #fff;
+    color: #000;
+  }
+
+  .metric,
+  .chartSection {
+    break-inside: avoid;
+    border-color: #ccc;
+  }
+}

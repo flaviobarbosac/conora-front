@@ -834,3 +834,24 @@
     padding: var(--space-9) var(--space-12);
   }
 }
+
+@media print {
+  .shell {
+    display: block;
+    padding: 0;
+    background: #fff;
+  }
+
+  .sidebar,
+  .sidebarBackdrop,
+  .bottomNav,
+  .appHeader,
+  .menuBtn {
+    display: none !important;
+  }
+
+  .main {
+    padding: 0;
+    max-width: none;
+  }
+}

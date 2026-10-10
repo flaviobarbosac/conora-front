@@ -9,6 +9,7 @@ import { UnsavedChangesProvider } from './hooks/useUnsavedChanges'
 import { AppShell } from './layouts/AppShell'
 import { AdminPage } from './pages/AdminPage'
 import { AiPage } from './pages/AiPage'
+import { IanReportPage } from './pages/IanReportPage'
 import { ApresentacaoPage } from './pages/ApresentacaoPage'
 import { ApresentacaoVariantesPage } from './pages/apresentacao/ApresentacaoVariantesPage'
 import { DiagnosisPage } from './pages/DiagnosisPage'
@@ -93,6 +94,7 @@ export default function App() {
             <Route path="/ajuda" element={<HelpPage />} />
             <Route path="/configuracoes" element={<SettingsPage />} />
             <Route path="/ia" element={<AiPage />} />
+            <Route path="/ian/relatorio" element={<IanReportPage />} />
             <Route path="/whatsapp" element={<WhatsAppPage />} />
             <Route path="/importar" element={<ImportPage />} />
             <Route path="/mes" element={<MonthPage />} />

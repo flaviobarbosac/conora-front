@@ -1,0 +1,174 @@
+.chartBlock {
+  display: grid;
+  gap: 1rem;
+}
+
+.legendMode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.legendMode label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.barList {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barRow {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.barMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.barTrack {
+  height: 0.75rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #375984);
+  min-width: 2px;
+}
+
+.lineWrap {
+  width: 100%;
+  min-height: 15rem;
+}
+
+.lineSvg {
+  width: 100%;
+  height: 15rem;
+  display: block;
+}
+
+.linePath {
+  fill: none;
+  stroke: var(--primary, #375984);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lineDot {
+  fill: var(--primary, #375984);
+  stroke: var(--surface, #fff);
+  stroke-width: 1.5;
+  cursor: pointer;
+}
+
+.lineDotActive {
+  fill: var(--primary, #375984);
+  stroke: var(--surface, #fff);
+  stroke-width: 2;
+}
+
+.lineAxis {
+  stroke: var(--border, #ced4da);
+  stroke-width: 1;
+}
+
+.lineGrid {
+  stroke: var(--border-subtle, #e9ecef);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.lineAxisLabel {
+  fill: var(--muted, #868e96);
+  font-size: 11px;
+}
+
+.lineGuide {
+  stroke: var(--border, #ced4da);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.lineTooltipBox {
+  fill: var(--surface, #fff);
+  stroke: var(--border-subtle, #e9ecef);
+  stroke-width: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.08));
+}
+
+.lineTooltipText {
+  fill: var(--muted, #868e96);
+  font-size: 10px;
+}
+
+.lineTooltipTextStrong {
+  fill: var(--text, #212529);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pieLayout {
+  display: grid;
+  grid-template-columns: minmax(8rem, 10rem) 1fr;
+  gap: 1rem;
+  align-items: center;
+}
+
+.pieChart {
+  width: 9rem;
+  height: 9rem;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+
+.pieLegend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.pieLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 600px) {
+  .pieLayout {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+}
+
+@media print {
+  .legendMode {
+    display: none;
+  }
+}

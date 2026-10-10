@@ -1,0 +1,214 @@
+.fab {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 0.75rem);
+  z-index: 30;
+  width: 3.75rem;
+  height: 3.75rem;
+  padding: 0;
+  border: 2px solid var(--surface, #fff);
+  border-radius: 50%;
+  background: var(--surface-2, #f1f3f5);
+  color: #fff;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 22%);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.fab:hover {
+  filter: brightness(1.04);
+}
+
+.fabFace {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.headTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.headFace {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.fabLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.panel {
+  position: fixed;
+  right: max(0.75rem, env(safe-area-inset-right));
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 4.5rem);
+  z-index: 30;
+  width: min(22rem, calc(100vw - 1.5rem));
+  max-height: min(70vh, 32rem);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl, 1rem);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 18%);
+  overflow: hidden;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-2, var(--bg-app));
+}
+
+.head strong {
+  font-size: 1rem;
+}
+
+.headActions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.iconBtn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: var(--radius-sm, 0.4rem);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconBtn:hover {
+  background: var(--nav-active-bg, rgb(0 0 0 / 6%));
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  min-height: 0;
+  flex: 1;
+}
+
+.modeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow: auto;
+  flex: 1;
+  min-height: 8rem;
+  max-height: 14rem;
+  padding: 0.25rem;
+}
+
+.bubbleUser,
+.bubbleAssistant {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-md, 0.6rem);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+.bubbleUser {
+  align-self: flex-end;
+  max-width: 92%;
+}
+
+.bubbleAssistant {
+  align-self: flex-start;
+  max-width: 92%;
+}
+
+.bubbleText {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.choices {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.input {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: vertical;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 0.6rem);
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (min-width: 1200px) {
+  .fab,
+  .panel {
+    bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
+
+  .panel {
+    bottom: calc(max(1.25rem, env(safe-area-inset-bottom)) + 4.25rem);
+  }
+}
+
+@media print {
+  .fab,
+  .panel {
+    display: none !important;
+  }
+}
