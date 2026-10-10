@@ -1,15 +1,15 @@
-import type { Budget, BudgetLine, BudgetYear, ChartAccount, ChartSection, PatrimonySummary } from '../api/finance'
-import { CASH_FLOW_SECTIONS, isCashFlowSection } from './chartOrder'
+import type { Budget, BudgetLine, BudgetYear, Category, CategorySection, PatrimonySummary } from '../api/finance'
+import { CASH_FLOW_SECTIONS, isCashFlowSection } from './categoryOrder'
 import { monthsInclusive, shiftCompetence } from './format'
 
 export type RaioXTotals = { planned: number; actual: number }
 
 export type ProgressTone = 'ok' | 'over' | 'muted' | 'unbudgeted'
 
-/** Rolls up planned/actual from analytical leaves through the chart tree. */
+/** Rolls up planned/actual from analytical leaves through the category tree. */
 export function sumBranch(
   accountId: string,
-  byParent: Map<string | null, ChartAccount[]>,
+  byParent: Map<string | null, Category[]>,
   planned: Map<string, number>,
   actual: Map<string, number>,
 ): RaioXTotals {
@@ -67,19 +67,19 @@ export function buildAmountMaps(lines: BudgetLine[]): {
 } {
   const plannedMap = new Map<string, number>()
   const actualMap = new Map<string, number>()
-  const analytical = lines.filter((line) => line.chartAccountId && !line.isGroup)
-  const source = analytical.length > 0 ? analytical : lines.filter((line) => line.chartAccountId)
+  const analytical = lines.filter((line) => line.categoryId && !line.isGroup)
+  const source = analytical.length > 0 ? analytical : lines.filter((line) => line.categoryId)
 
   for (const line of source) {
-    const id = line.chartAccountId!
+    const id = line.categoryId!
     plannedMap.set(id, (plannedMap.get(id) ?? 0) + Math.abs(line.plannedAmount))
     actualMap.set(id, (actualMap.get(id) ?? 0) + Math.abs(line.actualAmount))
   }
   return { planned: plannedMap, actual: actualMap }
 }
 
-export function groupAccountsByParent(accounts: ChartAccount[]): Map<string | null, ChartAccount[]> {
-  const map = new Map<string | null, ChartAccount[]>()
+export function groupAccountsByParent(accounts: Category[]): Map<string | null, Category[]> {
+  const map = new Map<string | null, Category[]>()
   for (const account of accounts) {
     const bucket = map.get(account.parentId) ?? []
     bucket.push(account)
@@ -90,7 +90,7 @@ export function groupAccountsByParent(accounts: ChartAccount[]): Map<string | nu
 
 export function sectionPlannedActual(
   budget: Budget,
-  section: ChartSection,
+  section: CategorySection,
 ): RaioXTotals {
   const block = budget.sections.find((item) => item.section === section)
   if (block) {
@@ -142,7 +142,7 @@ export function aggregateYearMonths(
 
   for (const year of years) {
     for (const line of year.lines) {
-      if (!line.chartAccountId) {
+      if (!line.categoryId) {
         continue
       }
       for (const cell of line.months) {
@@ -150,12 +150,12 @@ export function aggregateYearMonths(
           continue
         }
         planned.set(
-          line.chartAccountId,
-          (planned.get(line.chartAccountId) ?? 0) + Math.abs(cell.plannedAmount),
+          line.categoryId,
+          (planned.get(line.categoryId) ?? 0) + Math.abs(cell.plannedAmount),
         )
         actual.set(
-          line.chartAccountId,
-          (actual.get(line.chartAccountId) ?? 0) + Math.abs(cell.actualAmount),
+          line.categoryId,
+          (actual.get(line.categoryId) ?? 0) + Math.abs(cell.actualAmount),
         )
       }
     }
@@ -168,45 +168,67 @@ export function yearsNeededForMonths(monthList: string[]): number[] {
   return [...years].sort((a, b) => a - b)
 }
 
-export type RaioXFocus = 'income' | 'discount' | 'spendable' | 'patrimony' | null
+export type RaioXFocus = 'income' | 'discount' | 'spendable' | 'life' | 'patrimony' | null
 
-export function focusSections(focus: RaioXFocus): ChartSection[] {
+export function focusSections(focus: RaioXFocus): CategorySection[] {
   switch (focus) {
     case 'income':
       return ['Income']
     case 'discount':
-      return ['Discount']
+      // Hero "Descontos realizados" highlights the Despesa master in the tree (not Descontos).
+      return ['Expense']
     case 'spendable':
-      return ['Income', 'Discount']
+      return ['Income', 'Expense']
+    case 'life':
+      return ['LifeProject']
     case 'patrimony':
-      return ['Asset', 'Liability']
+      return ['Asset', 'Liability', 'Patrimony']
     default:
       return []
   }
 }
 
-export function isBudgetEditableSection(section: ChartSection): boolean {
+export function isBudgetEditableSection(section: CategorySection): boolean {
   return isCashFlowSection(section)
 }
 
-/** Realized total of a section, same rollup the Raio-X tree shows on the root row. */
+/** Head account of a posting section (Receita, Descontos…), not nested under the same section. */
+export function sectionHead(
+  accounts: Category[],
+  section: CategorySection,
+): Category | undefined {
+  return accounts.find((account) => {
+    if (account.section !== section || account.level === 'Analytical') {
+      return false
+    }
+    const parent = accounts.find((item) => item.id === account.parentId)
+    return !parent || parent.section !== section
+  })
+}
+
+/** Realized total of a section, same rollup the Raio-X tree shows on the head row. */
 export function sectionRealized(
-  byParent: Map<string | null, ChartAccount[]>,
+  byParent: Map<string | null, Category[]>,
   actual: Map<string, number>,
-  section: ChartSection,
+  section: CategorySection,
+  accounts?: Category[],
 ): number {
+  const planned = new Map<string, number>()
+  if (accounts) {
+    const head = sectionHead(accounts, section)
+    return head ? sumBranch(head.id, byParent, planned, actual).actual : 0
+  }
   const roots = (byParent.get(null) ?? []).filter(
     (account) => account.level === 'Root' && account.section === section,
   )
-  const planned = new Map<string, number>()
   return roots.reduce((sum, root) => sum + sumBranch(root.id, byParent, planned, actual).actual, 0)
 }
 
-/** Item amounts keyed by chart account. Groups roll up with sumBranch. */
-export function patrimonyStockMap(items: { chartAccountId: string; amount: number }[]): Map<string, number> {
+/** Item amounts keyed by category. Groups roll up with sumBranch. */
+export function patrimonyStockMap(items: { categoryId: string; amount: number }[]): Map<string, number> {
   const actual = new Map<string, number>()
   for (const item of items) {
-    actual.set(item.chartAccountId, (actual.get(item.chartAccountId) ?? 0) + Math.abs(item.amount))
+    actual.set(item.categoryId, (actual.get(item.categoryId) ?? 0) + Math.abs(item.amount))
   }
   return actual
 }

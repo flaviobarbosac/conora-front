@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { Budget, BudgetLine, ChartAccount } from '../api/finance'
+import type { Budget, BudgetLine, Category } from '../api/finance'
 import {
   aggregateYearMonths,
   buildAmountMaps,
   patrimonyStockMap,
+  sectionHead,
   sectionRealized,
   groupAccountsByParent,
   monthsEndingAt,
@@ -15,8 +16,8 @@ import {
 } from './raioX'
 
 function account(
-  partial: Pick<ChartAccount, 'id' | 'parentId' | 'name' | 'level'> & Partial<ChartAccount>,
-): ChartAccount {
+  partial: Pick<Category, 'id' | 'parentId' | 'name' | 'level'> & Partial<Category>,
+): Category {
   return {
     code: null,
     displayNumber: null,
@@ -30,14 +31,14 @@ function account(
 }
 
 function line(
-  chartAccountId: string,
+  categoryId: string,
   plannedAmount: number,
   actualAmount: number,
   isGroup = false,
 ): BudgetLine {
   return {
-    chartAccountId,
-    chartAccountName: chartAccountId,
+    categoryId,
+    categoryName: categoryId,
     parentId: null,
     groupName: '',
     section: 'LifeProject',
@@ -136,7 +137,7 @@ describe('sumBranch', () => {
 })
 
 describe('patrimonyStockMap', () => {
-  it('rolls item amounts up the chart without a hidden balance', () => {
+  it('rolls item amounts up the category tree without a hidden balance', () => {
     const apt = account({ id: 'apt', parentId: 'use', name: 'Apartamento', level: 'Analytical' })
     const car = account({ id: 'car', parentId: 'use', name: 'Automóvel', level: 'Analytical' })
     const use = account({ id: 'use', parentId: 'asset', name: 'Bens de Uso', level: 'Group' })
@@ -144,8 +145,8 @@ describe('patrimonyStockMap', () => {
     const asset = account({ id: 'asset', parentId: null, name: 'Ativo', level: 'Root', section: 'Asset' })
     const byParent = groupAccountsByParent([asset, use, idle, apt, car])
     const stock = patrimonyStockMap([
-      { chartAccountId: 'apt', amount: 850000 },
-      { chartAccountId: 'car', amount: 120000 },
+      { categoryId: 'apt', amount: 850000 },
+      { categoryId: 'car', amount: 120000 },
     ])
 
     expect(sumBranch('use', byParent, new Map(), stock)).toEqual({ planned: 0, actual: 970000 })
@@ -169,6 +170,26 @@ describe('sectionRealized', () => {
     expect(sectionRealized(byParent, actual, 'Income')).toBe(10000)
     expect(sectionRealized(byParent, actual, 'Discount')).toBe(1500)
     expect(sectionRealized(byParent, actual, 'Income') - sectionRealized(byParent, actual, 'Discount')).toBe(8500)
+  })
+
+  it('finds section heads under Orçamento / Despesa masters', () => {
+    const budget = account({ id: 'budget', parentId: null, name: 'Orçamento', level: 'Root', section: 'Budget' })
+    const expense = account({ id: 'expense', parentId: 'budget', name: 'Despesa', level: 'Group', section: 'Expense' })
+    const income = account({ id: 'income', parentId: 'budget', name: 'Receita', level: 'Group', section: 'Income' })
+    const salary = account({ id: 'salary', parentId: 'income', name: 'Salário', level: 'Analytical', section: 'Income' })
+    const discount = account({
+      id: 'discount',
+      parentId: 'expense',
+      name: 'Descontos',
+      level: 'Group',
+      section: 'Discount',
+    })
+    const accounts = [budget, expense, income, salary, discount]
+    expect(sectionHead(accounts, 'Income')?.id).toBe('income')
+    expect(sectionHead(accounts, 'Discount')?.id).toBe('discount')
+    const byParent = groupAccountsByParent(accounts)
+    const actual = new Map([['salary', 500]])
+    expect(sectionRealized(byParent, actual, 'Income', accounts)).toBe(500)
   })
 })
 
@@ -225,8 +246,8 @@ describe('aggregateYearMonths', () => {
           months: ['2026-01', '2026-02'],
           lines: [
             {
-              chartAccountId: 'a',
-              chartAccountName: 'A',
+              categoryId: 'a',
+              categoryName: 'A',
               groupName: '',
               section: 'Essential',
               months: [

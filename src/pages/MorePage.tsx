@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { dashboardApi, exportApi, lgpdApi } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
@@ -88,9 +88,9 @@ export function MorePage() {
             {data.byAccount.length > 0 ? (
               <ul className={styles.list}>
                 {data.byAccount.map((item) => (
-                  <li key={item.chartAccountId ?? item.chartAccountName} className={styles.row}>
+                  <li key={item.categoryId ?? item.categoryName} className={styles.row}>
                     <span className={styles.rowMain}>
-                      <strong>{item.chartAccountName}</strong>
+                      <strong>{item.categoryName}</strong>
                     </span>
                     <span className={styles.amount}>{formatMoney(item.amount)}</span>
                   </li>

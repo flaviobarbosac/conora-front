@@ -1,21 +1,42 @@
 import { describe, expect, it } from 'vitest'
-import type { Budget, BudgetSectionBlock, ChartSection, PatrimonySummary } from '../api/finance'
+import type { Budget, BudgetSectionBlock, CategorySection, PatrimonySummary } from '../api/finance'
+import type { BudgetLine } from '../api/finance'
 import {
   buildBudgetMacroBars,
+  buildExpensePieSlices,
+  buildIncomeExpenseCompare,
+  buildIncomePieSlices,
   buildPatrimonyHomeInsight,
   buildPatrimonyMacroBars,
   buildRaioXHomeInsight,
+  pieConicGradient,
   pickTopDeviation,
 } from './homeInsights'
+
+function budgetLine(
+  partial: Pick<BudgetLine, 'categoryId' | 'categoryName' | 'section' | 'plannedAmount' | 'actualAmount'> &
+    Partial<BudgetLine>,
+): BudgetLine {
+  return {
+    parentId: null,
+    groupName: '',
+    level: 'Analytical',
+    remaining: 0,
+    percent: null,
+    status: 'ok',
+    isGroup: false,
+    ...partial,
+  }
+}
 
 function section(
   name: string,
   plannedAmount: number,
   actualAmount: number,
-  chartSection: ChartSection = 'Essential',
+  categorySection: CategorySection = 'Essential',
 ): BudgetSectionBlock {
   return {
-    section: chartSection,
+    section: categorySection,
     name,
     plannedAmount,
     actualAmount,
@@ -150,5 +171,82 @@ describe('buildPatrimonyMacroBars', () => {
     })
     expect(bars[0]).toMatchObject({ key: 'assets', pct: 100 })
     expect(bars[1]).toMatchObject({ key: 'liabilities', pct: 25 })
+  })
+})
+
+describe('home realized pies and compare', () => {
+  it('builds income pie slices from analytical lines', () => {
+    const slices = buildIncomePieSlices(
+      budget({
+        totalPlanned: 0,
+        totalActual: 300,
+        lines: [
+          budgetLine({
+            categoryId: 'a',
+            categoryName: 'Salário',
+            section: 'Income',
+            plannedAmount: 0,
+            actualAmount: 200,
+          }),
+          budgetLine({
+            categoryId: 'b',
+            categoryName: 'Extra',
+            section: 'Income',
+            plannedAmount: 0,
+            actualAmount: 100,
+          }),
+          budgetLine({
+            categoryId: 'c',
+            categoryName: 'Aluguel',
+            section: 'Essential',
+            plannedAmount: 0,
+            actualAmount: 50,
+          }),
+        ],
+        sections: [],
+      }),
+    )
+    expect(slices).toHaveLength(2)
+    expect(slices[0]?.label).toBe('Salário')
+    expect(slices[0]?.pct).toBeCloseTo((200 / 300) * 100)
+    expect(pieConicGradient(slices)).toContain('conic-gradient')
+  })
+
+  it('builds expense pie from expense sections', () => {
+    const slices = buildExpensePieSlices(
+      budget({
+        totalPlanned: 0,
+        totalActual: 300,
+        sections: [
+          section('Descontos', 0, 50, 'Discount'),
+          section('Essencial', 0, 150, 'Essential'),
+          section('Social', 0, 100, 'Social'),
+          section('Receita', 0, 999, 'Income'),
+        ],
+      }),
+    )
+    expect(slices.map((slice) => slice.section)).toEqual(['Discount', 'Essential', 'Social'])
+    expect(slices.find((slice) => slice.section === 'Essential')?.pct).toBeCloseTo(50)
+  })
+
+  it('builds despesa as realized expenses over spendable income', () => {
+    const bars = buildIncomeExpenseCompare(
+      budget({
+        totalPlanned: 2500,
+        totalActual: 1500,
+        receivedIncome: 1000,
+        sections: [
+          section('Receita', 2000, 1000, 'Income'),
+          section('Descontos', 100, 100, 'Discount'),
+          section('Essencial', 400, 400, 'Essential'),
+          section('Social', 100, 100, 'Social'),
+        ],
+      }),
+    )
+    // Receita: 1000 / 2000 = 50%
+    expect(bars[0]).toMatchObject({ key: 'income', planned: 2000, actual: 1000, progressPct: 50 })
+    // Despesa: (100+400+100) / renda gastável (1000-100) = 600/900 = 66.6…%
+    expect(bars[1]).toMatchObject({ key: 'expense', planned: 900, actual: 600 })
+    expect(bars[1]?.progressPct).toBeCloseTo((600 / 900) * 100)
   })
 })

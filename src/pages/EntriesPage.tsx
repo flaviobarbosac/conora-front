@@ -1,13 +1,14 @@
-﻿import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   entriesApi,
-  type ChartAccount,
+  type Category,
   type Entry,
   type EntryInput,
   type EntryType,
   type EntryUpdateInput,
 } from '../api/finance'
+import { CASH_FLOW_SECTIONS, isCashFlowSection } from '../lib/categoryOrder'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -15,7 +16,7 @@ import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
-import { ChartAccountSelect } from '../components/ChartAccountSelect'
+import { CategorySelect } from '../components/CategorySelect'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
@@ -144,10 +145,18 @@ export function EntriesPage() {
       changed = true
     }
 
-    const chartAccountId = searchParams.get('chartAccountId')
-    if (chartAccountId) {
-      setCategoryFilter(chartAccountId)
-      next.delete('chartAccountId')
+    const categoryId = searchParams.get('categoryId')
+    if (categoryId) {
+      setCategoryFilter(categoryId)
+      next.delete('categoryId')
+      changed = true
+    }
+
+    const searchQuery = searchParams.get('search')
+    if (searchQuery != null && searchQuery !== '') {
+      setSearch(searchQuery)
+      setAppliedSearch(searchQuery.trim())
+      next.delete('search')
       changed = true
     }
 
@@ -178,12 +187,27 @@ export function EntriesPage() {
   }, [searchParams, setSearchParams])
 
   const lookups = useLookups()
+  const filterAccountOptions = useMemo(() => {
+    const tree = lookups.categories
+    const heads = tree.filter(
+      (account) =>
+        account.level !== 'Analytical' &&
+        (account.section === 'Budget' ||
+          account.section === 'Expense' ||
+          CASH_FLOW_SECTIONS.includes(account.section)),
+    )
+    const byId = new Map<string, Category>()
+    for (const account of [...heads, ...lookups.cashFlowAccounts]) {
+      byId.set(account.id, account)
+    }
+    return [...byId.values()]
+  }, [lookups.categories, lookups.cashFlowAccounts])
   const entries = useLoad(
     () =>
       entriesApi.list({
         competenceYm: ym,
         type: typeFilter || undefined,
-        chartAccountId: categoryFilter || undefined,
+        categoryId: categoryFilter || undefined,
         search: appliedSearch || undefined,
         take: 100,
       }),
@@ -230,8 +254,8 @@ export function EntriesPage() {
     const parts = [formatDate(entry.occurredAt), lookups.accountName(entry.accountId)]
     if (entry.type === 'Transfer') {
       parts.push(`→ ${lookups.accountName(entry.contraAccountId)}`)
-    } else if (entry.chartAccountId) {
-      parts.push(lookups.chartAccountName(entry.chartAccountId))
+    } else if (entry.categoryId) {
+      parts.push(lookups.categoryName(entry.categoryId))
     }
     return parts.join(' · ')
   }
@@ -275,7 +299,7 @@ export function EntriesPage() {
           initial={editing}
           accounts={lookups.accounts.map((account) => ({ id: account.id, name: account.name }))}
           categories={lookups.cashFlowAccounts}
-          tree={lookups.chartAccounts}
+          tree={lookups.categories}
           onDirtyChange={setFormDirty}
           onCancel={() => void closeForm()}
           onSaved={() => {
@@ -305,13 +329,13 @@ export function EntriesPage() {
               </option>
             ))}
           </Select>
-          <ChartAccountSelect
+          <CategorySelect
             label="Conta"
             name="categoryFilter"
             value={categoryFilter}
             onChange={setCategoryFilter}
-            options={lookups.cashFlowAccounts}
-            tree={lookups.chartAccounts}
+            options={filterAccountOptions}
+            tree={lookups.categories}
             emptyLabel="Todas"
           />
           <Button type="submit" variant="secondary">
@@ -367,8 +391,8 @@ export function EntriesPage() {
 type FormProps = {
   initial: Entry | null
   accounts: { id: string; name: string }[]
-  categories: ChartAccount[]
-  tree: ChartAccount[]
+  categories: Category[]
+  tree: Category[]
   onDirtyChange?: (dirty: boolean) => void
   onCancel: () => void
   onSaved: () => void
@@ -381,7 +405,7 @@ function matchesEntryType(section: string, type: FormType): boolean {
   if (type === 'Transfer') {
     return false
   }
-  return section === 'Discount' || section === 'LifeProject' || section === 'Essential' || section === 'Social'
+  return isCashFlowSection(section as Category['section']) && section !== 'Income'
 }
 
 function EntryForm({ initial, accounts, categories, tree, onDirtyChange, onCancel, onSaved }: FormProps) {
@@ -402,7 +426,7 @@ function EntryForm({ initial, accounts, categories, tree, onDirtyChange, onCance
   const [receiptPreview] = useState(pendingReceipt?.dataUrl ?? '')
   const [accountId, setAccountId] = useState(() => initial?.accountId ?? '')
   const [contraAccountId, setContraAccountId] = useState(() => initial?.contraAccountId ?? '')
-  const [chartAccountId, setChartAccountId] = useState(() => initial?.chartAccountId ?? '')
+  const [categoryId, setCategoryId] = useState(() => initial?.categoryId ?? '')
   const action = useAction()
 
   const baseline = {
@@ -416,7 +440,7 @@ function EntryForm({ initial, accounts, categories, tree, onDirtyChange, onCance
         : '',
     accountId: initial?.accountId ?? '',
     contraAccountId: initial?.contraAccountId ?? '',
-    chartAccountId: initial?.chartAccountId ?? '',
+    categoryId: initial?.categoryId ?? '',
   }
 
   const kindCategories = categories.filter((category) => matchesEntryType(category.section, type))
@@ -429,7 +453,7 @@ function EntryForm({ initial, accounts, categories, tree, onDirtyChange, onCance
       description !== baseline.description ||
       accountId !== baseline.accountId ||
       contraAccountId !== baseline.contraAccountId ||
-      chartAccountId !== baseline.chartAccountId
+      categoryId !== baseline.categoryId
     onDirtyChange?.(dirty)
   }, [
     type,
@@ -438,25 +462,25 @@ function EntryForm({ initial, accounts, categories, tree, onDirtyChange, onCance
     description,
     accountId,
     contraAccountId,
-    chartAccountId,
+    categoryId,
     baseline.type,
     baseline.amount,
     baseline.date,
     baseline.description,
     baseline.accountId,
     baseline.contraAccountId,
-    baseline.chartAccountId,
+    baseline.categoryId,
     onDirtyChange,
   ])
 
   async function suggest() {
-    if (editing || type === 'Transfer' || chartAccountId || description.trim().length < 3) {
+    if (editing || type === 'Transfer' || categoryId || description.trim().length < 3) {
       return
     }
     try {
       const suggestion = await entriesApi.suggestAccount(description.trim())
-      if (suggestion.chartAccountId && kindCategories.some((category) => category.id === suggestion.chartAccountId)) {
-        setChartAccountId(suggestion.chartAccountId)
+      if (suggestion.categoryId && kindCategories.some((category) => category.id === suggestion.categoryId)) {
+        setCategoryId(suggestion.categoryId)
       }
     } catch {
       // suggestion is optional
@@ -477,7 +501,7 @@ function EntryForm({ initial, accounts, categories, tree, onDirtyChange, onCance
         description: description.trim(),
         accountId: accountId || undefined,
         contraAccountId: type === 'Transfer' ? contraAccountId || undefined : undefined,
-        chartAccountId: type === 'Transfer' ? undefined : chartAccountId || undefined,
+        categoryId: type === 'Transfer' ? undefined : categoryId || undefined,
         incomeSourceId: type === 'Income' ? initial.incomeSourceId ?? undefined : undefined,
         memberId: initial.memberId ?? undefined,
         confirmDuplicate,
@@ -496,7 +520,7 @@ function EntryForm({ initial, accounts, categories, tree, onDirtyChange, onCance
       description: description.trim(),
       accountId: accountId || undefined,
       contraAccountId: type === 'Transfer' ? contraAccountId || undefined : undefined,
-      chartAccountId: type === 'Transfer' ? undefined : chartAccountId || undefined,
+      categoryId: type === 'Transfer' ? undefined : categoryId || undefined,
       confirmDuplicate,
     }
 
@@ -528,7 +552,7 @@ function EntryForm({ initial, accounts, categories, tree, onDirtyChange, onCance
                 return
               }
               setType(option)
-              setChartAccountId('')
+              setCategoryId('')
             }}
           >
             {TYPE_LABEL[option]}
@@ -569,11 +593,11 @@ function EntryForm({ initial, accounts, categories, tree, onDirtyChange, onCance
               ))}
           </Select>
         ) : (
-          <ChartAccountSelect
+          <CategorySelect
             label="Conta"
-            name="chartAccountId"
-            value={chartAccountId}
-            onChange={setChartAccountId}
+            name="categoryId"
+            value={categoryId}
+            onChange={setCategoryId}
             options={kindCategories}
             tree={tree}
             emptyLabel="Sem conta"

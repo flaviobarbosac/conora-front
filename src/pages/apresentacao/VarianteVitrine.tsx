@@ -19,7 +19,7 @@ export function VarianteVitrine() {
             Todo o dinheiro da casa, <span>num só lugar</span>.
           </h1>
           <p className={styles.lead}>
-            Orçamento, lançamentos, patrimônio e projetos de vida — organizados num plano de contas que a família
+            Orçamento, lançamentos, patrimônio e projetos de vida — organizados em categorias que a família
             inteira entende e acompanha mês a mês.
           </p>
           <div className={styles.actions}>

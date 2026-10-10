@@ -1,6 +1,29 @@
-import type { Budget, BudgetSectionBlock, ChartSection, PatrimonySummary } from '../api/finance'
-import { CASH_FLOW_SECTIONS } from './chartOrder'
+import type { Budget, BudgetLine, BudgetSectionBlock, CategorySection, PatrimonySummary } from '../api/finance'
+import { CASH_FLOW_SECTIONS, EXPENSE_SECTIONS, sectionLabel as categorySectionLabel } from './categoryOrder'
 import { progressPercent, progressTone, spendableIncomeBox, type ProgressTone } from './raioX'
+
+export type PieSlice = {
+  key: string
+  label: string
+  amount: number
+  pct: number
+  color: string
+  section?: CategorySection
+  categoryId?: string | null
+}
+
+export type CompareBar = {
+  key: 'income' | 'expense'
+  label: string
+  planned: number
+  actual: number
+  /** Progress of realized vs planned (0–100, capped for bar width). */
+  progressPct: number
+  tone: ProgressTone
+  section: CategorySection | 'Expense'
+}
+
+const PIE_COLORS = ['#2f9e44', '#375984', '#f59f00', '#e03131', '#6aacff', '#868e96']
 
 export type RaioXHomeInsight = {
   planned: number
@@ -18,7 +41,7 @@ export type PatrimonyHomeInsight = {
 }
 
 export type BudgetMacroBar = {
-  section: ChartSection
+  section: CategorySection
   name: string
   planned: number
   actual: number
@@ -102,25 +125,116 @@ export function buildBudgetMacroBars(budget: Budget): BudgetMacroBar[] {
   }).filter((bar) => bar.planned > 0 || bar.actual > 0 || bySection.has(bar.section))
 }
 
-function sectionLabel(section: ChartSection): string {
-  switch (section) {
-    case 'Income':
-      return 'Receita'
-    case 'Discount':
-      return 'Desconto'
-    case 'LifeProject':
-      return 'Projetos de vida'
-    case 'Essential':
-      return 'Essencial'
-    case 'Social':
-      return 'Social'
-    case 'Asset':
-      return 'Ativo'
-    case 'Liability':
-      return 'Passivo'
-    default:
-      return section
+function sectionLabel(section: CategorySection): string {
+  return categorySectionLabel(section)
+}
+
+function slicesFromLines(
+  lines: BudgetLine[],
+  predicate: (line: BudgetLine) => boolean,
+): PieSlice[] {
+  const analytical = lines.filter((line) => !line.isGroup && predicate(line) && Math.abs(line.actualAmount) > 0.001)
+  const total = analytical.reduce((sum, line) => sum + Math.abs(line.actualAmount), 0)
+  if (total <= 0) {
+    return []
   }
+  return analytical
+    .map((line, index) => {
+      const amount = Math.abs(line.actualAmount)
+      return {
+        key: line.categoryId ?? `${line.section}-${line.categoryName}`,
+        label: line.categoryName,
+        amount,
+        pct: (amount / total) * 100,
+        color: PIE_COLORS[index % PIE_COLORS.length]!,
+        section: line.section,
+        categoryId: line.categoryId,
+      }
+    })
+    .sort((a, b) => b.amount - a.amount)
+}
+
+/** Realized income by analytical category (for home pie). */
+export function buildIncomePieSlices(budget: Budget): PieSlice[] {
+  return slicesFromLines(budget.lines, (line) => line.section === 'Income')
+}
+
+/** Realized expense by section head (Descontos, Projeto de vida, Essencial, Social). */
+export function buildExpensePieSlices(budget: Budget): PieSlice[] {
+  const bySection = new Map(budget.sections.map((block) => [block.section, block]))
+  const parts = EXPENSE_SECTIONS.map((section) => {
+    const block = bySection.get(section)
+    const amount = Math.abs(block?.actualAmount ?? 0)
+    return { section, label: block?.name ?? sectionLabel(section), amount }
+  }).filter((part) => part.amount > 0.001)
+  const total = parts.reduce((sum, part) => sum + part.amount, 0)
+  if (total <= 0) {
+    return []
+  }
+  return parts.map((part, index) => ({
+    key: part.section,
+    label: part.label,
+    amount: part.amount,
+    pct: (part.amount / total) * 100,
+    color: PIE_COLORS[index % PIE_COLORS.length]!,
+    section: part.section,
+  }))
+}
+
+/**
+ * Horizontal compare:
+ * - Receita: realizado / orçado da renda
+ * - Despesa: somatório das despesas realizadas / renda gastável (receita − descontos)
+ */
+export function buildIncomeExpenseCompare(budget: Budget): CompareBar[] {
+  const incomeBlock = budget.sections.find((block) => block.section === 'Income')
+  const incomePlanned = Math.abs(incomeBlock?.plannedAmount ?? 0)
+  const incomeActual = Math.abs(incomeBlock?.actualAmount ?? budget.receivedIncome)
+  const expenseActual = EXPENSE_SECTIONS.reduce((sum, section) => {
+    const block = budget.sections.find((item) => item.section === section)
+    return sum + Math.abs(block?.actualAmount ?? 0)
+  }, 0)
+  const gastavel = spendableIncomeBox(budget)
+  const spendable = gastavel.actual > 0 ? gastavel.actual : gastavel.planned
+
+  function bar(
+    key: 'income' | 'expense',
+    label: string,
+    planned: number,
+    actual: number,
+    section: CategorySection | 'Expense',
+  ): CompareBar {
+    const percent = progressPercent({ planned, actual })
+    const tone = progressTone(percent, { planned, actual })
+    return {
+      key,
+      label,
+      planned,
+      actual,
+      progressPct: percent === null ? 0 : Math.min(100, percent),
+      tone,
+      section,
+    }
+  }
+
+  return [
+    bar('income', 'Receita', incomePlanned, incomeActual, 'Income'),
+    bar('expense', 'Despesa', spendable, expenseActual, 'Expense'),
+  ].filter((item) => item.planned > 0 || item.actual > 0)
+}
+
+export function pieConicGradient(slices: PieSlice[]): string {
+  if (slices.length === 0) {
+    return 'var(--surface-2)'
+  }
+  let cursor = 0
+  const stops: string[] = []
+  for (const slice of slices) {
+    const next = cursor + slice.pct
+    stops.push(`${slice.color} ${cursor}% ${next}%`)
+    cursor = next
+  }
+  return `conic-gradient(${stops.join(', ')})`
 }
 
 export function buildPatrimonyMacroBars(summary: PatrimonySummary): PatrimonyMacroBar[] {

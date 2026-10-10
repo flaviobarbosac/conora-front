@@ -18,7 +18,7 @@ export const NAV_ITEMS: ReadonlyArray<NavItem> = [
 export const CADASTROS_ITEMS: ReadonlyArray<NavItem> = [
   { to: '/contas', label: 'Contas', short: 'Contas', icon: 'card' },
   { to: '/cartoes', label: 'Cartões', short: 'Cartões', icon: 'card' },
-  { to: '/plano-de-contas', label: 'Plano de contas', short: 'Plano c.', icon: 'folder' },
+  { to: '/categorias', label: 'Categorias', short: 'Categorias', icon: 'folder' },
   { to: '/projetos', label: 'Projetos de vida', short: 'Projetos', icon: 'goal' },
   { to: '/patrimonio', label: 'Patrimônio', short: 'Patrim.', icon: 'wallet' },
   { to: '/membros', label: 'Membros', short: 'Membros', icon: 'user' },

@@ -1,4 +1,4 @@
-import type { ChartAccount } from '../api/finance'
+import type { Category } from '../api/finance'
 
 export type HorizonKey = 'short' | 'mid' | 'long'
 
@@ -52,7 +52,7 @@ export function projectFillClass(
   return ''
 }
 
-export function horizonCodeOf(accountId: string | null, accounts: ChartAccount[]): string | null {
+export function horizonCodeOf(accountId: string | null, accounts: Category[]): string | null {
   if (!accountId) {
     return null
   }
@@ -67,7 +67,7 @@ export function horizonCodeOf(accountId: string | null, accounts: ChartAccount[]
   return null
 }
 
-export function horizonLabelOf(accountId: string | null, accounts: ChartAccount[]): string | null {
+export function horizonLabelOf(accountId: string | null, accounts: Category[]): string | null {
   const code = horizonCodeOf(accountId, accounts)
   return LIFE_HORIZONS.find((item) => item.code === code)?.label ?? null
 }

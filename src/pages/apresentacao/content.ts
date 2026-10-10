@@ -13,7 +13,7 @@ export const FEATURES: ReadonlyArray<Feature> = [
     key: 'lancamentos',
     icon: 'list',
     title: 'Lançamentos',
-    text: 'Receitas e despesas por conta e cartão, classificadas no plano de contas da família.',
+    text: 'Receitas e despesas por conta e cartão, classificadas nas categorias da família.',
   },
   {
     key: 'orcamento',
@@ -80,7 +80,7 @@ export function feature(key: string): Feature {
 }
 
 export const STEPS = [
-  { title: 'Monte a base', text: 'Cadastre contas, cartões e o plano de contas — ou comece pelo modelo pronto.' },
+  { title: 'Monte a base', text: 'Cadastre contas, cartões e categorias — ou comece pelo modelo pronto.' },
   { title: 'Registre o dia a dia', text: 'Lance no app, importe o extrato ou mande pelo WhatsApp.' },
   { title: 'Enxergue e decida', text: 'Orçamento, Raio-X e patrimônio mostram onde ajustar a rota.' },
 ] as const

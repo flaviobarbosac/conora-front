@@ -19,7 +19,7 @@ const BLOCKS = [
   },
   {
     title: 'Raio-X',
-    text: 'Visão em árvore do plano de contas: receita, descontos, projetos, essenciais e social, com drill-down até o lançamento.',
+    text: 'Visão em árvore das categorias: receita, descontos, projetos, essenciais e social, com drill-down até o lançamento.',
   },
 ] as const
 

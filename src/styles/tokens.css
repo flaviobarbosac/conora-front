@@ -46,9 +46,9 @@
   --bottom-nav-h: 84px;
 
   /* Money columns sized for the app ceiling: 99.999.999,99 / R$ 99.999.999,99 */
-  --money-field-w: calc(13ch + 2 * var(--space-4) + 4px);
-  --money-display-w: 17ch;
-  --money-percent-w: 6ch;
+  --money-field-w: calc(14ch + 2 * var(--space-4) + 4px);
+  --money-display-w: 19ch;
+  --money-percent-w: 7ch;
 
   --weight-regular: 400;
   --weight-medium: 500;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { familyApi, projectsApi, type LifeProject, type LifeProjectScope } from '../api/finance'
-import { ChartAccountSelect } from '../components/ChartAccountSelect'
+import { CategorySelect } from '../components/CategorySelect'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
@@ -98,7 +98,7 @@ export function ProjectDetailPage() {
                   {formatMoney(data.accumulatedAmount)} de {formatMoney(data.goalAmount)}
                   {` · prazo ${formatDate(data.dueDate)}`}
                   {` · aporte desde ${formatCompetence(data.contributionStartYm)}`}
-                  {data.chartAccountName ? ` · ${data.chartAccountName}` : ''}
+                  {data.categoryName ? ` · ${data.categoryName}` : ''}
                 </span>
               </span>
               <strong>{formatPercent(data.progressPercent)}</strong>
@@ -113,7 +113,7 @@ export function ProjectDetailPage() {
 
           {data.isOwner ? (
             <>
-              <ProjectEditForm key={`${data.id}-${data.chartAccountId}`} data={data} onSaved={() => project.reload()} />
+              <ProjectEditForm key={`${data.id}-${data.categoryId}`} data={data} onSaved={() => project.reload()} />
               <ContributeForm key={`contrib-${data.id}`} data={data} onSaved={() => project.reload()} />
             </>
           ) : (
@@ -143,7 +143,7 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
   const [dueYm, setDueYm] = useState(ymFromIso(data.dueDate))
   const [startYm, setStartYm] = useState(data.contributionStartYm || shiftCompetence(currentCompetence(), 1))
   const [scope, setScope] = useState<LifeProjectScope>(data.scope)
-  const [chartAccountId, setChartAccountId] = useState(data.chartAccountId ?? '')
+  const [categoryId, setCategoryId] = useState(data.categoryId ?? '')
   const hasFamilyGroup = Boolean(family.data?.groupId)
   const currentYm = currentCompetence()
   const months = dueYm ? monthsInclusive(startYm, dueYm) : []
@@ -158,9 +158,9 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
       dueYm !== ymFromIso(data.dueDate) ||
       startYm !== data.contributionStartYm ||
       scope !== data.scope ||
-      chartAccountId !== (data.chartAccountId ?? '')
+      categoryId !== (data.categoryId ?? '')
     )
-  }, [name, detailedDescription, goal, dueYm, startYm, scope, chartAccountId, data])
+  }, [name, detailedDescription, goal, dueYm, startYm, scope, categoryId, data])
 
   useRegisterDirty(`project-edit:${data.id}`, isDirty)
 
@@ -170,8 +170,8 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
       save.setError('Informe uma meta maior que zero.')
       return
     }
-    if (!chartAccountId) {
-      save.setError('Escolha a conta do plano de contas.')
+    if (!categoryId) {
+      save.setError('Escolha a categoria.')
       return
     }
     if (!dueYm) {
@@ -191,7 +191,7 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
           dueDate: dateToApi(`${dueYm}-01`),
           contributionStartYm: startYm,
           scope: projectScope,
-          chartAccountId,
+          categoryId,
           detailedDescription: detailedDescription.trim() || undefined,
         }),
       )
@@ -218,14 +218,14 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
             maxLength={4000}
           />
         </div>
-        <ChartAccountSelect
-          label="Conta do plano"
-          name="projectChartAccount"
+        <CategorySelect
+          label="Categoria"
+          name="projectCategory"
           required
-          value={chartAccountId}
-          onChange={setChartAccountId}
+          value={categoryId}
+          onChange={setCategoryId}
           options={lifeAccounts}
-          tree={lookups.chartAccounts}
+          tree={lookups.categories}
           emptyLabel="Selecione"
         />
         <Select
@@ -285,7 +285,7 @@ function ContributeForm({ data, onSaved }: { data: LifeProject; onSaved: () => v
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayInput)
   const [accountId, setAccountId] = useState('')
-  const [chartAccountId, setChartAccountId] = useState(data.chartAccountId ?? '')
+  const [categoryId, setCategoryId] = useState(data.categoryId ?? '')
   const initialDate = useState(todayInput)[0]
   const isDirty = useMemo(
     () => amount.trim() !== '' || date !== initialDate || accountId !== '',
@@ -294,8 +294,8 @@ function ContributeForm({ data, onSaved }: { data: LifeProject; onSaved: () => v
   useRegisterDirty(`project-contribute:${data.id}`, isDirty)
 
   useEffect(() => {
-    setChartAccountId(data.chartAccountId ?? '')
-  }, [data.chartAccountId])
+    setCategoryId(data.categoryId ?? '')
+  }, [data.categoryId])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -308,8 +308,8 @@ function ContributeForm({ data, onSaved }: { data: LifeProject; onSaved: () => v
       contribute.setError('Escolha a conta bancária de origem.')
       return
     }
-    if (!chartAccountId) {
-      contribute.setError('Escolha a conta do plano de contas.')
+    if (!categoryId) {
+      contribute.setError('Escolha a categoria.')
       return
     }
     if (
@@ -318,7 +318,7 @@ function ContributeForm({ data, onSaved }: { data: LifeProject; onSaved: () => v
           amount: value,
           occurredAt: dateToApi(date),
           accountId,
-          chartAccountId,
+          categoryId,
         }),
       )
     ) {
@@ -357,15 +357,15 @@ function ContributeForm({ data, onSaved }: { data: LifeProject; onSaved: () => v
             </option>
           ))}
         </Select>
-        <ChartAccountSelect
-          label="Conta do plano"
-          name="contribChartAccount"
+        <CategorySelect
+          label="Categoria"
+          name="contribCategory"
           required
           disabled
-          value={chartAccountId}
-          onChange={setChartAccountId}
+          value={categoryId}
+          onChange={setCategoryId}
           options={lifeAccounts}
-          tree={lookups.chartAccounts}
+          tree={lookups.categories}
         />
         <div className={styles.formWide}>
           <ErrorText message={contribute.error} />
