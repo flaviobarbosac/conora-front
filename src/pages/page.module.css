@@ -463,6 +463,18 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.rowMain:disabled {
+  cursor: default;
 }
 
 .rowMain strong {
@@ -736,6 +748,22 @@ button.compact {
   opacity: 0.75;
 }
 
+.raioxToneUnbudgeted {
+  color: var(--warning);
+  font-weight: var(--weight-semibold);
+}
+
+.raioxLegend {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.raioxLegendMark {
+  color: var(--warning);
+  font-weight: var(--weight-semibold);
+}
+
 .raioxFocus,
 .raioxFocusIncome {
   outline: 2px solid var(--primary);
@@ -811,8 +839,6 @@ button.compact {
   font-weight: var(--weight-semibold);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .periodSeg {
@@ -1005,11 +1031,6 @@ button.compact {
   text-align: right;
 }
 
-@media (min-width: 900px) {
-  .heroCards {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
 
 .macroGrid {
   display: grid;

@@ -9,37 +9,38 @@ import {
 const styles = {
   progressFill_ok: 'green',
   progressFill_warning: 'yellow',
-  progressFill_horizonLong: 'horizon-red',
+  progressFill_horizonLong: 'horizon-blue',
   progressFill_danger: 'alert-red',
   badge_ok: 'badge-green',
   badge_warning: 'badge-yellow',
-  badge_horizonLong: 'badge-horizon-red',
+  badge_horizonLong: 'badge-horizon-blue',
 }
 
 describe('life project horizon colors', () => {
-  it('maps short to green, mid to yellow, long to horizon red', () => {
+  it('maps short to green, mid to yellow, long to horizon blue', () => {
     expect(horizonFillClass(styles, 'short')).toBe('green')
     expect(horizonFillClass(styles, 'mid')).toBe('yellow')
-    expect(horizonFillClass(styles, 'long')).toBe('horizon-red')
+    expect(horizonFillClass(styles, 'long')).toBe('horizon-blue')
     expect(horizonFillClass(styles, 'long')).not.toBe('alert-red')
   })
 
   it('uses the same palette on the badge', () => {
     expect(horizonBadgeClass(styles, 'short')).toBe('badge-green')
     expect(horizonBadgeClass(styles, 'mid')).toBe('badge-yellow')
-    expect(horizonBadgeClass(styles, 'long')).toBe('badge-horizon-red')
+    expect(horizonBadgeClass(styles, 'long')).toBe('badge-horizon-blue')
   })
 
   it('paints a project bar by horizon', () => {
     expect(projectFillClass(styles, { horizon: 'short', accumulatedAmount: 10, goalAmount: 100 })).toBe('green')
     expect(projectFillClass(styles, { horizon: 'mid', accumulatedAmount: 10, goalAmount: 100 })).toBe('yellow')
-    expect(projectFillClass(styles, { horizon: 'long', accumulatedAmount: 10, goalAmount: 100 })).toBe('horizon-red')
+    expect(projectFillClass(styles, { horizon: 'long', accumulatedAmount: 10, goalAmount: 100 })).toBe('horizon-blue')
   })
 
-  it('uses horizon red when accumulated passes the goal, even on a short project', () => {
+  it('uses danger red when accumulated passes the goal, even on a short project', () => {
     expect(isProjectExtrapolated({ accumulatedAmount: 150, goalAmount: 100 })).toBe(true)
     expect(isProjectExtrapolated({ accumulatedAmount: 100, goalAmount: 100 })).toBe(false)
     expect(isProjectExtrapolated({ accumulatedAmount: 10, goalAmount: 0 })).toBe(false)
-    expect(projectFillClass(styles, { horizon: 'short', accumulatedAmount: 150, goalAmount: 100 })).toBe('horizon-red')
+    expect(projectFillClass(styles, { horizon: 'short', accumulatedAmount: 150, goalAmount: 100 })).toBe('alert-red')
+    expect(projectFillClass(styles, { horizon: 'long', accumulatedAmount: 150, goalAmount: 100 })).toBe('alert-red')
   })
 })

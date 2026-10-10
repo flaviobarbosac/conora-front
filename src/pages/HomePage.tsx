@@ -195,7 +195,7 @@ function BudgetMacroChart({ budget, loading }: { budget: Budget | null | undefin
                     className={`${styles.progressFill} ${
                       bar.tone === 'over'
                         ? styles.progressFill_danger
-                        : bar.tone === 'muted'
+                        : bar.tone === 'muted' || bar.tone === 'unbudgeted'
                           ? styles.progressFillMuted
                           : styles.progressFillActual
                     }`}

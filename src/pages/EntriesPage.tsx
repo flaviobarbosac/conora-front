@@ -1,6 +1,13 @@
 ﻿import { useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { entriesApi, type ChartAccount, type Entry, type EntryInput, type EntryType } from '../api/finance'
+import {
+  entriesApi,
+  type ChartAccount,
+  type Entry,
+  type EntryInput,
+  type EntryType,
+  type EntryUpdateInput,
+} from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -17,7 +24,15 @@ import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import { scanReceipt } from '../camera/scanReceipt'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
-import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
+import {
+  currentCompetence,
+  dateToApi,
+  formatDate,
+  formatMoney,
+  formatMoneyInput,
+  parseMoney,
+  todayInput,
+} from '../lib/format'
 import { isNativeApp } from '../lib/platform'
 import { peekPendingShare } from '../share/pendingShare'
 import styles from './page.module.css'
@@ -35,11 +50,19 @@ const TYPE_LABEL: Record<EntryType, string> = {
 
 const FORM_TYPES: FormType[] = ['Expense', 'Income', 'Transfer']
 
+function isEditableType(type: EntryType): type is FormType {
+  return type === 'Expense' || type === 'Income' || type === 'Transfer'
+}
+
 function amountClass(type: EntryType): string | undefined {
   if (type === 'Income') {
     return styles.positive
   }
   return type === 'Transfer' ? undefined : styles.negative
+}
+
+function toDateInput(iso: string): string {
+  return iso.slice(0, 10)
 }
 
 export function EntriesPage() {
@@ -51,7 +74,9 @@ export function EntriesPage() {
   const [search, setSearch] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState<Entry | null>(null)
   const [formDirty, setFormDirty] = useState(false)
+  const [openError, setOpenError] = useState<string | null>(null)
 
   useRegisterDirty('entries-form', showForm && formDirty)
 
@@ -65,13 +90,39 @@ export function EntriesPage() {
     setYm(next)
   }
 
-  async function toggleForm() {
+  async function closeForm() {
+    if (formDirty && !(await confirmLeave())) {
+      return
+    }
+    setShowForm(false)
+    setEditing(null)
+    setFormDirty(false)
+    setOpenError(null)
+  }
+
+  async function openCreate() {
     if (showForm && formDirty && !(await confirmLeave())) {
       return
     }
-    setShowForm((value) => !value)
-    if (showForm) {
-      setFormDirty(false)
+    setEditing(null)
+    setOpenError(null)
+    setFormDirty(false)
+    setShowForm(true)
+  }
+
+  async function openEdit(entry: Entry) {
+    if (!isEditableType(entry.type)) {
+      return
+    }
+    if (showForm && formDirty && !(await confirmLeave())) {
+      return
+    }
+    setEditing(entry)
+    setOpenError(null)
+    setFormDirty(false)
+    setShowForm(true)
+    if (entry.competenceYm) {
+      setYm(entry.competenceYm)
     }
   }
 
@@ -80,6 +131,7 @@ export function EntriesPage() {
     let changed = false
 
     if (searchParams.get('novo') === '1') {
+      setEditing(null)
       setShowForm(true)
       next.delete('novo')
       changed = true
@@ -97,6 +149,27 @@ export function EntriesPage() {
       setCategoryFilter(chartAccountId)
       next.delete('chartAccountId')
       changed = true
+    }
+
+    const entryId = searchParams.get('entry')
+    if (entryId) {
+      next.delete('entry')
+      changed = true
+      void entriesApi
+        .get(entryId)
+        .then((entry) => {
+          if (!isEditableType(entry.type)) {
+            setOpenError('Este tipo de lançamento não pode ser editado por aqui.')
+            return
+          }
+          setEditing(entry)
+          setYm(entry.competenceYm)
+          setShowForm(true)
+          setFormDirty(false)
+        })
+        .catch(() => {
+          setOpenError('Lançamento não encontrado.')
+        })
     }
 
     if (changed) {
@@ -132,18 +205,23 @@ export function EntriesPage() {
         return
       }
       event.preventDefault()
-      setShowForm(true)
+      void openCreate()
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [showForm, formDirty])
 
   async function remove(entry: Entry) {
     if (!(await confirmDestructive(`Excluir "${entry.description}"?`, { title: 'Excluir lançamento' }))) {
       return
     }
     if (await rowAction.run(() => entriesApi.remove(entry.id))) {
+      if (editing?.id === entry.id) {
+        setShowForm(false)
+        setEditing(null)
+        setFormDirty(false)
+      }
       entries.reload()
     }
   }
@@ -166,12 +244,22 @@ export function EntriesPage() {
         actions={
           <>
             <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
-            <Button onClick={() => void toggleForm()}>{showForm ? 'Fechar' : '+ Novo lançamento'}</Button>
+            <Button
+              onClick={() => {
+                if (showForm) {
+                  void closeForm()
+                } else {
+                  void openCreate()
+                }
+              }}
+            >
+              {showForm ? 'Fechar' : '+ Novo lançamento'}
+            </Button>
             <Button
               variant="secondary"
               onClick={() => {
                 void scanReceipt()
-                  .then(() => setShowForm(true))
+                  .then(() => void openCreate())
                   .catch(() => undefined)
               }}
             >
@@ -183,13 +271,17 @@ export function EntriesPage() {
 
       {showForm ? (
         <EntryForm
+          key={editing?.id ?? 'new'}
+          initial={editing}
           accounts={lookups.accounts.map((account) => ({ id: account.id, name: account.name }))}
           categories={lookups.cashFlowAccounts}
           tree={lookups.chartAccounts}
           onDirtyChange={setFormDirty}
+          onCancel={() => void closeForm()}
           onSaved={() => {
             setFormDirty(false)
             setShowForm(false)
+            setEditing(null)
             entries.reload()
             lookups.reloadAccounts()
           }}
@@ -227,30 +319,39 @@ export function EntriesPage() {
           </Button>
         </form>
 
-        <ErrorText message={entries.error ?? rowAction.error} />
+        <ErrorText message={entries.error ?? rowAction.error ?? openError} />
         {entries.loading && !entries.data ? <Loading /> : null}
         {entries.data && entries.data.items.length === 0 ? <Empty>Nenhum lançamento nesta competência.</Empty> : null}
         {entries.data && entries.data.items.length > 0 ? (
           <ul className={styles.list}>
-            {entries.data.items.map((entry) => (
-              <li key={entry.id} className={styles.row}>
-                <span className={styles.rowMain}>
-                  <strong>
-                    {entry.description}
-                    {entry.installmentCount ? ` (${entry.installmentNumber}/${entry.installmentCount})` : ''}
-                  </strong>
-                  <span className={styles.rowSub}>{describe(entry)}</span>
-                </span>
-                <span className={styles.rowEnd}>
-                  <Badge>{TYPE_LABEL[entry.type]}</Badge>
-                  <span className={`${styles.amount} ${amountClass(entry.type) ?? ''}`}>
-                    {entry.type === 'Expense' ? '− ' : ''}
-                    {formatMoney(entry.amount)}
+            {entries.data.items.map((entry) => {
+              const editable = isEditableType(entry.type)
+              return (
+                <li key={entry.id} className={styles.row}>
+                  <button
+                    type="button"
+                    className={styles.rowMain}
+                    disabled={!editable}
+                    onClick={() => void openEdit(entry)}
+                    style={editable ? undefined : { cursor: 'default', textAlign: 'left' }}
+                  >
+                    <strong>
+                      {entry.description}
+                      {entry.installmentCount ? ` (${entry.installmentNumber}/${entry.installmentCount})` : ''}
+                    </strong>
+                    <span className={styles.rowSub}>{describe(entry)}</span>
+                  </button>
+                  <span className={styles.rowEnd}>
+                    <Badge>{TYPE_LABEL[entry.type]}</Badge>
+                    <span className={`${styles.amount} ${amountClass(entry.type) ?? ''}`}>
+                      {entry.type === 'Expense' ? '− ' : ''}
+                      {formatMoney(entry.amount)}
+                    </span>
+                    <DeleteIconButton disabled={rowAction.busy} onClick={() => void remove(entry)} />
                   </span>
-                  <DeleteIconButton disabled={rowAction.busy} onClick={() => void remove(entry)} />
-                </span>
-              </li>
-            ))}
+                </li>
+              )
+            })}
           </ul>
         ) : null}
         {entries.data ? (
@@ -264,10 +365,12 @@ export function EntriesPage() {
 }
 
 type FormProps = {
+  initial: Entry | null
   accounts: { id: string; name: string }[]
   categories: ChartAccount[]
   tree: ChartAccount[]
   onDirtyChange?: (dirty: boolean) => void
+  onCancel: () => void
   onSaved: () => void
 }
 
@@ -281,31 +384,52 @@ function matchesEntryType(section: string, type: FormType): boolean {
   return section === 'Discount' || section === 'LifeProject' || section === 'Essential' || section === 'Social'
 }
 
-function EntryForm({ accounts, categories, tree, onDirtyChange, onSaved }: FormProps) {
-  const [type, setType] = useState<FormType>('Expense')
-  const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(todayInput)
-  const pendingReceipt = peekPendingShare()
-  const [description, setDescription] = useState(pendingReceipt ? pendingReceipt.fileName.replace(/\.[^.]+$/, '') : '')
+function EntryForm({ initial, accounts, categories, tree, onDirtyChange, onCancel, onSaved }: FormProps) {
+  const editing = initial !== null
+  const [type, setType] = useState<FormType>(() =>
+    initial && isEditableType(initial.type) ? initial.type : 'Expense',
+  )
+  const [amount, setAmount] = useState(() => (initial ? formatMoneyInput(initial.amount) : ''))
+  const [date, setDate] = useState(() => (initial ? toDateInput(initial.occurredAt) : todayInput()))
+  const pendingReceipt = !editing ? peekPendingShare() : null
+  const [description, setDescription] = useState(() =>
+    initial
+      ? initial.description
+      : pendingReceipt
+        ? pendingReceipt.fileName.replace(/\.[^.]+$/, '')
+        : '',
+  )
   const [receiptPreview] = useState(pendingReceipt?.dataUrl ?? '')
-  const [accountId, setAccountId] = useState('')
-  const [contraAccountId, setContraAccountId] = useState('')
-  const [chartAccountId, setChartAccountId] = useState('')
+  const [accountId, setAccountId] = useState(() => initial?.accountId ?? '')
+  const [contraAccountId, setContraAccountId] = useState(() => initial?.contraAccountId ?? '')
+  const [chartAccountId, setChartAccountId] = useState(() => initial?.chartAccountId ?? '')
   const action = useAction()
-  const initialDate = useState(todayInput)[0]
-  const initialDescription = useState(pendingReceipt ? pendingReceipt.fileName.replace(/\.[^.]+$/, '') : '')[0]
+
+  const baseline = {
+    type: (initial && isEditableType(initial.type) ? initial.type : 'Expense') as FormType,
+    amount: initial ? formatMoneyInput(initial.amount) : '',
+    date: initial ? toDateInput(initial.occurredAt) : todayInput(),
+    description: initial
+      ? initial.description
+      : pendingReceipt
+        ? pendingReceipt.fileName.replace(/\.[^.]+$/, '')
+        : '',
+    accountId: initial?.accountId ?? '',
+    contraAccountId: initial?.contraAccountId ?? '',
+    chartAccountId: initial?.chartAccountId ?? '',
+  }
 
   const kindCategories = categories.filter((category) => matchesEntryType(category.section, type))
 
   useEffect(() => {
     const dirty =
-      type !== 'Expense' ||
-      amount.trim() !== '' ||
-      date !== initialDate ||
-      description !== initialDescription ||
-      accountId !== '' ||
-      contraAccountId !== '' ||
-      chartAccountId !== ''
+      type !== baseline.type ||
+      amount !== baseline.amount ||
+      date !== baseline.date ||
+      description !== baseline.description ||
+      accountId !== baseline.accountId ||
+      contraAccountId !== baseline.contraAccountId ||
+      chartAccountId !== baseline.chartAccountId
     onDirtyChange?.(dirty)
   }, [
     type,
@@ -315,13 +439,18 @@ function EntryForm({ accounts, categories, tree, onDirtyChange, onSaved }: FormP
     accountId,
     contraAccountId,
     chartAccountId,
-    initialDate,
-    initialDescription,
+    baseline.type,
+    baseline.amount,
+    baseline.date,
+    baseline.description,
+    baseline.accountId,
+    baseline.contraAccountId,
+    baseline.chartAccountId,
     onDirtyChange,
   ])
 
   async function suggest() {
-    if (type === 'Transfer' || chartAccountId || description.trim().length < 3) {
+    if (editing || type === 'Transfer' || chartAccountId || description.trim().length < 3) {
       return
     }
     try {
@@ -338,6 +467,25 @@ function EntryForm({ accounts, categories, tree, onDirtyChange, onSaved }: FormP
     const value = parseMoney(amount)
     if (!Number.isFinite(value) || value <= 0) {
       action.setError('Informe um valor maior que zero.')
+      return
+    }
+
+    if (editing && initial) {
+      const input: EntryUpdateInput = {
+        amount: value,
+        occurredAt: dateToApi(date),
+        description: description.trim(),
+        accountId: accountId || undefined,
+        contraAccountId: type === 'Transfer' ? contraAccountId || undefined : undefined,
+        chartAccountId: type === 'Transfer' ? undefined : chartAccountId || undefined,
+        incomeSourceId: type === 'Income' ? initial.incomeSourceId ?? undefined : undefined,
+        memberId: initial.memberId ?? undefined,
+        confirmDuplicate,
+      }
+      if (await action.run(() => entriesApi.update(initial.id, input))) {
+        showSaveToast('Lançamento salvo.')
+        onSaved()
+      }
       return
     }
 
@@ -367,14 +515,18 @@ function EntryForm({ accounts, categories, tree, onDirtyChange, onSaved }: FormP
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Novo lançamento</h2>
+      <h2 className={styles.sectionTitle}>{editing ? 'Editar lançamento' : 'Novo lançamento'}</h2>
       <div className={styles.segmented} role="group" aria-label="Tipo de lançamento">
         {FORM_TYPES.map((option) => (
           <button
             key={option}
             type="button"
             aria-pressed={type === option}
+            disabled={editing}
             onClick={() => {
+              if (editing) {
+                return
+              }
               setType(option)
               setChartAccountId('')
             }}
@@ -433,6 +585,9 @@ function EntryForm({ accounts, categories, tree, onDirtyChange, onSaved }: FormP
         <div className={styles.formActions}>
           <Button type="submit" disabled={action.busy}>
             Salvar
+          </Button>
+          <Button type="button" variant="secondary" disabled={action.busy} onClick={onCancel}>
+            Cancelar
           </Button>
           {looksLikeDuplicate ? (
             <Button variant="secondary" disabled={action.busy} onClick={() => void submit(true)}>

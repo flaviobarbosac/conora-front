@@ -44,7 +44,7 @@ export function ChartAccountsPage() {
   const action = useAction()
   const [query, setQuery] = useState('')
   const [section, setSection] = useState<ChartSection | null>(null)
-  const [showAll, setShowAll] = useState(false)
+  const [showAll, setShowAll] = useState(true)
   const [draftParentId, setDraftParentId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
   const [renameId, setRenameId] = useState<string | null>(null)

@@ -62,6 +62,9 @@ function toneClass(tone: ProgressTone): string {
   if (tone === 'over') {
     return styles.raioxToneOver
   }
+  if (tone === 'unbudgeted') {
+    return styles.raioxToneUnbudgeted
+  }
   if (tone === 'muted') {
     return styles.raioxToneMuted
   }
@@ -84,13 +87,12 @@ function TotalsCell({ totals, stock = false }: { totals: RaioXTotals; stock?: bo
 
   const percent = progressPercent(totals)
   const tone = progressTone(percent, totals)
+  const shown = percent === null ? 0 : percent
   return (
     <span className={styles.raioxTotals}>
       <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.planned)}</span>
       <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.actual)}</span>
-      <span className={`${styles.raioxPercent} ${toneClass(tone)}`}>
-        {percent === null ? '—' : formatPercent(percent)}
-      </span>
+      <span className={`${styles.raioxPercent} ${toneClass(tone)}`}>{formatPercent(shown)}</span>
     </span>
   )
 }
@@ -221,14 +223,14 @@ export function RaioXPage() {
   }
 
   function openEntry(entry: Entry) {
-    const params = new URLSearchParams({ competenceYm: ym })
-    if (entry.chartAccountId) {
-      params.set('chartAccountId', entry.chartAccountId)
-    }
     if (entry.type === 'ProjectContribution' || entry.type === 'Contribution') {
       navigate('/projetos')
       return
     }
+    const params = new URLSearchParams({
+      competenceYm: entry.competenceYm || ym,
+      entry: entry.id,
+    })
     navigate(`/lancamentos?${params.toString()}`)
   }
 
@@ -278,6 +280,9 @@ export function RaioXPage() {
       {accounts.loading && !accounts.data ? <Loading /> : null}
       {roots.length > 0 ? (
         <div className={styles.raioxList}>
+          <p className={styles.raioxLegend}>
+            <span className={styles.raioxLegendMark}>Amarelo</span> = sem orçamento lançado.
+          </p>
           <div className={`${styles.raioxRow} ${styles.raioxHead}`}>
             <span />
             <span>Conta</span>
@@ -424,7 +429,7 @@ function RaioXCharts({
                     className={`${styles.progressFill} ${
                       bar.tone === 'over'
                         ? styles.progressFill_danger
-                        : bar.tone === 'muted'
+                        : bar.tone === 'muted' || bar.tone === 'unbudgeted'
                           ? styles.progressFillMuted
                           : styles.progressFillActual
                     }`}
@@ -519,10 +524,6 @@ function AccountBlock({
   function onRowClick() {
     if (expandable) {
       onToggle(account.id)
-      return
-    }
-    if (account.level === 'Analytical') {
-      onOpenOrigin(account)
     }
   }
 

@@ -4,7 +4,7 @@ import { monthsInclusive, shiftCompetence } from './format'
 
 export type RaioXTotals = { planned: number; actual: number }
 
-export type ProgressTone = 'ok' | 'over' | 'muted'
+export type ProgressTone = 'ok' | 'over' | 'muted' | 'unbudgeted'
 
 /** Rolls up planned/actual from analytical leaves through the chart tree. */
 export function sumBranch(
@@ -33,7 +33,7 @@ export function sumBranch(
 
 /**
  * Progress as percent of planned (always ≥ 0 when defined).
- * planned ≤ 0 → null (no base); otherwise actual/planned×100.
+ * planned ≤ 0 → null (no budget base); otherwise actual/planned×100.
  */
 export function progressPercent(totals: RaioXTotals): number | null {
   const planned = Math.abs(totals.planned)
@@ -49,14 +49,12 @@ export function variationPercent(totals: RaioXTotals): number | null {
   return progressPercent(totals)
 }
 
+/** Yellow unbudgeted when there is no planned amount; otherwise ok / over / muted. */
 export function progressTone(percent: number | null, totals?: RaioXTotals): ProgressTone {
-  if (percent === null) {
-    return 'muted'
+  if (percent === null || (totals && Math.abs(totals.planned) <= 0)) {
+    return 'unbudgeted'
   }
-  if (totals && Math.abs(totals.planned) <= 0 && Math.abs(totals.actual) <= 0) {
-    return 'muted'
-  }
-  if (percent <= 0 && (!totals || Math.abs(totals.actual) <= 0)) {
+  if (percent <= 0 && Math.abs(totals?.actual ?? 0) <= 0) {
     return 'muted'
   }
   return percent > 100 ? 'over' : 'ok'
