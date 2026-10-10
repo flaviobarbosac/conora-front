@@ -612,9 +612,70 @@ export const helpApi = {
 
 export type AiAnswer = { available: boolean; answer: string }
 
+export type IanReportQuery = {
+  kind: string
+  competenceYm?: string | null
+  fromYm?: string | null
+  toYm?: string | null
+  subject?: string | null
+  matchKind?: string | null
+  matchId?: string | null
+  focus?: string | null
+  categoryIds?: string | null
+  chartKind?: string | null
+  insight?: string | null
+}
+
+export type IanAskResponse = {
+  available: boolean
+  answer: string
+  canOpenReport: boolean
+  query?: IanReportQuery | null
+  choices?: string[] | null
+}
+
+export type IanAnalyzeRequest = {
+  categoryIds: string[]
+  fromYm: string
+  toYm: string
+}
+
+export type IanReportPoint = { key: string; label: string; amount: number }
+export type IanTableColumn = { key: string; label: string }
+export type IanTableRow = { key: string; cells: string[]; amount?: number | null }
+export type IanReportTable = { columns: IanTableColumn[]; rows: IanTableRow[] }
+
+export type IanReport = {
+  title: string
+  table: IanReportTable
+  chartKind: 'none' | 'bar' | 'line' | 'pie' | string
+  points: IanReportPoint[]
+  found: boolean
+  insight?: string | null
+}
+
 export const aiApi = {
   ask: (question: string, competenceYm?: string) =>
     apiFetch<AiAnswer>('/ai/ask', json('POST', { question, competenceYm })),
+  ianAsk: (question: string, competenceYm?: string) =>
+    apiFetch<IanAskResponse>('/ai/ian', json('POST', { question, competenceYm })),
+  ianAnalyze: (input: IanAnalyzeRequest) =>
+    apiFetch<IanAskResponse>('/ai/ian/analyze', json('POST', input)),
+  ianReport: (query: IanReportQuery) => {
+    const params = new URLSearchParams()
+    params.set('kind', query.kind)
+    if (query.competenceYm) params.set('competenceYm', query.competenceYm)
+    if (query.fromYm) params.set('fromYm', query.fromYm)
+    if (query.toYm) params.set('toYm', query.toYm)
+    if (query.subject) params.set('subject', query.subject)
+    if (query.matchKind) params.set('matchKind', query.matchKind)
+    if (query.matchId) params.set('matchId', query.matchId)
+    if (query.focus) params.set('focus', query.focus)
+    if (query.categoryIds) params.set('categoryIds', query.categoryIds)
+    if (query.chartKind) params.set('chartKind', query.chartKind)
+    if (query.insight) params.set('insight', query.insight)
+    return apiFetch<IanReport>(`/ai/ian/report?${params.toString()}`)
+  },
 }
 
 /* ---------- WhatsApp ---------- */
