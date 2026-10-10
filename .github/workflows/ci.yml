@@ -18,10 +18,12 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - name: Install and build
+      - name: Install, lint, test and build
         env:
           VITE_API_URL: https://api.conora.com.br
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
         run: |
           npm ci
+          npm run lint
+          npm run test
           npm run build

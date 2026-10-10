@@ -22,6 +22,8 @@ export type IconName =
   | 'logout'
   | 'trash'
   | 'repeat'
+  | 'menu'
+  | 'camera'
 
 type IconDef = {
   label: string
@@ -147,5 +149,17 @@ export const ICON_CATALOG: Record<IconName, IconDef> = {
     label: 'Repetir ou parcelar',
     base: ['M17 2l4 4-4 4', 'M3 11V9a4 4 0 0 1 4-4h14', 'M7 22l-4-4 4-4', 'M21 13v2a4 4 0 0 1-4 4H3'],
     accent: [],
+  },
+  menu: {
+    label: 'Menu',
+    base: ['M4 7h16', 'M4 12h16', 'M4 17h16'],
+    accent: [],
+  },
+  camera: {
+    label: 'Câmera',
+    base: [
+      'M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z',
+    ],
+    accent: ['M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
   },
 }

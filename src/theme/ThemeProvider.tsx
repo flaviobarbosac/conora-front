@@ -7,7 +7,8 @@ export const ThemeName = {
 
 export type Theme = (typeof ThemeName)[keyof typeof ThemeName]
 
-const STORAGE_KEY = 'onra.theme'
+const STORAGE_KEY = 'conora.theme'
+const LEGACY_STORAGE_KEY = 'onra.theme'
 
 type ThemeContextValue = {
   theme: Theme
@@ -18,7 +19,7 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 function readStoredTheme(): Theme {
-  const stored = localStorage.getItem(STORAGE_KEY)
+  const stored = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY)
   return stored === ThemeName.Dark ? ThemeName.Dark : ThemeName.Light
 }
 
@@ -28,6 +29,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem(STORAGE_KEY, theme)
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
   }, [theme])
 
   const value = useMemo<ThemeContextValue>(
