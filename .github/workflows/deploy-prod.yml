@@ -34,12 +34,14 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - name: Build
+      - name: Lint, test and build
         env:
           VITE_API_URL: https://api.conora.com.br
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
         run: |
           npm ci
+          npm run lint
+          npm run test
           npm run build
 
       - name: Configure AWS credentials

@@ -1,7 +1,8 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { familyApi } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
+import { scanReceipt } from '../camera/scanReceipt'
 import { AlertsBell } from '../components/AlertsBell'
 import { BrandLockup } from '../components/BrandLockup'
 import { Skeleton } from '../components/ui/Feedback'
@@ -24,6 +25,7 @@ function initialsFrom(name: string, email: string): string {
 export function AppShell() {
   const { session, logout } = useAuth()
   const { theme, setTheme } = useTheme()
+  const navigate = useNavigate()
   const { pathname } = useLocation()
   const email = session?.email || 'conta'
   const profile = useLoad(() => familyApi.profile(), [session?.email])
@@ -36,6 +38,7 @@ export function AppShell() {
   }, [profile.reload])
   const [cadastrosOpen, setCadastrosOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed)
   const [railViewport, setRailViewport] = useState(
@@ -64,20 +67,22 @@ export function AppShell() {
 
   useEffect(() => {
     setProfileMenuOpen(false)
+    setMobileNavOpen(false)
   }, [pathname])
 
   useEffect(() => {
-    if (!profileMenuOpen) {
+    if (!profileMenuOpen && !mobileNavOpen) {
       return
     }
     function onPointerDown(event: MouseEvent) {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+      if (profileMenuOpen && profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setProfileMenuOpen(false)
       }
     }
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setProfileMenuOpen(false)
+        setMobileNavOpen(false)
       }
     }
     document.addEventListener('mousedown', onPointerDown)
@@ -86,31 +91,79 @@ export function AppShell() {
       document.removeEventListener('mousedown', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [profileMenuOpen])
+  }, [profileMenuOpen, mobileNavOpen])
 
-  const brandCompact = sidebarCollapsed || railViewport
+  useEffect(() => {
+    if (!mobileNavOpen) {
+      return
+    }
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [mobileNavOpen])
+
+  const brandCompact = !mobileNavOpen && (sidebarCollapsed || railViewport)
 
   const cadastrosActive = CADASTROS_ITEMS.some((item) => pathname === item.to || pathname.startsWith(`${item.to}/`))
 
   const shellClass = [styles.shell, sidebarCollapsed ? styles.shellCollapsed : ''].filter(Boolean).join(' ')
-  const sidebarClass = [styles.sidebar, sidebarCollapsed ? styles.sidebarCollapsed : ''].filter(Boolean).join(' ')
+  const sidebarClass = [
+    styles.sidebar,
+    sidebarCollapsed && !mobileNavOpen ? styles.sidebarCollapsed : '',
+    mobileNavOpen ? styles.sidebarMobileOpen : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  async function openCameraEntry() {
+    try {
+      await scanReceipt()
+      navigate('/lancamentos?novo=1&recibo=1')
+    } catch {
+      // User cancelled the camera/gallery prompt.
+    }
+  }
 
   return (
     <div className={shellClass}>
-      <aside className={sidebarClass}>
+      {mobileNavOpen ? (
+        <button
+          type="button"
+          className={styles.sidebarBackdrop}
+          aria-label="Fechar menu"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      ) : null}
+      <aside className={sidebarClass} id="menu-lateral">
         <div className={styles.sidebarHead}>
           <BrandLockup size="nav" compact={brandCompact} />
           <button
             type="button"
             className={styles.collapseBtn}
-            aria-label={sidebarCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
-            aria-expanded={!sidebarCollapsed}
-            onClick={() => setSidebarCollapsed((value) => !value)}
+            aria-label={
+              mobileNavOpen
+                ? 'Fechar menu'
+                : sidebarCollapsed
+                  ? 'Expandir menu lateral'
+                  : 'Recolher menu lateral'
+            }
+            aria-expanded={mobileNavOpen ? true : !sidebarCollapsed}
+            onClick={() => {
+              if (mobileNavOpen) {
+                setMobileNavOpen(false)
+                return
+              }
+              setSidebarCollapsed((value) => !value)
+            }}
           >
             <Icon
               name="chevron"
               size={20}
-              className={sidebarCollapsed ? styles.chevronCollapsed : styles.chevronExpanded}
+              className={
+                mobileNavOpen || !sidebarCollapsed ? styles.chevronExpanded : styles.chevronCollapsed
+              }
             />
           </button>
         </div>
@@ -121,7 +174,7 @@ export function AppShell() {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) => (isActive ? styles.linkActive : styles.link)}
-              title={sidebarCollapsed ? item.label : undefined}
+              title={sidebarCollapsed && !mobileNavOpen ? item.label : undefined}
             >
               {({ isActive }) => (
                 <>
@@ -139,7 +192,7 @@ export function AppShell() {
               }
               aria-expanded={cadastrosOpen}
               aria-controls="nav-cadastros"
-              title={sidebarCollapsed ? 'Cadastros' : undefined}
+              title={sidebarCollapsed && !mobileNavOpen ? 'Cadastros' : undefined}
               onClick={() => setCadastrosOpen((open) => !open)}
             >
               <Icon name="folder" variant={cadastrosActive || cadastrosOpen ? 'duo' : 'linear'} size={24} />
@@ -158,7 +211,7 @@ export function AppShell() {
                     key={item.to}
                     to={item.to}
                     className={({ isActive }) => (isActive ? styles.cadastrosLinkActive : styles.cadastrosLink)}
-                    title={sidebarCollapsed ? item.label : undefined}
+                    title={sidebarCollapsed && !mobileNavOpen ? item.label : undefined}
                   >
                     {({ isActive }) => (
                       <>
@@ -181,6 +234,16 @@ export function AppShell() {
 
       <div className={styles.content}>
         <header className={styles.appHeader}>
+          <button
+            type="button"
+            className={styles.menuBtn}
+            aria-label="Abrir menu"
+            aria-controls="menu-lateral"
+            aria-expanded={mobileNavOpen}
+            onClick={() => setMobileNavOpen(true)}
+          >
+            <Icon name="menu" size={24} />
+          </button>
           <div className={styles.appHeaderBrand}>
             <BrandLockup size="nav" />
           </div>
@@ -290,11 +353,11 @@ export function AppShell() {
             </>
           )}
         </NavLink>
-        <NavLink to="/lancamentos?novo=1" className={styles.fab} aria-label="Novo lançamento">
+        <button type="button" className={styles.fab} aria-label="Fotografar recibo" onClick={() => void openCameraEntry()}>
           <span className={styles.fabDisc}>
-            <Icon name="add" variant="tile" size={20} />
+            <Icon name="camera" variant="tile" size={24} />
           </span>
-        </NavLink>
+        </button>
         <NavLink to="/raio-x" className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
           {({ isActive }) => (
             <>
@@ -303,14 +366,17 @@ export function AppShell() {
             </>
           )}
         </NavLink>
-        <NavLink to="/relatorios" className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
-          {({ isActive }) => (
-            <>
-              <Icon name="search" variant={isActive ? 'duo' : 'linear'} size={24} />
-              <span>Mais</span>
-            </>
-          )}
-        </NavLink>
+        <button
+          type="button"
+          className={mobileNavOpen || cadastrosActive ? styles.bottomLinkActive : styles.bottomLink}
+          aria-label="Abrir menu Cadastros e Orçamento"
+          aria-expanded={mobileNavOpen}
+          aria-controls="menu-lateral"
+          onClick={() => setMobileNavOpen(true)}
+        >
+          <Icon name="menu" variant={mobileNavOpen || cadastrosActive ? 'duo' : 'linear'} size={24} />
+          <span>Menu</span>
+        </button>
       </nav>
       <span className={styles.mobileVersion} title={`Versão ${__APP_VERSION__}`}>
         v{__APP_VERSION__}

@@ -1,5 +1,7 @@
-const ACCESS_KEY = 'onra.accessToken'
-const REFRESH_KEY = 'onra.refreshToken'
+const ACCESS_KEY = 'conora.accessToken'
+const REFRESH_KEY = 'conora.refreshToken'
+const LEGACY_ACCESS_KEY = 'onra.accessToken'
+const LEGACY_REFRESH_KEY = 'onra.refreshToken'
 
 export type AuthResponse = {
   userId: string
@@ -13,8 +15,24 @@ function apiBase(): string {
   return import.meta.env.VITE_API_URL ?? ''
 }
 
+function migrateLegacyTokens(): void {
+  const legacyAccess = localStorage.getItem(LEGACY_ACCESS_KEY)
+  if (legacyAccess && !sessionStorage.getItem(ACCESS_KEY)) {
+    sessionStorage.setItem(ACCESS_KEY, legacyAccess)
+  }
+  const legacyRefresh = localStorage.getItem(LEGACY_REFRESH_KEY)
+  if (legacyRefresh && !localStorage.getItem(REFRESH_KEY)) {
+    localStorage.setItem(REFRESH_KEY, legacyRefresh)
+  }
+  localStorage.removeItem(LEGACY_ACCESS_KEY)
+  localStorage.removeItem(LEGACY_REFRESH_KEY)
+  localStorage.removeItem(ACCESS_KEY)
+}
+
+migrateLegacyTokens()
+
 export function getAccessToken(): string | null {
-  return sessionStorage.getItem(ACCESS_KEY) ?? localStorage.getItem(ACCESS_KEY)
+  return sessionStorage.getItem(ACCESS_KEY)
 }
 
 export function getRefreshToken(): string | null {
@@ -42,15 +60,21 @@ export function emailFromAccessToken(token: string | null): string {
 }
 
 export function persistSession(auth: AuthResponse): void {
+  // Access token stays in sessionStorage (cleared with tab; less XSS persistence surface).
+  // Refresh stays in localStorage so the session can survive a reload in the same browser profile.
   sessionStorage.setItem(ACCESS_KEY, auth.accessToken)
-  localStorage.setItem(ACCESS_KEY, auth.accessToken)
   localStorage.setItem(REFRESH_KEY, auth.refreshToken)
+  localStorage.removeItem(ACCESS_KEY)
+  localStorage.removeItem(LEGACY_ACCESS_KEY)
+  localStorage.removeItem(LEGACY_REFRESH_KEY)
 }
 
 export function clearSession(): void {
   sessionStorage.removeItem(ACCESS_KEY)
   localStorage.removeItem(ACCESS_KEY)
   localStorage.removeItem(REFRESH_KEY)
+  localStorage.removeItem(LEGACY_ACCESS_KEY)
+  localStorage.removeItem(LEGACY_REFRESH_KEY)
 }
 
 type RequestOptions = {
@@ -164,7 +188,10 @@ export async function apiBlob(path: string): Promise<{ blob: Blob; fileName: str
 
   const disposition = response.headers.get('Content-Disposition') ?? ''
   const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)
-  return { blob: await response.blob(), fileName: match?.[1] ? decodeURIComponent(match[1]) : 'conora-export' }
+  return {
+    blob: await response.blob(),
+    fileName: match?.[1] ? decodeURIComponent(match[1]) : 'conora-export',
+  }
 }
 
 export const authApi = {
