@@ -67,7 +67,7 @@ export function MorePage() {
           <>
             <div className={styles.grid3}>
               <div className={styles.stat}>
-                <span>Receitas</span>
+                <span>Renda</span>
                 <strong>{formatMoney(data.summary.incomeTotal)}</strong>
               </div>
               <div className={styles.stat}>

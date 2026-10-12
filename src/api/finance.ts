@@ -1,4 +1,4 @@
-import { apiBlob, apiFetch } from './client'
+import { apiBlob, apiFetch, apiFormData } from './client'
 
 /* ---------- Enums (serialized as strings by the API) ---------- */
 
@@ -80,6 +80,8 @@ export type Account = {
   name: string
   kind: AccountKind
   balance: number
+  openingBalance: number
+  openingBalanceAt: string
   isArchived: boolean
   bankCode: string | null
   agency: string | null
@@ -94,15 +96,20 @@ export type CreateAccountInput = {
   name: string
   kind: AccountKind
   openingBalance: number
+  openingBalanceAt: string
   bankCode?: string
   agency?: string
   accountNumber?: string
   checkDigit?: string
 }
 
+export type CashBalance = { endYm: string; balance: number }
+
 export const accountsApi = {
   list: (includeArchived = false) => apiFetch<Account[]>(`/accounts${query({ includeArchived })}`),
   banks: () => apiFetch<BankOption[]>('/accounts/banks'),
+  cashBalanceAtEndOfMonth: (endYm: string) =>
+    apiFetch<CashBalance>(`/accounts/cash-balance${query({ endYm })}`),
   create: (input: CreateAccountInput) => apiFetch<Account>('/accounts', json('POST', input)),
   archive: (id: string, archived: boolean) =>
     apiFetch<Account>(`/accounts/${id}/archive`, json('POST', { archived })),
@@ -705,6 +712,58 @@ export const whatsappApi = {
   confirm: (id: string, accountId?: string, categoryId?: string) =>
     apiFetch<unknown>(`/whatsapp/drafts/${id}/confirm`, json('POST', { accountId, categoryId })),
   discard: (id: string) => apiFetch<unknown>(`/whatsapp/drafts/${id}/discard`, json('POST')),
+}
+
+/* ---------- Receipts / OCR ---------- */
+
+export type ReceiptIntakeStatus =
+  | 'Processing'
+  | 'NeedsClassification'
+  | 'Ready'
+  | 'Confirmed'
+  | 'Failed'
+
+export type ReceiptChannel = 'App' | 'ShareTarget' | 'WhatsApp'
+
+export type ReceiptIntake = {
+  id: string
+  channel: ReceiptChannel
+  status: ReceiptIntakeStatus
+  extractedCnpj: string | null
+  extractedName: string | null
+  extractedAmount: number | null
+  extractedOccurredAt: string | null
+  supplierId: string | null
+  proposedCategoryCode: string | null
+  proposedCategoryId: string | null
+  proposedCategoryName: string | null
+  selectedBankAccountId: string | null
+  failureReason: string | null
+  needsClassification: boolean
+}
+
+export const receiptsApi = {
+  upload: (file: Blob, fileName: string, channel: ReceiptChannel = 'App') => {
+    const form = new FormData()
+    form.append('file', file, fileName)
+    form.append('channel', channel)
+    return apiFormData<ReceiptIntake>('/receipts', form)
+  },
+  get: (id: string) => apiFetch<ReceiptIntake>(`/receipts/${id}`),
+  categories: () => apiFetch<Category[]>('/receipts/categories'),
+  classify: (id: string, categoryCode: string) =>
+    apiFetch<ReceiptIntake>(`/receipts/${id}/classify`, json('POST', { categoryCode })),
+  confirm: (
+    id: string,
+    body: {
+      accountId?: string
+      categoryId?: string
+      amount?: number
+      occurredAt?: string
+      description?: string
+      confirmDuplicate?: boolean
+    },
+  ) => apiFetch<Entry>(`/receipts/${id}/confirm`, json('POST', body)),
 }
 
 /* ---------- Imports ---------- */

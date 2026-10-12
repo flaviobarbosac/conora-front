@@ -9,7 +9,6 @@ export type NavItem = {
 
 export const NAV_ITEMS: ReadonlyArray<NavItem> = [
   { to: '/', label: 'Início', short: 'Início', icon: 'home' },
-  { to: '/lancamentos', label: 'Lançamentos', short: 'Lançar', icon: 'list' },
   { to: '/raio-x', label: 'Raio-X', short: 'Raio-X', icon: 'budget' },
   { to: '/orcamento', label: 'Orçamento', short: 'Orçam.', icon: 'folder' },
   { to: '/relatorios', label: 'Relatórios', short: 'Mais', icon: 'search' },
@@ -17,7 +16,6 @@ export const NAV_ITEMS: ReadonlyArray<NavItem> = [
 
 export const CADASTROS_ITEMS: ReadonlyArray<NavItem> = [
   { to: '/contas', label: 'Contas', short: 'Contas', icon: 'card' },
-  { to: '/cartoes', label: 'Cartões', short: 'Cartões', icon: 'card' },
   { to: '/categorias', label: 'Categorias', short: 'Categorias', icon: 'folder' },
   { to: '/projetos', label: 'Projetos de vida', short: 'Projetos', icon: 'goal' },
   { to: '/patrimonio', label: 'Patrimônio', short: 'Patrim.', icon: 'wallet' },

@@ -69,7 +69,7 @@ export function buildRaioXHomeInsight(budget: Budget): RaioXHomeInsight {
     monthPercent,
     topDeviation: pickTopDeviation(cashSections),
     received: budget.receivedIncome,
-    /** Renda gastável do mês = receita − descontos (not diagnosis net). */
+    /** Renda gastável do mês = renda − descontos (not diagnosis net). */
     spendable: gastavel.actual > 0 ? gastavel.actual : gastavel.planned,
   }
 }
@@ -159,7 +159,7 @@ export function buildIncomePieSlices(budget: Budget): PieSlice[] {
   return slicesFromLines(budget.lines, (line) => line.section === 'Income')
 }
 
-/** Realized expense by section head (Descontos, Projeto de vida, Essencial, Social). */
+/** Realized expense by section head (Descontos, Projetos de vida, Essencial, Social). */
 export function buildExpensePieSlices(budget: Budget): PieSlice[] {
   const bySection = new Map(budget.sections.map((block) => [block.section, block]))
   const parts = EXPENSE_SECTIONS.map((section) => {
@@ -183,8 +183,8 @@ export function buildExpensePieSlices(budget: Budget): PieSlice[] {
 
 /**
  * Horizontal compare:
- * - Receita: realizado / orçado da renda
- * - Despesa: somatório das despesas realizadas / renda gastável (receita − descontos)
+ * - Renda: realizado / orçado da renda
+ * - Despesa: somatório das despesas realizadas / renda gastável (renda − descontos)
  */
 export function buildIncomeExpenseCompare(budget: Budget): CompareBar[] {
   const incomeBlock = budget.sections.find((block) => block.section === 'Income')
@@ -218,7 +218,7 @@ export function buildIncomeExpenseCompare(budget: Budget): CompareBar[] {
   }
 
   return [
-    bar('income', 'Receita', incomePlanned, incomeActual, 'Income'),
+    bar('income', 'Renda', incomePlanned, incomeActual, 'Income'),
     bar('expense', 'Despesa', spendable, expenseActual, 'Expense'),
   ].filter((item) => item.planned > 0 || item.actual > 0)
 }

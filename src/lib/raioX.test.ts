@@ -10,6 +10,7 @@ import {
   monthsEndingAt,
   progressPercent,
   progressTone,
+  monthBalanceActual,
   spendableIncomeBox,
   sumBranch,
   variationPercent,
@@ -158,7 +159,7 @@ describe('patrimonyStockMap', () => {
 describe('sectionRealized', () => {
   it('matches the tree root and ignores planned and diagnosis net', () => {
     const salary = account({ id: 'salary', parentId: 'income', name: 'Salário', level: 'Analytical', section: 'Income' })
-    const income = account({ id: 'income', parentId: null, name: 'Receita', level: 'Root', section: 'Income' })
+    const income = account({ id: 'income', parentId: null, name: 'Renda', level: 'Root', section: 'Income' })
     const inss = account({ id: 'inss', parentId: 'discount', name: 'INSS', level: 'Analytical', section: 'Discount' })
     const discount = account({ id: 'discount', parentId: null, name: 'Desconto', level: 'Root', section: 'Discount' })
     const byParent = groupAccountsByParent([income, salary, discount, inss])
@@ -175,7 +176,7 @@ describe('sectionRealized', () => {
   it('finds section heads under Orçamento / Despesa masters', () => {
     const budget = account({ id: 'budget', parentId: null, name: 'Orçamento', level: 'Root', section: 'Budget' })
     const expense = account({ id: 'expense', parentId: 'budget', name: 'Despesa', level: 'Group', section: 'Expense' })
-    const income = account({ id: 'income', parentId: 'budget', name: 'Receita', level: 'Group', section: 'Income' })
+    const income = account({ id: 'income', parentId: 'budget', name: 'Renda', level: 'Group', section: 'Income' })
     const salary = account({ id: 'salary', parentId: 'income', name: 'Salário', level: 'Analytical', section: 'Income' })
     const discount = account({
       id: 'discount',
@@ -209,7 +210,7 @@ describe('spendableIncomeBox', () => {
       sections: [
         {
           section: 'Income',
-          name: 'Receita',
+          name: 'Renda',
           plannedAmount: 5000,
           actualAmount: 4000,
           percentOfSpendable: null,
@@ -263,5 +264,9 @@ describe('aggregateYearMonths', () => {
     )
     expect(maps.planned.get('a')).toBe(150)
     expect(maps.actual.get('a')).toBe(50)
+  })
+
+  it('computes saldo do mês without double-counting discounts', () => {
+    expect(monthBalanceActual(10_000, 2_000, 1_000, 4_000, 500)).toBe(2_500)
   })
 })

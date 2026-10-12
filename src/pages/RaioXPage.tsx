@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
+  accountsApi,
   budgetsApi,
   categoriesApi,
   entriesApi,
@@ -23,12 +24,13 @@ import { useLoad } from '../hooks/useLoad'
 import { categoryLabel } from '../lib/categoryLabel'
 import { compareCategorySiblings, isCashFlowSection, isPatrimonySection } from '../lib/categoryOrder'
 import { buildBudgetMacroBars } from '../lib/homeInsights'
-import { currentCompetence, formatCompetence, formatMoney, formatPercent } from '../lib/format'
+import { currentCompetence, formatCompetence, formatMoney, formatPercent, shiftCompetence } from '../lib/format'
 import {
   aggregateYearMonths,
   buildAmountMaps,
   focusSections,
   groupAccountsByParent,
+  monthBalanceActual,
   monthsEndingAt,
   patrimonyRootAmounts,
   patrimonyStockMap,
@@ -44,7 +46,8 @@ import {
 } from '../lib/raioX'
 import styles from './page.module.css'
 
-const PERIODS = [1, 2, 6, 12] as const
+const MONTHS_MIN = 1
+const MONTHS_MAX = 24
 
 function focusClass(section: CategorySection, highlighted: CategorySection[]): string {
   if (!highlighted.includes(section)) {
@@ -138,19 +141,24 @@ export function RaioXPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const focusSection = parseSectionParam(searchParams.get('section'))
   const [ym, setYm] = useState(currentCompetence)
-  const [months, setMonths] = useState<(typeof PERIODS)[number]>(1)
+  const [months, setMonths] = useState(MONTHS_MIN)
   const [focus, setFocus] = useState<RaioXFocus>(null)
   const [open, setOpen] = useState<Set<string>>(() => new Set())
 
   const monthList = useMemo(() => monthsEndingAt(ym, months), [ym, months])
   const yearNums = useMemo(() => yearsNeededForMonths(monthList), [monthList])
+  const yearKey = yearNums.join(',')
 
+  const previousYm = useMemo(() => shiftCompetence(ym, -1), [ym])
   const budget = useLoad(() => budgetsApi.get(ym), [ym])
-  const yearA = useLoad(() => budgetsApi.getYear(yearNums[0]!), [yearNums[0]])
-  const yearB = useLoad(
-    () => (yearNums[1] != null ? budgetsApi.getYear(yearNums[1]) : Promise.resolve(null)),
-    [yearNums[1]],
+  const yearsBudget = useLoad(
+    () =>
+      months <= 1
+        ? Promise.resolve([] as BudgetYear[])
+        : Promise.all(yearNums.map((year) => budgetsApi.getYear(year))),
+    [months, yearKey],
   )
+  const previousCash = useLoad(() => accountsApi.cashBalanceAtEndOfMonth(previousYm), [previousYm])
   const accounts = useLoad(() => categoriesApi.list(undefined, false, false), [])
   const patrimony = useLoad(() => patrimonyApi.get(), [])
   const projects = useLoad(() => projectsApi.list(), [])
@@ -181,15 +189,8 @@ export function RaioXPage() {
     if (months === 1) {
       return buildAmountMaps(budget.data?.lines ?? [])
     }
-    const years: BudgetYear[] = []
-    if (yearA.data) {
-      years.push(yearA.data)
-    }
-    if (yearB.data) {
-      years.push(yearB.data)
-    }
-    return aggregateYearMonths(years, monthList)
-  }, [months, budget.data, yearA.data, yearB.data, monthList])
+    return aggregateYearMonths(yearsBudget.data ?? [], monthList)
+  }, [months, budget.data, yearsBudget.data, monthList])
 
   const incomeHead = useMemo(() => sectionHead(list, 'Income'), [list])
   const expenseHead = useMemo(
@@ -279,7 +280,7 @@ export function RaioXPage() {
           next.add(id)
         }
       }
-      // Keep path from root so the head is visible under Receita/Despesa/Patrimônio.
+      // Keep path from root so the head is visible under Renda/Despesa/Patrimônio.
       for (const root of rootRows) {
         if (root.id === head.id || ancestorIds(head.id, list).includes(root.id)) {
           next.add(root.id)
@@ -342,8 +343,19 @@ export function RaioXPage() {
 
   const data = budget.data
   const highlighted = focusSections(focus)
-  const loadingRange = months > 1 && ((yearA.loading && !yearA.data) || (yearNums[1] != null && yearB.loading && !yearB.data))
+  const loadingRange = months > 1 && yearsBudget.loading && !yearsBudget.data
+  const incomeActual = sectionRealized(byParent, actual, 'Income', list)
+  const discountActual = sectionRealized(byParent, actual, 'Discount', list)
   const lifeActual = sectionRealized(byParent, actual, 'LifeProject', list)
+  const essentialActual = sectionRealized(byParent, actual, 'Essential', list)
+  const socialActual = sectionRealized(byParent, actual, 'Social', list)
+  const monthBalance = monthBalanceActual(
+    incomeActual,
+    discountActual,
+    lifeActual,
+    essentialActual,
+    socialActual,
+  )
 
   return (
     <div className={styles.page} onClick={clearFocus}>
@@ -353,38 +365,52 @@ export function RaioXPage() {
         actions={
           <>
             <CompetencePicker value={ym} onChange={setYm} />
-            <div className={styles.periodSeg} role="group" aria-label="Período">
-              {PERIODS.map((count) => (
-                <button
-                  key={count}
-                  type="button"
-                  aria-pressed={months === count}
-                  onClick={() => setMonths(count)}
-                >
-                  {count === 1 ? '1 mês' : `${count} meses`}
-                </button>
-              ))}
-            </div>
+            <label className={styles.periodSlider} onClick={(event) => event.stopPropagation()}>
+              <span className={styles.periodSliderValue}>
+                {months === 1 ? 'Último mês' : `Últimos ${months} meses`}
+              </span>
+              <span className={styles.periodSliderEnds} aria-hidden>
+                {MONTHS_MIN}
+              </span>
+              <input
+                type="range"
+                min={MONTHS_MIN}
+                max={MONTHS_MAX}
+                step={1}
+                value={months}
+                aria-label="Meses a analisar"
+                aria-valuemin={MONTHS_MIN}
+                aria-valuemax={MONTHS_MAX}
+                aria-valuenow={months}
+                aria-valuetext={months === 1 ? 'Último mês' : `Últimos ${months} meses`}
+                onChange={(event) => setMonths(Number(event.target.value))}
+              />
+              <span className={styles.periodSliderEnds} aria-hidden>
+                {MONTHS_MAX}
+              </span>
+            </label>
           </>
         }
       />
       <ErrorText
         message={
           budget.error ??
+          previousCash.error ??
           accounts.error ??
           patrimony.error ??
           projects.error ??
           entries.error ??
-          yearA.error ??
-          yearB.error
+          yearsBudget.error
         }
       />
       {(budget.loading && !data) || loadingRange ? <Loading /> : null}
       {data ? (
         <RaioXHero
-          incomeActual={sectionRealized(byParent, actual, 'Income', list)}
-          discountActual={sectionRealized(byParent, actual, 'Discount', list)}
+          previousMonthBalance={previousCash.data?.balance ?? 0}
+          incomeActual={incomeActual}
+          discountActual={discountActual}
           lifeActual={lifeActual}
+          monthBalance={monthBalance}
           focus={focus}
           onFocus={toggleFocus}
           months={months}
@@ -660,17 +686,21 @@ function RaioXAccountBlock({
 }
 
 function RaioXHero({
+  previousMonthBalance,
   incomeActual,
   discountActual,
   lifeActual,
+  monthBalance,
   focus,
   onFocus,
   months,
   ym,
 }: {
+  previousMonthBalance: number
   incomeActual: number
   discountActual: number
   lifeActual: number
+  monthBalance: number
   focus: RaioXFocus
   onFocus: (next: RaioXFocus) => void
   months: number
@@ -684,14 +714,21 @@ function RaioXHero({
       <div className={styles.heroTop}>
         <span>Raio-X · {periodLabel}</span>
       </div>
-      <div className={styles.heroCards} aria-label="Indicadores do Raio-X">
+      <div className={`${styles.heroCards} ${styles.heroCardsRaioX}`} aria-label="Indicadores do Raio-X">
+        <div className={`${styles.heroCard} ${styles.heroCardStatic}`}>
+          <span>Saldo do mês anterior</span>
+          <strong className={`${styles.moneyValue} ${previousMonthBalance < 0 ? styles.negative : ''}`}>
+            {formatMoney(previousMonthBalance)}
+          </strong>
+          <span className={styles.muted}>Caixa ao fim do mês anterior</span>
+        </div>
         <button
           type="button"
           className={`${styles.heroCard} ${focus === 'income' ? styles.heroCardIncomeActive : ''}`}
           aria-pressed={focus === 'income'}
           onClick={() => onFocus('income')}
         >
-          <span>Receita recebida</span>
+          <span>Renda recebida</span>
           <strong className={styles.moneyValue}>{formatMoney(incomeActual)}</strong>
         </button>
         <button
@@ -713,7 +750,7 @@ function RaioXHero({
           <strong className={`${styles.moneyValue} ${gastavel < 0 ? styles.negative : ''}`}>
             {formatMoney(gastavel)}
           </strong>
-          <span className={styles.muted}>Receita recebida − descontos realizados</span>
+          <span className={styles.muted}>Renda recebida − descontos realizados</span>
         </button>
         <button
           type="button"
@@ -721,12 +758,19 @@ function RaioXHero({
           aria-pressed={focus === 'life'}
           onClick={() => onFocus('life')}
         >
-          <span>Projeto de vida</span>
+          <span>Projetos de vida</span>
           <strong className={styles.moneyValue}>{formatMoney(lifeActual)}</strong>
           <span className={styles.muted}>
             {months === 1 ? 'Separado neste mês' : `Separado em ${months} meses`}
           </span>
         </button>
+        <div className={`${styles.heroCard} ${styles.heroCardStatic}`}>
+          <span>Saldo do mês</span>
+          <strong className={`${styles.moneyValue} ${monthBalance < 0 ? styles.negative : ''}`}>
+            {formatMoney(monthBalance)}
+          </strong>
+          <span className={styles.muted}>Renda − descontos − projetos − essencial − social</span>
+        </div>
       </div>
     </section>
   )

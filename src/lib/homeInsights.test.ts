@@ -99,7 +99,7 @@ describe('buildRaioXHomeInsight', () => {
         spendableIncome: 9999,
         receivedIncome: 1000,
         sections: [
-          section('Receita', 5000, 1000, 'Income'),
+          section('Renda', 5000, 1000, 'Income'),
           section('Desconto', 200, 100, 'Discount'),
         ],
       }),
@@ -145,7 +145,7 @@ describe('buildBudgetMacroBars', () => {
         sections: [
           section('Ativo', 999, 999, 'Asset'),
           section('Essencial', 100, 50, 'Essential'),
-          section('Receita', 200, 100, 'Income'),
+          section('Renda', 200, 100, 'Income'),
         ],
       }),
     )
@@ -221,7 +221,7 @@ describe('home realized pies and compare', () => {
           section('Descontos', 0, 50, 'Discount'),
           section('Essencial', 0, 150, 'Essential'),
           section('Social', 0, 100, 'Social'),
-          section('Receita', 0, 999, 'Income'),
+          section('Renda', 0, 999, 'Income'),
         ],
       }),
     )
@@ -236,14 +236,14 @@ describe('home realized pies and compare', () => {
         totalActual: 1500,
         receivedIncome: 1000,
         sections: [
-          section('Receita', 2000, 1000, 'Income'),
+          section('Renda', 2000, 1000, 'Income'),
           section('Descontos', 100, 100, 'Discount'),
           section('Essencial', 400, 400, 'Essential'),
           section('Social', 100, 100, 'Social'),
         ],
       }),
     )
-    // Receita: 1000 / 2000 = 50%
+    // Renda: 1000 / 2000 = 50%
     expect(bars[0]).toMatchObject({ key: 'income', planned: 2000, actual: 1000, progressPct: 50 })
     // Despesa: (100+400+100) / renda gastável (1000-100) = 600/900 = 66.6…%
     expect(bars[1]).toMatchObject({ key: 'expense', planned: 900, actual: 600 })

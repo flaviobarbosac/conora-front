@@ -38,7 +38,29 @@ async function fromSendIntent(): Promise<PendingShare | null> {
   }
 }
 
+async function fromIosAppGroup(): Promise<PendingShare | null> {
+  try {
+    const { ConoraShare } = await import('./conoraShare')
+    const result = await ConoraShare.consumePendingShare()
+    if (!result?.found || !result.dataUrl) {
+      return null
+    }
+    return {
+      fileName: result.fileName || 'recibo.jpg',
+      mimeType: result.mimeType || 'image/jpeg',
+      dataUrl: result.dataUrl,
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function consumeIncomingShare(): Promise<PendingShare | null> {
+  const fromIos = await fromIosAppGroup()
+  if (fromIos) {
+    setPendingShare(fromIos)
+    return fromIos
+  }
   const fromCache = await fromShareCache()
   if (fromCache) {
     setPendingShare(fromCache)

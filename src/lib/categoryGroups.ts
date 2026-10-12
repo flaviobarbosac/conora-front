@@ -14,7 +14,7 @@ export type CategoryGroup = {
 /**
  * Groups analytical options under their synthetic (Group) parent.
  * Group/Root accounts passed in `options` appear as selectable items under their section label
- * (used by the Conta filter: Orçamento, Receita, Despesa…).
+ * (used by the Conta filter: Orçamento, Renda, Despesa…).
  */
 export function groupCategories(options: Category[], tree: Category[]): CategoryGroup[] {
   const byId = new Map(tree.map((account) => [account.id, account]))

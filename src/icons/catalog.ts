@@ -63,7 +63,7 @@ export const ICON_CATALOG: Record<IconName, IconDef> = {
     accent: ['M12 8v8', 'M8 12h8'],
   },
   income: {
-    label: 'Receita',
+    label: 'Renda',
     base: ['M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4'],
     accent: ['M12 4v11', 'M7 10l5 5 5-5'],
   },

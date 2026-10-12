@@ -167,7 +167,7 @@ export function ProjectsPage() {
             aria-pressed={horizonte === horizon.key}
             onClick={() => setHorizonFilter(horizon.key)}
           >
-            {horizon.label.replace(' prazo', '')}
+            {horizon.label}
           </button>
         ))}
       </div>

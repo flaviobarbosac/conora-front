@@ -26,7 +26,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        // Share Extension stores the image in the App Group; keep it until JS consumes via ConoraSharePlugin.
+        if let defaults = UserDefaults(suiteName: "group.br.com.conora.app"),
+           defaults.data(forKey: "pendingShareImage") != nil {
+            NotificationCenter.default.post(name: Notification.Name("ConoraPendingShareReady"), object: nil)
+        }
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
