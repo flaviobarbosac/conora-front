@@ -183,7 +183,7 @@ function DraftRow({
     )
   }
 
-  const kind = payload.type === 'Income' ? 'Receita' : 'Despesa'
+  const kind = payload.type === 'Income' ? 'Renda' : 'Despesa'
 
   return (
     <li className={styles.section}>

@@ -112,7 +112,7 @@ export function discountTotals(budget: Budget): RaioXTotals {
   return sectionPlannedActual(budget, 'Discount')
 }
 
-/** Renda gastável = receita − descontos (never negative). */
+/** Renda gastável = renda − descontos (never negative). */
 export function spendableIncomeBox(budget: Budget): { planned: number; actual: number } {
   const incomePlannedValue = incomePlanned(budget)
   const incomeActual = Math.abs(budget.receivedIncome)
@@ -121,6 +121,20 @@ export function spendableIncomeBox(budget: Budget): { planned: number; actual: n
     planned: Math.max(0, incomePlannedValue - discount.planned),
     actual: Math.max(0, incomeActual - discount.actual),
   }
+}
+
+/**
+ * Saldo do mês = renda − descontos − projetos − essencial − social.
+ * Equals renda gastável − (projetos + essencial + social). Does not include prior cash balance.
+ */
+export function monthBalanceActual(
+  incomeActual: number,
+  discountActual: number,
+  lifeActual: number,
+  essentialActual: number,
+  socialActual: number,
+): number {
+  return incomeActual - discountActual - lifeActual - essentialActual - socialActual
 }
 
 export function monthsEndingAt(endYm: string, count: number): string[] {
@@ -192,7 +206,7 @@ export function isBudgetEditableSection(section: CategorySection): boolean {
   return isCashFlowSection(section)
 }
 
-/** Head account of a posting section (Receita, Descontos…), not nested under the same section. */
+/** Head account of a posting section (Renda, Descontos…), not nested under the same section. */
 export function sectionHead(
   accounts: Category[],
   section: CategorySection,

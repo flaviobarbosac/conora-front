@@ -78,11 +78,11 @@ export function sectionLabel(section: CategorySection): string {
     case 'Patrimony':
       return 'Patrimônio'
     case 'Income':
-      return 'Receita'
+      return 'Renda'
     case 'Discount':
       return 'Descontos'
     case 'LifeProject':
-      return 'Projeto de vida'
+      return 'Projetos de vida'
     case 'Essential':
       return 'Essencial'
     case 'Social':

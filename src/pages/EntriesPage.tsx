@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   entriesApi,
+  receiptsApi,
   type Category,
   type Entry,
   type EntryInput,
   type EntryType,
   type EntryUpdateInput,
+  type ReceiptIntake,
 } from '../api/finance'
+import { ReceiptClassifyDialog } from '../components/ReceiptClassifyDialog'
 import { CASH_FLOW_SECTIONS, isCashFlowSection } from '../lib/categoryOrder'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
@@ -35,14 +38,29 @@ import {
   todayInput,
 } from '../lib/format'
 import { isNativeApp } from '../lib/platform'
-import { peekPendingShare } from '../share/pendingShare'
+import { peekPendingShare, takePendingShare } from '../share/pendingShare'
+import {
+  peekPendingIntakeId,
+  pollReceipt,
+  setPendingIntakeId,
+  takePendingIntakeId,
+  uploadPendingShare,
+} from '../lib/receiptFlow'
 import styles from './page.module.css'
+
+type ReceiptPrefill = {
+  description: string
+  amount: string
+  date: string
+  categoryId: string
+  accountId: string
+}
 
 type FormType = Extract<EntryType, 'Expense' | 'Income' | 'Transfer'>
 
 const TYPE_LABEL: Record<EntryType, string> = {
   Expense: 'Despesa',
-  Income: 'Receita',
+  Income: 'Renda',
   Transfer: 'Transferência',
   Contribution: 'Aporte',
   CardPayment: 'Pagamento de fatura',
@@ -78,8 +96,62 @@ export function EntriesPage() {
   const [editing, setEditing] = useState<Entry | null>(null)
   const [formDirty, setFormDirty] = useState(false)
   const [openError, setOpenError] = useState<string | null>(null)
+  const [receiptBusy, setReceiptBusy] = useState(false)
+  const [classifyOpen, setClassifyOpen] = useState(false)
+  const [receiptIntake, setReceiptIntake] = useState<ReceiptIntake | null>(null)
+  const [receiptPrefill, setReceiptPrefill] = useState<ReceiptPrefill | null>(null)
+  const [receiptIntakeId, setReceiptIntakeId] = useState<string | null>(null)
 
   useRegisterDirty('entries-form', showForm && formDirty)
+
+  function applyIntakeToForm(intake: ReceiptIntake) {
+    setReceiptIntake(intake)
+    setReceiptIntakeId(intake.id)
+    setPendingIntakeId(intake.id)
+    setReceiptPrefill({
+      description: intake.extractedName ?? 'Recibo',
+      amount: intake.extractedAmount != null ? formatMoneyInput(intake.extractedAmount) : '',
+      date: intake.extractedOccurredAt ? toDateInput(intake.extractedOccurredAt) : todayInput(),
+      categoryId: intake.proposedCategoryId ?? '',
+      accountId: intake.selectedBankAccountId ?? '',
+    })
+    setEditing(null)
+    setShowForm(true)
+    setFormDirty(false)
+  }
+
+  async function bootstrapReceipt(channel: 'App' | 'ShareTarget' = 'App') {
+    if (receiptBusy) return
+    setReceiptBusy(true)
+    setOpenError(null)
+    try {
+      let intakeId = peekPendingIntakeId()
+      if (!intakeId) {
+        const share = peekPendingShare()
+        if (!share) {
+          return
+        }
+        const created = await uploadPendingShare(share, channel)
+        intakeId = created.id
+      }
+      const intake = await pollReceipt(intakeId)
+      if (intake.status === 'Failed') {
+        setOpenError(intake.failureReason ?? 'Não foi possível ler o recibo.')
+        return
+      }
+      if (intake.needsClassification || intake.status === 'NeedsClassification') {
+        setReceiptIntake(intake)
+        setClassifyOpen(true)
+        setShowForm(true)
+        return
+      }
+      applyIntakeToForm(intake)
+    } catch (error) {
+      setOpenError(error instanceof Error ? error.message : 'Falha ao processar o recibo.')
+    } finally {
+      setReceiptBusy(false)
+    }
+  }
 
   async function changeYm(next: string) {
     if (next === ym) {
@@ -130,12 +202,19 @@ export function EntriesPage() {
   useEffect(() => {
     const next = new URLSearchParams(searchParams)
     let changed = false
+    const isRecibo = searchParams.get('recibo') === '1'
 
     if (searchParams.get('novo') === '1') {
       setEditing(null)
       setShowForm(true)
       next.delete('novo')
       changed = true
+    }
+
+    if (isRecibo) {
+      next.delete('recibo')
+      changed = true
+      void bootstrapReceipt(searchParams.get('canal') === 'share' ? 'ShareTarget' : 'App')
     }
 
     const competenceYm = searchParams.get('competenceYm')
@@ -184,6 +263,7 @@ export function EntriesPage() {
     if (changed) {
       setSearchParams(next, { replace: true })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bootstrap once per URL flag
   }, [searchParams, setSearchParams])
 
   const lookups = useLookups()
@@ -293,10 +373,15 @@ export function EntriesPage() {
         }
       />
 
+      {receiptBusy ? <p className={styles.muted}>Lendo o recibo…</p> : null}
+      <ErrorText message={openError} />
+
       {showForm ? (
         <EntryForm
-          key={editing?.id ?? 'new'}
+          key={editing?.id ?? receiptIntakeId ?? 'new'}
           initial={editing}
+          receiptPrefill={editing ? null : receiptPrefill}
+          receiptIntakeId={editing ? null : receiptIntakeId}
           accounts={lookups.accounts.map((account) => ({ id: account.id, name: account.name }))}
           categories={lookups.cashFlowAccounts}
           tree={lookups.categories}
@@ -306,11 +391,25 @@ export function EntriesPage() {
             setFormDirty(false)
             setShowForm(false)
             setEditing(null)
+            setReceiptPrefill(null)
+            setReceiptIntakeId(null)
+            takePendingIntakeId()
+            takePendingShare()
             entries.reload()
             lookups.reloadAccounts()
           }}
         />
       ) : null}
+
+      <ReceiptClassifyDialog
+        open={classifyOpen}
+        intake={receiptIntake}
+        onClose={() => setClassifyOpen(false)}
+        onClassified={(intake) => {
+          setClassifyOpen(false)
+          applyIntakeToForm(intake)
+        }}
+      />
 
       <section className={styles.section}>
         <form
@@ -390,6 +489,8 @@ export function EntriesPage() {
 
 type FormProps = {
   initial: Entry | null
+  receiptPrefill?: ReceiptPrefill | null
+  receiptIntakeId?: string | null
   accounts: { id: string; name: string }[]
   categories: Category[]
   tree: Category[]
@@ -408,39 +509,55 @@ function matchesEntryType(section: string, type: FormType): boolean {
   return isCashFlowSection(section as Category['section']) && section !== 'Income'
 }
 
-function EntryForm({ initial, accounts, categories, tree, onDirtyChange, onCancel, onSaved }: FormProps) {
+function EntryForm({
+  initial,
+  receiptPrefill,
+  receiptIntakeId,
+  accounts,
+  categories,
+  tree,
+  onDirtyChange,
+  onCancel,
+  onSaved,
+}: FormProps) {
   const editing = initial !== null
   const [type, setType] = useState<FormType>(() =>
     initial && isEditableType(initial.type) ? initial.type : 'Expense',
   )
-  const [amount, setAmount] = useState(() => (initial ? formatMoneyInput(initial.amount) : ''))
-  const [date, setDate] = useState(() => (initial ? toDateInput(initial.occurredAt) : todayInput()))
+  const [amount, setAmount] = useState(() =>
+    initial ? formatMoneyInput(initial.amount) : (receiptPrefill?.amount ?? ''),
+  )
+  const [date, setDate] = useState(() =>
+    initial ? toDateInput(initial.occurredAt) : (receiptPrefill?.date ?? todayInput()),
+  )
   const pendingReceipt = !editing ? peekPendingShare() : null
   const [description, setDescription] = useState(() =>
     initial
       ? initial.description
-      : pendingReceipt
-        ? pendingReceipt.fileName.replace(/\.[^.]+$/, '')
-        : '',
+      : (receiptPrefill?.description ??
+        (pendingReceipt ? pendingReceipt.fileName.replace(/\.[^.]+$/, '') : '')),
   )
   const [receiptPreview] = useState(pendingReceipt?.dataUrl ?? '')
-  const [accountId, setAccountId] = useState(() => initial?.accountId ?? '')
+  const [accountId, setAccountId] = useState(
+    () => initial?.accountId ?? receiptPrefill?.accountId ?? '',
+  )
   const [contraAccountId, setContraAccountId] = useState(() => initial?.contraAccountId ?? '')
-  const [categoryId, setCategoryId] = useState(() => initial?.categoryId ?? '')
+  const [categoryId, setCategoryId] = useState(
+    () => initial?.categoryId ?? receiptPrefill?.categoryId ?? '',
+  )
   const action = useAction()
 
   const baseline = {
     type: (initial && isEditableType(initial.type) ? initial.type : 'Expense') as FormType,
-    amount: initial ? formatMoneyInput(initial.amount) : '',
-    date: initial ? toDateInput(initial.occurredAt) : todayInput(),
+    amount: initial ? formatMoneyInput(initial.amount) : (receiptPrefill?.amount ?? ''),
+    date: initial ? toDateInput(initial.occurredAt) : (receiptPrefill?.date ?? todayInput()),
     description: initial
       ? initial.description
-      : pendingReceipt
-        ? pendingReceipt.fileName.replace(/\.[^.]+$/, '')
-        : '',
-    accountId: initial?.accountId ?? '',
+      : (receiptPrefill?.description ??
+        (pendingReceipt ? pendingReceipt.fileName.replace(/\.[^.]+$/, '') : '')),
+    accountId: initial?.accountId ?? receiptPrefill?.accountId ?? '',
     contraAccountId: initial?.contraAccountId ?? '',
-    categoryId: initial?.categoryId ?? '',
+    categoryId: initial?.categoryId ?? receiptPrefill?.categoryId ?? '',
   }
 
   const kindCategories = categories.filter((category) => matchesEntryType(category.section, type))
@@ -507,6 +624,25 @@ function EntryForm({ initial, accounts, categories, tree, onDirtyChange, onCance
         confirmDuplicate,
       }
       if (await action.run(() => entriesApi.update(initial.id, input))) {
+        showSaveToast('Lançamento salvo.')
+        onSaved()
+      }
+      return
+    }
+
+    if (receiptIntakeId && type === 'Expense') {
+      if (
+        await action.run(() =>
+          receiptsApi.confirm(receiptIntakeId, {
+            amount: value,
+            occurredAt: dateToApi(date),
+            description: description.trim(),
+            accountId: accountId || undefined,
+            categoryId: categoryId || undefined,
+            confirmDuplicate,
+          }),
+        )
+      ) {
         showSaveToast('Lançamento salvo.')
         onSaved()
       }

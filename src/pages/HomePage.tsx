@@ -10,6 +10,7 @@ import {
   type LifeProject,
   type PatrimonySummary,
 } from '../api/finance'
+import { scanReceipt } from '../camera/scanReceipt'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -59,6 +60,16 @@ export function HomePage() {
           <>
             <CompetencePicker value={ym} onChange={setYm} />
             <Button onClick={() => navigate('/lancamentos?novo=1')}>Novo lançamento</Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                void scanReceipt()
+                  .then(() => navigate('/lancamentos?novo=1&recibo=1'))
+                  .catch(() => undefined)
+              }}
+            >
+              Escanear recibo
+            </Button>
           </>
         }
       />
@@ -100,9 +111,9 @@ function HomeRealizedCharts({ budget, loading }: { budget: Budget | null | undef
   const compare = useMemo(() => (budget ? buildIncomeExpenseCompare(budget) : []), [budget])
 
   return (
-    <section className={styles.homeCharts} aria-label="Receita e despesa do mês">
+    <section className={styles.homeCharts} aria-label="Renda e despesa do mês">
       <div className={styles.homePieGrid}>
-        <PieCard title="Receita" slices={incomeSlices} loading={loading} empty="Sem receita neste mês." />
+        <PieCard title="Renda" slices={incomeSlices} loading={loading} empty="Sem renda neste mês." />
         <PieCard title="Despesa" slices={expenseSlices} loading={loading} empty="Sem despesa neste mês." />
       </div>
       <CompareCard bars={compare} loading={loading} />
@@ -167,10 +178,10 @@ function PieCard({
 
 function CompareCard({ bars, loading }: { bars: CompareBar[]; loading: boolean }) {
   return (
-    <section className={styles.macroCard} aria-label="Receita versus despesa">
+    <section className={styles.macroCard} aria-label="Renda versus despesa">
       <div className={styles.macroHead}>
-        <strong>Receita × despesa</strong>
-        <span className={styles.macroHeadMeta}>Receita: % do orçado · Despesa: % da renda gastável</span>
+        <strong>Renda × despesa</strong>
+        <span className={styles.macroHeadMeta}>Renda: % do orçado · Despesa: % da renda gastável</span>
       </div>
       {loading ? <Skeleton height={96} /> : null}
       {!loading && bars.length === 0 ? (
@@ -347,7 +358,7 @@ function ProjectsHomeTile({ projects, loading }: { projects: LifeProject[]; load
               to={`/projetos?horizonte=${horizon.key}`}
             >
               <span className={styles.homeHorizonMeta}>
-                <strong>{horizon.label.replace(' prazo', '')}</strong>
+                <strong>{horizon.label}</strong>
                 <span>{formatPercent(percent)}</span>
               </span>
               <span className={styles.progress} aria-hidden>

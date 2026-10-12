@@ -193,6 +193,8 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
   const [accountNumber, setAccountNumber] = useState('')
   const [checkDigit, setCheckDigit] = useState('')
   const [balance, setBalance] = useState('')
+  const [openingDate, setOpeningDate] = useState(todayInput)
+  const initialOpeningDate = useState(todayInput)[0]
   const action = useAction()
   const needsBank = kind !== 'Cash'
   useRegisterDirty(
@@ -203,7 +205,8 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
       agency.trim() !== '' ||
       accountNumber.trim() !== '' ||
       checkDigit.trim() !== '' ||
-      balance.trim() !== '',
+      balance.trim() !== '' ||
+      openingDate !== initialOpeningDate,
   )
 
   async function submit(event: FormEvent) {
@@ -213,12 +216,17 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
       action.setError('Saldo inicial inválido.')
       return
     }
+    if (!openingDate.trim()) {
+      action.setError('Informe a data do saldo inicial.')
+      return
+    }
     if (
       await action.run(() =>
         accountsApi.create({
           name: name.trim(),
           kind,
           openingBalance: opening,
+          openingBalanceAt: dateToApi(openingDate),
           bankCode: needsBank ? bankCode || undefined : undefined,
           agency: needsBank ? agency.trim() || undefined : undefined,
           accountNumber: needsBank ? accountNumber.trim() || undefined : undefined,
@@ -234,6 +242,7 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
       setAccountNumber('')
       setCheckDigit('')
       setBalance('')
+      setOpeningDate(todayInput())
       onSaved()
     }
   }
@@ -300,6 +309,15 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
           </>
         ) : null}
         <MoneyField label="Saldo inicial (R$)" name="openingBalance" value={balance} onChange={setBalance} />
+        <Field
+          label="Data do saldo inicial"
+          name="openingBalanceAt"
+          type="date"
+          required
+          value={openingDate}
+          max={todayInput()}
+          onChange={(event) => setOpeningDate(event.target.value)}
+        />
         <div className={styles.formWide}>
           <ErrorText message={action.error ?? banks.error} />
         </div>

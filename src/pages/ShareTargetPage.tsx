@@ -33,7 +33,8 @@ export function ShareTargetPage() {
     if (share) {
       setPendingShare(share)
     }
-    navigate(session ? '/lancamentos?novo=1&recibo=1' : '/login', { replace: true })
+    const next = '/lancamentos?novo=1&recibo=1&canal=share'
+    navigate(session ? next : `/login?returnTo=${encodeURIComponent(next)}`, { replace: true })
   }
 
   function dismiss() {
@@ -56,7 +57,7 @@ export function ShareTargetPage() {
         ) : null}
         <div className={styles.formActions}>
           <Button onClick={confirm} disabled={!share}>
-            Confirmar lançamento
+            Continuar
           </Button>
           <Button variant="secondary" onClick={dismiss}>
             Agora não
