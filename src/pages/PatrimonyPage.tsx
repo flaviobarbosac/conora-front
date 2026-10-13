@@ -87,36 +87,6 @@ export function PatrimonyPage() {
       {summary.loading && !data ? <Loading /> : null}
       {data ? (
         <>
-          <section className={styles.hero}>
-            <div className={styles.heroTop}>
-              <span>Composição</span>
-            </div>
-            <div className={styles.heroCards} aria-label="Saldos de patrimônio">
-              <div className={styles.heroCard}>
-                <span>Ativo</span>
-                <strong className={`${styles.moneyValue} ${styles.positive}`}>
-                  {formatMoney(data.assetsTotal)}
-                </strong>
-                <span className={styles.muted}>
-                  Uso {formatMoney(data.assetsInUse)} · não uso {formatMoney(data.assetsNotInUse)}
-                </span>
-              </div>
-              <div className={styles.heroCard}>
-                <span>Passivo</span>
-                <strong className={`${styles.moneyValue} ${styles.negative}`}>
-                  {formatMoney(data.liabilitiesTotal)}
-                </strong>
-                <span className={styles.muted}>Itens de passivo</span>
-              </div>
-              <div className={`${styles.heroCard} ${styles.heroCardPatrimonyActive}`}>
-                <span>Patrimônio líquido</span>
-                <strong className={`${styles.moneyValue} ${data.netWorth < 0 ? styles.negative : ''}`}>
-                  {formatMoney(data.netWorth)}
-                </strong>
-                <span className={styles.muted}>Ativo − passivo</span>
-              </div>
-            </div>
-          </section>
           {data.groups.length > 0 ? (
             <section className={styles.section}>
               <h2 className={styles.sectionTitle}>Totais por grupo</h2>
