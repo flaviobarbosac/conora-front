@@ -25,7 +25,7 @@ import { useLookups } from '../hooks/useLookups'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
-import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
+import { currentCompetence, formatDate, formatMoney, parseMoney } from '../lib/format'
 import styles from './page.module.css'
 
 const KIND_LABEL: Record<AccountKind, string> = {
@@ -141,10 +141,7 @@ export function AccountsPage() {
             ) : null}
           </section>
 
-          <div className={styles.grid2}>
-            <AccountForm onSaved={refresh} />
-            <TransferForm accounts={activeAccounts} onSaved={refresh} />
-          </div>
+          <AccountForm onSaved={refresh} />
         </>
       ) : null}
 
@@ -192,9 +189,6 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
   const [agency, setAgency] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
   const [checkDigit, setCheckDigit] = useState('')
-  const [balance, setBalance] = useState('')
-  const [openingDate, setOpeningDate] = useState(todayInput)
-  const initialOpeningDate = useState(todayInput)[0]
   const action = useAction()
   const needsBank = kind !== 'Cash'
   useRegisterDirty(
@@ -204,29 +198,16 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
       bankCode !== '021' ||
       agency.trim() !== '' ||
       accountNumber.trim() !== '' ||
-      checkDigit.trim() !== '' ||
-      balance.trim() !== '' ||
-      openingDate !== initialOpeningDate,
+      checkDigit.trim() !== '',
   )
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    const opening = balance.trim() ? parseMoney(balance) : 0
-    if (!Number.isFinite(opening)) {
-      action.setError('Saldo inicial inválido.')
-      return
-    }
-    if (!openingDate.trim()) {
-      action.setError('Informe a data do saldo inicial.')
-      return
-    }
     if (
       await action.run(() =>
         accountsApi.create({
           name: name.trim(),
           kind,
-          openingBalance: opening,
-          openingBalanceAt: dateToApi(openingDate),
           bankCode: needsBank ? bankCode || undefined : undefined,
           agency: needsBank ? agency.trim() || undefined : undefined,
           accountNumber: needsBank ? accountNumber.trim() || undefined : undefined,
@@ -241,8 +222,6 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
       setAgency('')
       setAccountNumber('')
       setCheckDigit('')
-      setBalance('')
-      setOpeningDate(todayInput())
       onSaved()
     }
   }
@@ -308,85 +287,12 @@ function AccountForm({ onSaved }: { onSaved: () => void }) {
             />
           </>
         ) : null}
-        <MoneyField label="Saldo inicial (R$)" name="openingBalance" value={balance} onChange={setBalance} />
-        <Field
-          label="Data do saldo inicial"
-          name="openingBalanceAt"
-          type="date"
-          required
-          value={openingDate}
-          max={todayInput()}
-          onChange={(event) => setOpeningDate(event.target.value)}
-        />
         <div className={styles.formWide}>
           <ErrorText message={action.error ?? banks.error} />
         </div>
         <div className={styles.formActions}>
           <Button type="submit" disabled={action.busy || (needsBank && banks.loading)}>
             Criar conta
-          </Button>
-        </div>
-      </form>
-    </section>
-  )
-}
-
-function TransferForm({ accounts, onSaved }: { accounts: Account[]; onSaved: () => void }) {
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
-  const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(todayInput)
-  const initialDate = useState(todayInput)[0]
-  const action = useAction()
-  useRegisterDirty(
-    'transfer-form',
-    from !== '' || to !== '' || amount.trim() !== '' || date !== initialDate,
-  )
-
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    const value = parseMoney(amount)
-    if (!Number.isFinite(value) || value <= 0) {
-      action.setError('Informe um valor maior que zero.')
-      return
-    }
-    if (await action.run(() => accountsApi.transfer(from, to, value, dateToApi(date)))) {
-      showSaveToast('Transferência registrada.')
-      setAmount('')
-      onSaved()
-    }
-  }
-
-  return (
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Transferir entre contas</h2>
-      <form className={styles.form} onSubmit={(event) => void submit(event)}>
-        <Select label="De" name="transferFrom" required value={from} onChange={(event) => setFrom(event.target.value)}>
-          <option value="">Selecione</option>
-          {accounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name}
-            </option>
-          ))}
-        </Select>
-        <Select label="Para" name="transferTo" required value={to} onChange={(event) => setTo(event.target.value)}>
-          <option value="">Selecione</option>
-          {accounts
-            .filter((account) => account.id !== from)
-            .map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-        </Select>
-        <MoneyField label="Valor (R$)" name="transferAmount" required value={amount} onChange={setAmount} />
-        <Field label="Data" name="transferDate" type="date" required value={date} onChange={(event) => setDate(event.target.value)} />
-        <div className={styles.formWide}>
-          <ErrorText message={action.error} />
-        </div>
-        <div className={styles.formActions}>
-          <Button type="submit" disabled={action.busy}>
-            Transferir
           </Button>
         </div>
       </form>

@@ -1,10 +1,9 @@
-import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { Link } from 'react-router-dom'
-import { categoriesApi, type Category, type CategorySection } from '../api/finance'
+import { useMemo, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react'
+import { categoriesApi, type Category } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
-import { SearchableSelect } from '../components/SearchableSelect'
 import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
+import { Icon } from '../components/ui/Icon'
 import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
@@ -13,41 +12,14 @@ import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import { categoryLabel } from '../lib/categoryLabel'
-import { acceptsAnalyticalChild, compareCategorySiblings, sectionLabel } from '../lib/categoryOrder'
+import { acceptsAnalyticalChild, compareCategorySiblings } from '../lib/categoryOrder'
+import { groupAccountsByParent } from '../lib/raioX'
 import styles from './page.module.css'
-
-function sectionHint(section: CategorySection): string {
-  switch (section) {
-    case 'Budget':
-      return 'o que entra e sai no mês'
-    case 'Expense':
-      return 'saídas do mês'
-    case 'Patrimony':
-      return 'o que você tem e o que deve'
-    case 'Income':
-      return 'o que entra (receita)'
-    case 'Discount':
-      return 'o que reduz a renda'
-    case 'LifeProject':
-      return 'o que você separa para o futuro'
-    case 'Essential':
-      return 'o que a casa precisa'
-    case 'Social':
-      return 'o que é escolha'
-    case 'Asset':
-      return 'o que você tem'
-    case 'Liability':
-      return 'o que você deve'
-    default:
-      return ''
-  }
-}
 
 export function CategoriesPage() {
   const accounts = useLoad(() => categoriesApi.list(undefined, true), [])
   const action = useAction()
-  const [query, setQuery] = useState('')
-  const [typeFilterId, setTypeFilterId] = useState('')
+  const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [draftParentId, setDraftParentId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
   const [renameId, setRenameId] = useState<string | null>(null)
@@ -59,15 +31,8 @@ export function CategoriesPage() {
   )
 
   const list = accounts.data ?? []
-  const byId = useMemo(() => new Map(list.map((item) => [item.id, item])), [list])
   const byParent = useMemo(() => {
-    const map = new Map<string | null, Category[]>()
-    for (const account of list) {
-      const key = account.parentId
-      const bucket = map.get(key) ?? []
-      bucket.push(account)
-      map.set(key, bucket)
-    }
+    const map = groupAccountsByParent(list)
     for (const bucket of map.values()) {
       bucket.sort(compareCategorySiblings)
     }
@@ -76,91 +41,17 @@ export function CategoriesPage() {
 
   const roots = useMemo(() => byParent.get(null) ?? [], [byParent])
 
-  const typeOptions = useMemo(() => {
-    return list
-      .filter((item) => item.level !== 'Analytical')
-      .map((item) => {
-        const parent = item.parentId ? byId.get(item.parentId) : null
-        return {
-          value: item.id,
-          label: item.name,
-          hint: parent ? parent.name : sectionHint(item.section) || undefined,
-        }
-      })
-      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
-  }, [list, byId])
-
-  const needle = query.trim().toLowerCase()
-  const matches = needle
-    ? new Set(
-        list
-          .filter((account) => categoryLabel(account).toLowerCase().includes(needle))
-          .map((account) => account.id),
-      )
-    : null
-
-  function isUnderTypeFilter(account: Category): boolean {
-    if (!typeFilterId) {
-      return true
-    }
-    if (account.id === typeFilterId) {
-      return true
-    }
-    let current: Category | undefined = account
-    while (current?.parentId) {
-      if (current.parentId === typeFilterId) {
-        return true
+  function toggle(id: string) {
+    setOpen((current) => {
+      const next = new Set(current)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
       }
-      current = byId.get(current.parentId)
-    }
-    return false
+      return next
+    })
   }
-
-  function isAncestorOfTypeFilter(account: Category): boolean {
-    if (!typeFilterId) {
-      return false
-    }
-    let current = byId.get(typeFilterId)
-    while (current) {
-      if (current.id === account.id) {
-        return true
-      }
-      current = current.parentId ? byId.get(current.parentId) : undefined
-    }
-    return false
-  }
-
-  function matchesTypeFilter(account: Category): boolean {
-    if (!typeFilterId) {
-      return true
-    }
-    return isUnderTypeFilter(account) || isAncestorOfTypeFilter(account)
-  }
-
-  function subtreeVisible(account: Category): boolean {
-    if (!matchesTypeFilter(account)) {
-      const hasMatchingDescendant = (id: string): boolean => {
-        const kids = byParent.get(id) ?? []
-        return kids.some((kid) => matchesTypeFilter(kid) || hasMatchingDescendant(kid.id))
-      }
-      if (!hasMatchingDescendant(account.id)) {
-        return false
-      }
-    }
-    if (!matches) {
-      return true
-    }
-    if (matches.has(account.id)) {
-      return true
-    }
-    const walk = (id: string): boolean => {
-      const children = byParent.get(id) ?? []
-      return children.some((child) => matches.has(child.id) || walk(child.id))
-    }
-    return walk(account.id)
-  }
-
-  const visibleRoots = roots.filter(subtreeVisible)
 
   async function createUnder(parentId: string) {
     const name = draftName.trim()
@@ -171,6 +62,7 @@ export function CategoriesPage() {
       showSaveToast('Categoria salva.')
       setDraftName('')
       setDraftParentId(null)
+      setOpen((current) => new Set(current).add(parentId))
       accounts.reload()
     }
   }
@@ -193,218 +85,263 @@ export function CategoriesPage() {
       return
     }
     if (await action.run(() => categoriesApi.remove(account.id))) {
+      showSaveToast('Categoria excluída.')
       accounts.reload()
     }
-  }
-
-  async function deactivate(account: Category) {
-    if (await action.run(() => categoriesApi.update(account.id, account.name, false))) {
-      showSaveToast('Categoria desativada.')
-      accounts.reload()
-    }
-  }
-
-  function renderAnalytical(account: Category) {
-    if (matches && !matches.has(account.id)) {
-      return null
-    }
-    if (typeFilterId && !isUnderTypeFilter(account) && account.id !== typeFilterId) {
-      return null
-    }
-    const renaming = renameId === account.id
-    return (
-      <li key={account.id} className={styles.row}>
-        <span className={styles.rowMain}>
-          {renaming ? (
-            <Field
-              label="Nome"
-              name={`rename-${account.id}`}
-              value={renameName}
-              onChange={(event) => setRenameName(event.target.value)}
-              onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault()
-                  void saveRename(account)
-                }
-                if (event.key === 'Escape') {
-                  setRenameId(null)
-                }
-              }}
-            />
-          ) : (
-            <>
-              <strong>{categoryLabel(account)}</strong>
-              {!account.isActive ? <span className={styles.rowSub}>Inativa</span> : null}
-            </>
-          )}
-        </span>
-        <span className={styles.rowEnd}>
-          {!account.isSystem && !renaming ? (
-            <>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setRenameId(account.id)
-                  setRenameName(account.name)
-                }}
-              >
-                Renomear
-              </Button>
-              {account.isActive ? (
-                <DeleteIconButton disabled={action.busy} onClick={() => void removeAccount(account)} />
-              ) : null}
-              {account.isActive ? (
-                <Button variant="ghost" disabled={action.busy} onClick={() => void deactivate(account)}>
-                  Desativar
-                </Button>
-              ) : null}
-            </>
-          ) : null}
-          {renaming ? (
-            <>
-              <Button onClick={() => void saveRename(account)}>Salvar</Button>
-              <Button variant="ghost" onClick={() => setRenameId(null)}>
-                Cancelar
-              </Button>
-            </>
-          ) : null}
-        </span>
-      </li>
-    )
-  }
-
-  function renderBranch(parent: Category, depth: number) {
-    const children = (byParent.get(parent.id) ?? []).filter((child) => {
-      if (!typeFilterId) {
-        return true
-      }
-      return matchesTypeFilter(child) || subtreeVisible(child)
-    })
-    const groups = children.filter((child) => child.level !== 'Analytical')
-    const leaves = children.filter((child) => child.level === 'Analytical')
-    const canAdd = acceptsAnalyticalChild(parent.section)
-
-    return (
-      <>
-        {groups.map((group) => {
-          if (!subtreeVisible(group)) {
-            return null
-          }
-          if (matches && !matches.has(group.id)) {
-            const walk = (id: string): boolean => {
-              const kids = byParent.get(id) ?? []
-              return kids.some((kid) => matches.has(kid.id) || walk(kid.id))
-            }
-            if (!walk(group.id)) {
-              return null
-            }
-          }
-          return (
-            <div key={group.id} className={styles.section} style={{ marginLeft: depth > 0 ? 12 : 0 }}>
-              <h3 className={styles.sectionTitle}>
-                {categoryLabel(group)}{' '}
-                <span className={styles.muted}>{sectionHint(group.section) || sectionLabel(group.section)}</span>
-              </h3>
-              {renderBranch(group, depth + 1)}
-            </div>
-          )
-        })}
-        {leaves.length > 0 ? (
-          <ul className={styles.list}>{leaves.map((leaf) => renderAnalytical(leaf))}</ul>
-        ) : null}
-        {canAdd ? (
-          draftParentId === parent.id ? (
-            <form
-              className={styles.form}
-              onSubmit={(event: FormEvent) => {
-                event.preventDefault()
-                void createUnder(parent.id)
-              }}
-            >
-              <Field
-                label="Nova categoria"
-                name={`new-${parent.id}`}
-                value={draftName}
-                autoFocus
-                onChange={(event) => setDraftName(event.target.value)}
-                onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
-                  if (event.key === 'Escape') {
-                    setDraftParentId(null)
-                    setDraftName('')
-                  }
-                }}
-              />
-              <div className={styles.formActions}>
-                <Button type="submit" disabled={action.busy || !draftName.trim()}>
-                  Salvar
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setDraftParentId(null)
-                    setDraftName('')
-                  }}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          ) : (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setDraftParentId(parent.id)
-                setDraftName('')
-              }}
-            >
-              Nova categoria
-            </Button>
-          )
-        ) : null}
-      </>
-    )
   }
 
   return (
     <div className={styles.page}>
       <PageHeader secondary title="Categorias" />
-      <p className={styles.muted}>
-        Orçamento é o mês (o que entra e sai). Patrimônio é o que você tem e o que deve. O lançamento entra na
-        categoria analítica; as de cima só somam. <Link to="/ajuda#categorias">Central de ajuda</Link>
-      </p>
-      <div className={styles.toolbar}>
-        <SearchableSelect
-          label="Tipo"
-          name="categoryType"
-          value={typeFilterId}
-          onChange={setTypeFilterId}
-          options={typeOptions}
-          emptyLabel="Todos"
-          searchPlaceholder="Ex.: orçamento, essencial, cuidados…"
-        />
-        <Field
-          label="Buscar"
-          name="categorySearch"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Ex.: aluguel, salário…"
-        />
-      </div>
       <ErrorText message={accounts.error ?? action.error} />
       {accounts.loading && !accounts.data ? <Loading /> : null}
       {!accounts.loading && roots.length === 0 ? <Empty>Nenhuma categoria.</Empty> : null}
-      {!accounts.loading && roots.length > 0 && visibleRoots.length === 0 ? (
-        <Empty>{needle || typeFilterId ? 'Nenhuma categoria encontrada.' : 'Escolha uma categoria.'}</Empty>
+      {roots.length > 0 ? (
+        <div className={styles.raioxList}>
+          <div className={`${styles.raioxRow} ${styles.raioxHead} ${styles.categoriesRow}`}>
+            <span />
+            <span>Categoria</span>
+            <span />
+          </div>
+          {roots.map((account) => (
+            <CategoryTreeRow
+              key={account.id}
+              account={account}
+              depth={0}
+              byParent={byParent}
+              open={open}
+              draftParentId={draftParentId}
+              draftName={draftName}
+              renameId={renameId}
+              renameName={renameName}
+              busy={action.busy}
+              onToggle={toggle}
+              onDraftParent={(parentId) => {
+                setDraftParentId(parentId)
+                setDraftName('')
+                setRenameId(null)
+                setOpen((current) => new Set(current).add(parentId))
+              }}
+              onDraftName={setDraftName}
+              onCancelDraft={() => {
+                setDraftParentId(null)
+                setDraftName('')
+              }}
+              onCreate={(parentId) => void createUnder(parentId)}
+              onStartRename={(item) => {
+                setRenameId(item.id)
+                setRenameName(item.name)
+                setDraftParentId(null)
+                setDraftName('')
+              }}
+              onRenameName={setRenameName}
+              onCancelRename={() => setRenameId(null)}
+              onSaveRename={(item) => void saveRename(item)}
+              onRemove={(item) => void removeAccount(item)}
+            />
+          ))}
+        </div>
       ) : null}
-      {visibleRoots.map((root) => (
-        <section key={root.id} className={styles.section}>
-          <h2 className={styles.sectionTitle}>
-            {categoryLabel(root)} <span className={styles.muted}>{sectionHint(root.section)}</span>
-          </h2>
-          {renderBranch(root, 0)}
-        </section>
-      ))}
     </div>
+  )
+}
+
+function CategoryTreeRow({
+  account,
+  depth,
+  byParent,
+  open,
+  draftParentId,
+  draftName,
+  renameId,
+  renameName,
+  busy,
+  onToggle,
+  onDraftParent,
+  onDraftName,
+  onCancelDraft,
+  onCreate,
+  onStartRename,
+  onRenameName,
+  onCancelRename,
+  onSaveRename,
+  onRemove,
+}: {
+  account: Category
+  depth: number
+  byParent: Map<string | null, Category[]>
+  open: Set<string>
+  draftParentId: string | null
+  draftName: string
+  renameId: string | null
+  renameName: string
+  busy: boolean
+  onToggle: (id: string) => void
+  onDraftParent: (parentId: string) => void
+  onDraftName: (value: string) => void
+  onCancelDraft: () => void
+  onCreate: (parentId: string) => void
+  onStartRename: (account: Category) => void
+  onRenameName: (value: string) => void
+  onCancelRename: () => void
+  onSaveRename: (account: Category) => void
+  onRemove: (account: Category) => void
+}) {
+  const children = byParent.get(account.id) ?? []
+  // Only non-analytical parents in posting sections may receive a new leaf (API rejects analytical parents).
+  const canAdd = account.level !== 'Analytical' && acceptsAnalyticalChild(account.section)
+  const drafting = draftParentId === account.id
+  const renaming = renameId === account.id
+  const expandable = children.length > 0 || canAdd
+  const expanded = open.has(account.id) || drafting
+  const rowClass =
+    account.level === 'Root' ||
+    account.section === 'Expense' ||
+    account.section === 'Income' ||
+    account.section === 'Patrimony'
+      ? styles.raioxRoot
+      : account.level === 'Group'
+        ? styles.raioxGroup
+        : styles.raioxLeaf
+
+  function stop(event: MouseEvent) {
+    event.stopPropagation()
+  }
+
+  return (
+    <>
+      <div
+        className={`${styles.raioxRow} ${styles.categoriesRow} ${rowClass}`}
+        style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
+      >
+        <button
+          type="button"
+          className={styles.categoriesToggleBtn}
+          onClick={() => (expandable ? onToggle(account.id) : undefined)}
+          aria-expanded={expandable ? expanded : undefined}
+          aria-label={expandable ? (expanded ? 'Recolher' : 'Expandir') : undefined}
+          disabled={!expandable}
+        >
+          <span className={styles.raioxToggle} aria-hidden>
+            {expandable ? (expanded ? '−' : '+') : ''}
+          </span>
+        </button>
+        {renaming ? (
+          <form
+            className={styles.categoriesInlineForm}
+            onSubmit={(event: FormEvent) => {
+              event.preventDefault()
+              onSaveRename(account)
+            }}
+          >
+            <Field
+              label="Nome"
+              name={`rename-${account.id}`}
+              value={renameName}
+              autoFocus
+              onChange={(event) => onRenameName(event.target.value)}
+              onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
+                if (event.key === 'Escape') {
+                  onCancelRename()
+                }
+              }}
+            />
+            <Button type="submit" disabled={busy || !renameName.trim()}>
+              Salvar
+            </Button>
+            <Button type="button" variant="ghost" onClick={onCancelRename}>
+              Cancelar
+            </Button>
+          </form>
+        ) : (
+          <strong className={styles.raioxAccountName}>
+            {categoryLabel(account)}
+            {!account.isActive ? <span className={styles.rowSub}> · Inativa</span> : null}
+          </strong>
+        )}
+        <span className={styles.categoriesActions} onClick={stop}>
+          {canAdd && !renaming ? (
+            <Button
+              variant="ghost"
+              className={styles.categoriesIconBtn}
+              aria-label="Nova categoria"
+              title="Nova categoria"
+              disabled={busy}
+              onClick={() => onDraftParent(account.id)}
+            >
+              <Icon name="add" size={20} decorative />
+            </Button>
+          ) : null}
+          {!account.isSystem && !renaming ? (
+            <>
+              <Button variant="ghost" disabled={busy} onClick={() => onStartRename(account)}>
+                Renomear
+              </Button>
+              {account.isActive ? (
+                <DeleteIconButton disabled={busy} onClick={() => onRemove(account)} />
+              ) : null}
+            </>
+          ) : null}
+        </span>
+      </div>
+      {expanded
+        ? children.map((child) => (
+            <CategoryTreeRow
+              key={child.id}
+              account={child}
+              depth={depth + 1}
+              byParent={byParent}
+              open={open}
+              draftParentId={draftParentId}
+              draftName={draftName}
+              renameId={renameId}
+              renameName={renameName}
+              busy={busy}
+              onToggle={onToggle}
+              onDraftParent={onDraftParent}
+              onDraftName={onDraftName}
+              onCancelDraft={onCancelDraft}
+              onCreate={onCreate}
+              onStartRename={onStartRename}
+              onRenameName={onRenameName}
+              onCancelRename={onCancelRename}
+              onSaveRename={onSaveRename}
+              onRemove={onRemove}
+            />
+          ))
+        : null}
+      {expanded && drafting ? (
+        <form
+          className={`${styles.raioxRow} ${styles.categoriesRow} ${styles.raioxEntry} ${styles.categoriesInlineForm}`}
+          style={{ paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }}
+          onSubmit={(event: FormEvent) => {
+            event.preventDefault()
+            onCreate(account.id)
+          }}
+        >
+          <span />
+          <Field
+            label="Nova categoria"
+            name={`new-${account.id}`}
+            value={draftName}
+            autoFocus
+            onChange={(event) => onDraftName(event.target.value)}
+            onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
+              if (event.key === 'Escape') {
+                onCancelDraft()
+              }
+            }}
+          />
+          <span className={styles.categoriesActions}>
+            <Button type="submit" disabled={busy || !draftName.trim()}>
+              Salvar
+            </Button>
+            <Button type="button" variant="ghost" onClick={onCancelDraft}>
+              Cancelar
+            </Button>
+          </span>
+        </form>
+      ) : null}
+    </>
   )
 }

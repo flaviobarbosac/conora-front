@@ -1391,6 +1391,48 @@ button.compact {
   overflow-wrap: anywhere;
 }
 
+.categoriesRow {
+  grid-template-columns: 2rem minmax(8rem, 1fr) auto;
+  min-width: 0;
+  cursor: default;
+}
+
+.categoriesToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.categoriesToggleBtn:disabled {
+  cursor: default;
+}
+
+.categoriesActions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  justify-self: end;
+}
+
+.categoriesIconBtn {
+  padding: var(--space-1);
+  min-width: 2rem;
+}
+
+.categoriesInlineForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .raioxTotals {
   display: grid;
   grid-template-columns: var(--money-display-w) var(--money-display-w) var(--money-percent-w);

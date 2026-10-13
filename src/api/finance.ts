@@ -80,8 +80,6 @@ export type Account = {
   name: string
   kind: AccountKind
   balance: number
-  openingBalance: number
-  openingBalanceAt: string
   isArchived: boolean
   bankCode: string | null
   agency: string | null
@@ -95,8 +93,6 @@ export type BankOption = { code: string; name: string }
 export type CreateAccountInput = {
   name: string
   kind: AccountKind
-  openingBalance: number
-  openingBalanceAt: string
   bankCode?: string
   agency?: string
   accountNumber?: string
@@ -113,11 +109,6 @@ export const accountsApi = {
   create: (input: CreateAccountInput) => apiFetch<Account>('/accounts', json('POST', input)),
   archive: (id: string, archived: boolean) =>
     apiFetch<Account>(`/accounts/${id}/archive`, json('POST', { archived })),
-  transfer: (fromAccountId: string, toAccountId: string, amount: number, occurredAt: string, description?: string) =>
-    apiFetch<unknown>(
-      '/accounts/transfers',
-      json('POST', { fromAccountId, toAccountId, amount, occurredAt, description }),
-    ),
 }
 
 /* ---------- Credit cards ---------- */

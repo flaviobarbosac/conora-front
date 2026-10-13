@@ -56,7 +56,7 @@ type ReceiptPrefill = {
   accountId: string
 }
 
-type FormType = Extract<EntryType, 'Expense' | 'Income' | 'Transfer'>
+type FormType = Extract<EntryType, 'Expense' | 'Income'>
 
 const TYPE_LABEL: Record<EntryType, string> = {
   Expense: 'Despesa',
@@ -67,10 +67,10 @@ const TYPE_LABEL: Record<EntryType, string> = {
   ProjectContribution: 'Aporte em projeto',
 }
 
-const FORM_TYPES: FormType[] = ['Expense', 'Income', 'Transfer']
+const FORM_TYPES: FormType[] = ['Expense', 'Income']
 
 function isEditableType(type: EntryType): type is FormType {
-  return type === 'Expense' || type === 'Income' || type === 'Transfer'
+  return type === 'Expense' || type === 'Income'
 }
 
 function amountClass(type: EntryType): string | undefined {
@@ -503,9 +503,6 @@ function matchesEntryType(section: string, type: FormType): boolean {
   if (type === 'Income') {
     return section === 'Income'
   }
-  if (type === 'Transfer') {
-    return false
-  }
   return isCashFlowSection(section as Category['section']) && section !== 'Income'
 }
 
@@ -541,7 +538,6 @@ function EntryForm({
   const [accountId, setAccountId] = useState(
     () => initial?.accountId ?? receiptPrefill?.accountId ?? '',
   )
-  const [contraAccountId, setContraAccountId] = useState(() => initial?.contraAccountId ?? '')
   const [categoryId, setCategoryId] = useState(
     () => initial?.categoryId ?? receiptPrefill?.categoryId ?? '',
   )
@@ -556,7 +552,6 @@ function EntryForm({
       : (receiptPrefill?.description ??
         (pendingReceipt ? pendingReceipt.fileName.replace(/\.[^.]+$/, '') : '')),
     accountId: initial?.accountId ?? receiptPrefill?.accountId ?? '',
-    contraAccountId: initial?.contraAccountId ?? '',
     categoryId: initial?.categoryId ?? receiptPrefill?.categoryId ?? '',
   }
 
@@ -569,7 +564,6 @@ function EntryForm({
       date !== baseline.date ||
       description !== baseline.description ||
       accountId !== baseline.accountId ||
-      contraAccountId !== baseline.contraAccountId ||
       categoryId !== baseline.categoryId
     onDirtyChange?.(dirty)
   }, [
@@ -578,20 +572,18 @@ function EntryForm({
     date,
     description,
     accountId,
-    contraAccountId,
     categoryId,
     baseline.type,
     baseline.amount,
     baseline.date,
     baseline.description,
     baseline.accountId,
-    baseline.contraAccountId,
     baseline.categoryId,
     onDirtyChange,
   ])
 
   async function suggest() {
-    if (editing || type === 'Transfer' || categoryId || description.trim().length < 3) {
+    if (editing || categoryId || description.trim().length < 3) {
       return
     }
     try {
@@ -617,8 +609,7 @@ function EntryForm({
         occurredAt: dateToApi(date),
         description: description.trim(),
         accountId: accountId || undefined,
-        contraAccountId: type === 'Transfer' ? contraAccountId || undefined : undefined,
-        categoryId: type === 'Transfer' ? undefined : categoryId || undefined,
+        categoryId: categoryId || undefined,
         incomeSourceId: type === 'Income' ? initial.incomeSourceId ?? undefined : undefined,
         memberId: initial.memberId ?? undefined,
         confirmDuplicate,
@@ -655,8 +646,7 @@ function EntryForm({
       occurredAt: dateToApi(date),
       description: description.trim(),
       accountId: accountId || undefined,
-      contraAccountId: type === 'Transfer' ? contraAccountId || undefined : undefined,
-      categoryId: type === 'Transfer' ? undefined : categoryId || undefined,
+      categoryId: categoryId || undefined,
       confirmDuplicate,
     }
 
@@ -709,7 +699,7 @@ function EntryForm({
             onBlur={() => void suggest()}
           />
         </div>
-        <Select label={type === 'Transfer' ? 'Conta de origem' : 'Conta bancária'} name="accountId" required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+        <Select label="Conta bancária" name="accountId" required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
           <option value="">Selecione</option>
           {accounts.map((account) => (
             <option key={account.id} value={account.id}>
@@ -717,28 +707,15 @@ function EntryForm({
             </option>
           ))}
         </Select>
-        {type === 'Transfer' ? (
-          <Select label="Conta de destino" name="contraAccountId" required value={contraAccountId} onChange={(event) => setContraAccountId(event.target.value)}>
-            <option value="">Selecione</option>
-            {accounts
-              .filter((account) => account.id !== accountId)
-              .map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-          </Select>
-        ) : (
-          <CategorySelect
-            label="Conta"
-            name="categoryId"
-            value={categoryId}
-            onChange={setCategoryId}
-            options={kindCategories}
-            tree={tree}
-            emptyLabel="Sem conta"
-          />
-        )}
+        <CategorySelect
+          label="Conta"
+          name="categoryId"
+          value={categoryId}
+          onChange={setCategoryId}
+          options={kindCategories}
+          tree={tree}
+          emptyLabel="Sem conta"
+        />
         <div className={styles.formWide}>
           <ErrorText message={action.error} />
         </div>
