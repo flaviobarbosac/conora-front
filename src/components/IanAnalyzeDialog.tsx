@@ -17,7 +17,7 @@ import styles from './IanAnalyzeDialog.module.css'
 
 const SECTION_LABEL: Partial<Record<CategorySection, string>> = {
   Income: 'Renda',
-  Discount: 'Descontos',
+  Discount: 'Descontos sobre renda',
   Essential: 'Essenciais',
   Social: 'Sociais',
   Expense: 'Despesas',
