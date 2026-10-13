@@ -25,7 +25,7 @@ import { useLookups } from '../hooks/useLookups'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
-import { currentCompetence, formatDate, formatMoney, parseMoney } from '../lib/format'
+import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
 import styles from './page.module.css'
 
 const KIND_LABEL: Record<AccountKind, string> = {
