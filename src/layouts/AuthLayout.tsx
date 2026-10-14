@@ -9,9 +9,10 @@ type Props = {
   subtitle: string
   children: ReactNode
   footer?: ReactNode
+  heroHeadline?: string
 }
 
-export function AuthLayout({ title, subtitle, children, footer }: Props) {
+export function AuthLayout({ title, subtitle, children, footer, heroHeadline }: Props) {
   const { theme } = useTheme()
   const illustration = `${import.meta.env.BASE_URL}brand/${isDarkTheme(theme) ? 'ilustracao-escura' : 'ilustracao-login'}.jpg`
 
@@ -21,7 +22,9 @@ export function AuthLayout({ title, subtitle, children, footer }: Props) {
         <img src={illustration} alt="" />
         <div className={styles.heroCopy}>
           <span className={styles.kicker}>Conora</span>
-          <span className={styles.headline}>Organize o dinheiro da família com clareza — mês a mês.</span>
+          <span className={styles.headline}>
+            {heroHeadline ?? 'Organize o dinheiro da família com clareza — mês a mês.'}
+          </span>
         </div>
       </div>
       <div className={styles.panel}>

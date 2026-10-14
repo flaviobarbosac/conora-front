@@ -64,6 +64,8 @@ export type Category = {
   sortOrder: number
   acceptsPosting: boolean
   sharingScope: SharingScope
+  createdByUsuarioId?: string | null
+  createdByName?: string | null
 }
 
 export const categoriesApi = {
