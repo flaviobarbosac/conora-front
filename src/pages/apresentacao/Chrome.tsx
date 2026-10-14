@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { BrandLockup } from '../../components/BrandLockup'
 import { Icon } from '../../components/ui/Icon'
+import { isDarkTheme } from '../../theme/themes'
 import { useTheme } from '../../theme/ThemeProvider'
 import styles from './chrome.module.css'
 
@@ -18,9 +19,9 @@ export function PresentationChrome({ children }: { children: ReactNode }) {
             type="button"
             className={styles.themeToggle}
             onClick={toggleTheme}
-            aria-label={theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'}
+            aria-label={isDarkTheme(theme) ? 'Usar tema claro' : 'Usar tema escuro'}
           >
-            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={20} />
+            <Icon name={isDarkTheme(theme) ? 'sun' : 'moon'} size={20} />
           </button>
           <Link to="/login" className={styles.login}>
             Entrar

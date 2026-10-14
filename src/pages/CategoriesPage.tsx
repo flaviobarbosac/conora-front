@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react'
-import { categoriesApi, type Category } from '../api/finance'
+import { categoriesApi, familyApi, type Category, type SharingScope } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
@@ -18,12 +18,22 @@ import styles from './page.module.css'
 
 export function CategoriesPage() {
   const accounts = useLoad(() => categoriesApi.list(undefined, true), [])
+  const group = useLoad(() => familyApi.group(), [])
   const action = useAction()
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [draftParentId, setDraftParentId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameName, setRenameName] = useState('')
+  const inGroup = Boolean(group.data?.groupId)
+
+  async function toggleSharing(account: Category) {
+    const next: SharingScope = (account.sharingScope ?? 'Personal') === 'Family' ? 'Personal' : 'Family'
+    if (await action.run(() => categoriesApi.updateSharing(account.id, next))) {
+      showSaveToast(next === 'Family' ? 'Conta no consolidado familiar.' : 'Conta só pessoal.')
+      accounts.reload()
+    }
+  }
 
   useRegisterDirty(
     'categories-edit',
@@ -96,6 +106,11 @@ export function CategoriesPage() {
       <ErrorText message={accounts.error ?? action.error} />
       {accounts.loading && !accounts.data ? <Loading /> : null}
       {!accounts.loading && roots.length === 0 ? <Empty>Nenhuma categoria.</Empty> : null}
+      {inGroup ? (
+        <p className={styles.muted}>
+          No grupo, contas começam como Família. Marque como Pessoal as que não devem entrar no Raio-X consolidado.
+        </p>
+      ) : null}
       {roots.length > 0 ? (
         <div className={styles.raioxList}>
           <div className={`${styles.raioxRow} ${styles.raioxHead} ${styles.categoriesRow}`}>
@@ -115,6 +130,8 @@ export function CategoriesPage() {
               renameId={renameId}
               renameName={renameName}
               busy={action.busy}
+              inGroup={inGroup}
+              onToggleSharing={(item) => void toggleSharing(item)}
               onToggle={toggle}
               onDraftParent={(parentId) => {
                 setDraftParentId(parentId)
@@ -156,6 +173,8 @@ function CategoryTreeRow({
   renameId,
   renameName,
   busy,
+  inGroup,
+  onToggleSharing,
   onToggle,
   onDraftParent,
   onDraftName,
@@ -176,6 +195,8 @@ function CategoryTreeRow({
   renameId: string | null
   renameName: string
   busy: boolean
+  inGroup: boolean
+  onToggleSharing: (account: Category) => void
   onToggle: (id: string) => void
   onDraftParent: (parentId: string) => void
   onDraftName: (value: string) => void
@@ -257,6 +278,12 @@ function CategoryTreeRow({
           <strong className={styles.raioxAccountName}>
             {categoryLabel(account)}
             {!account.isActive ? <span className={styles.rowSub}> · Inativa</span> : null}
+            {inGroup && account.level === 'Analytical' ? (
+              <span className={styles.rowSub}>
+                {' '}
+                · {(account.sharingScope ?? 'Personal') === 'Family' ? 'Família' : 'Pessoal'}
+              </span>
+            ) : null}
           </strong>
         )}
         <span className={styles.categoriesActions} onClick={stop}>
@@ -270,6 +297,11 @@ function CategoryTreeRow({
               onClick={() => onDraftParent(account.id)}
             >
               <Icon name="add" size={20} decorative />
+            </Button>
+          ) : null}
+          {inGroup && account.level === 'Analytical' && !renaming ? (
+            <Button variant="ghost" disabled={busy} onClick={() => onToggleSharing(account)}>
+              {(account.sharingScope ?? 'Personal') === 'Family' ? 'Tornar pessoal' : 'Tornar família'}
             </Button>
           ) : null}
           {!account.isSystem && !renaming ? (
@@ -297,6 +329,8 @@ function CategoryTreeRow({
               renameId={renameId}
               renameName={renameName}
               busy={busy}
+              inGroup={inGroup}
+              onToggleSharing={onToggleSharing}
               onToggle={onToggle}
               onDraftParent={onDraftParent}
               onDraftName={onDraftName}

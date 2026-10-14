@@ -4,11 +4,17 @@ import {
   budgetsApi,
   dashboardApi,
   familyApi,
+  gamificationApi,
   patrimonyApi,
   projectsApi,
+  type Achievement,
   type Budget,
+  type BudgetCloseStatus,
+  type HomeProgress,
   type LifeProject,
   type PatrimonySummary,
+  type ProjectProgress,
+  type ReserveThermometer,
 } from '../api/finance'
 import { scanReceipt } from '../camera/scanReceipt'
 import { CompetencePicker } from '../components/CompetencePicker'
@@ -48,6 +54,7 @@ export function HomePage() {
   const patrimony = useLoad(() => patrimonyApi.get(), [])
   const projects = useLoad(() => projectsApi.list(), [])
   const profile = useLoad(() => familyApi.profile(), [])
+  const progress = useLoad(() => gamificationApi.home(ym), [ym])
   const name = firstName(profile.data?.name)
   const data = dashboard.data
 
@@ -74,7 +81,9 @@ export function HomePage() {
         }
       />
 
-      <ErrorText message={dashboard.error ?? budget.error ?? patrimony.error ?? projects.error} />
+      <ErrorText
+        message={dashboard.error ?? budget.error ?? patrimony.error ?? projects.error ?? progress.error}
+      />
 
       {dashboard.loading && !data ? (
         <div className={styles.skeletonStack} aria-busy="true" aria-live="polite">
@@ -89,6 +98,8 @@ export function HomePage() {
 
       {data ? (
         <>
+          <HomeProgressPanel data={progress.data} loading={progress.loading && !progress.data} />
+
           <HomeRealizedCharts budget={budget.data} loading={budget.loading && !budget.data} />
 
           <section className={styles.macroGrid} aria-label="Visão macro">
@@ -99,9 +110,150 @@ export function HomePage() {
           <nav className={styles.homeBlocks} aria-label="Atalhos principais">
             <ProjectsHomeTile projects={projects.data ?? []} loading={projects.loading && !projects.data} />
           </nav>
+
+          {progress.data && !progress.data.quietMode ? (
+            <AchievementsRow items={progress.data.achievements} />
+          ) : null}
         </>
       ) : null}
     </div>
+  )
+}
+
+function HomeProgressPanel({ data, loading }: { data: HomeProgress | null | undefined; loading: boolean }) {
+  if (loading) {
+    return <Skeleton height={160} />
+  }
+  if (!data) {
+    return null
+  }
+
+  return (
+    <section className={styles.homeProgress} aria-label="Progresso do método">
+      {!data.quietMode && data.nextStep ? (
+        <p className={styles.nextStep}>
+          Próximo passo:{' '}
+          <Link to={data.nextStep.route}>{data.nextStep.title}</Link>
+        </p>
+      ) : null}
+
+      <div className={styles.macroGrid}>
+        <ReserveCard reserve={data.reserve} />
+        <BudgetCloseCard status={data.budgetClose} />
+      </div>
+
+      <ProjectsProgressRow projects={data.projects} />
+    </section>
+  )
+}
+
+function ReserveCard({ reserve }: { reserve: ReserveThermometer }) {
+  return (
+    <section className={styles.macroCard} aria-label="Termômetro da reserva">
+      <div className={styles.macroHead}>
+        <Link className={styles.homeBlockProjectsHead} to="/projetos">
+          <Icon name="goal" size={24} />
+          <strong>Reserva</strong>
+        </Link>
+        <span className={styles.macroHeadMeta}>
+          {reserve.monthsCovered.toFixed(1)} de {reserve.targetMonths} meses
+        </span>
+      </div>
+      <span className={styles.progress} aria-hidden>
+        <span className={`${styles.progressFill} ${styles.progressFill_ok}`} style={{ width: `${Math.min(100, reserve.progressPercent)}%` }} />
+      </span>
+      <p className={styles.muted}>
+        {formatMoney(reserve.reserveBalance)} · média essencial {formatMoney(reserve.monthlyEssentialAverage)}
+      </p>
+    </section>
+  )
+}
+
+function BudgetCloseCard({ status }: { status: BudgetCloseStatus }) {
+  return (
+    <section className={styles.macroCard} aria-label="Fechamento do orçamento">
+      <div className={styles.macroHead}>
+        <Link className={styles.homeBlockProjectsHead} to="/mes">
+          <Icon name="budget" size={24} />
+          <strong>Fechamento</strong>
+        </Link>
+        <span className={styles.macroHeadMeta}>
+          {status.isClosed ? (status.withinBudget ? 'Fechado no orçamento' : 'Fechado') : 'Aberto'}
+        </span>
+      </div>
+      {status.hasBudget ? (
+        <>
+          <span className={styles.progress} aria-hidden>
+            <span
+              className={`${styles.progressFill} ${status.withinBudget ? styles.progressFill_ok : styles.progressFill_danger}`}
+              style={{
+                width: `${status.plannedExpense <= 0 ? 0 : Math.min(100, (status.actualExpense / status.plannedExpense) * 100)}%`,
+              }}
+            />
+          </span>
+          <p className={styles.muted}>
+            {formatMoney(status.actualExpense)} / {formatMoney(status.plannedExpense)}
+          </p>
+        </>
+      ) : (
+        <p className={styles.muted}>Defina o orçamento do mês.</p>
+      )}
+    </section>
+  )
+}
+
+function AchievementsRow({ items }: { items: Achievement[] }) {
+  const earned = items.filter((item) => item.earned)
+  if (earned.length === 0 && items.length === 0) {
+    return null
+  }
+  return (
+    <section className={styles.macroCard} aria-label="Marcos">
+      <div className={styles.macroHead}>
+        <strong>Marcos</strong>
+      </div>
+      <ul className={styles.achievementList}>
+        {items.map((item) => (
+          <li key={item.key} className={item.earned ? styles.achievementEarned : styles.achievementPending}>
+            <strong>{item.title}</strong>
+            <span className={styles.muted}>{item.description}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function ProjectsProgressRow({ projects }: { projects: ProjectProgress[] }) {
+  if (projects.length === 0) {
+    return null
+  }
+  return (
+    <section className={styles.macroCard} aria-label="Progresso dos projetos">
+      <div className={styles.macroHead}>
+        <Link className={styles.homeBlockProjectsHead} to="/projetos">
+          <strong>Projetos em andamento</strong>
+        </Link>
+      </div>
+      <ul className={styles.macroBars}>
+        {projects.slice(0, 3).map((project) => (
+          <li key={project.id}>
+            <Link className={styles.macroBarLink} to={`/projetos/${project.id}`}>
+              <span className={styles.macroBarLabel}>
+                <strong>{project.name}</strong>
+                <span>{formatPercent(project.progressPercent)}</span>
+              </span>
+              <span className={styles.progress} aria-hidden>
+                <span
+                  className={`${styles.progressFill} ${styles.progressFillActual}`}
+                  style={{ width: `${Math.min(100, project.progressPercent)}%` }}
+                />
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

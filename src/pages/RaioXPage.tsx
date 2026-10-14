@@ -5,19 +5,24 @@ import {
   budgetsApi,
   categoriesApi,
   entriesApi,
+  familyApi,
   patrimonyApi,
   projectsApi,
   type Budget,
   type BudgetYear,
   type Category,
+  type CategoryMemberBreakdown,
   type CategorySection,
   type Entry,
   type LifeProject,
   type PatrimonyItem,
   type PatrimonySummary,
+  type SharingScope,
 } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
+import { SharingViewToggle } from '../components/SharingViewToggle'
+import { Button } from '../components/ui/Button'
 import { ProgressToneLegend } from '../components/ProgressToneLegend'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
@@ -44,6 +49,7 @@ import {
   type RaioXFocus,
   type RaioXTotals,
 } from '../lib/raioX'
+import { readSharingView } from '../lib/sharingView'
 import styles from './page.module.css'
 
 const MONTHS_MIN = 1
@@ -144,19 +150,23 @@ export function RaioXPage() {
   const [months, setMonths] = useState(MONTHS_MIN)
   const [focus, setFocus] = useState<RaioXFocus>(null)
   const [open, setOpen] = useState<Set<string>>(() => new Set())
+  const [scope, setScope] = useState<SharingScope>(readSharingView)
+  const [breakdown, setBreakdown] = useState<CategoryMemberBreakdown | null>(null)
+  const [breakdownLoading, setBreakdownLoading] = useState(false)
+  const group = useLoad(() => familyApi.group(), [])
 
   const monthList = useMemo(() => monthsEndingAt(ym, months), [ym, months])
   const yearNums = useMemo(() => yearsNeededForMonths(monthList), [monthList])
   const yearKey = yearNums.join(',')
 
   const previousYm = useMemo(() => shiftCompetence(ym, -1), [ym])
-  const budget = useLoad(() => budgetsApi.get(ym), [ym])
+  const budget = useLoad(() => budgetsApi.get(ym, scope), [ym, scope])
   const yearsBudget = useLoad(
     () =>
       months <= 1
         ? Promise.resolve([] as BudgetYear[])
-        : Promise.all(yearNums.map((year) => budgetsApi.getYear(year))),
-    [months, yearKey],
+        : Promise.all(yearNums.map((year) => budgetsApi.getYear(year, scope))),
+    [months, yearKey, scope],
   )
   const previousCash = useLoad(() => accountsApi.cashBalanceAtEndOfMonth(previousYm), [previousYm])
   const accounts = useLoad(() => categoriesApi.list(undefined, false, false), [])
@@ -170,7 +180,17 @@ export function RaioXPage() {
     [ym, months],
   )
 
-  const list = accounts.data ?? []
+  const list = useMemo(() => {
+    const all = accounts.data ?? []
+    if (!group.data?.groupId) {
+      return all
+    }
+    // Keep structure (roots/groups) + analytical accounts in the active sharing scope.
+    return all.filter(
+      (account) =>
+        account.level !== 'Analytical' || (account.sharingScope ?? 'Personal') === scope,
+    )
+  }, [accounts.data, group.data?.groupId, scope])
   const byParent = useMemo(() => {
     const map = groupAccountsByParent(list)
     for (const bucket of map.values()) {
@@ -178,6 +198,21 @@ export function RaioXPage() {
     }
     return map
   }, [list])
+
+  async function openMemberBreakdown(account: Category) {
+    if (!group.data?.groupId || account.level !== 'Analytical' || scope !== 'Family') {
+      return
+    }
+    setBreakdownLoading(true)
+    try {
+      const data = await budgetsApi.breakdown(ym, account.id, scope)
+      setBreakdown(data)
+    } catch {
+      setBreakdown(null)
+    } finally {
+      setBreakdownLoading(false)
+    }
+  }
 
   const patAmounts = useMemo(
     () => patrimonyStockMap(patrimony.data?.items ?? []),
@@ -364,6 +399,12 @@ export function RaioXPage() {
         title="Raio-X"
         actions={
           <>
+            <SharingViewToggle
+              onChange={(next) => {
+                setScope(next)
+                setBreakdown(null)
+              }}
+            />
             <CompetencePicker value={ym} onChange={setYm} />
             <label className={styles.periodSlider} onClick={(event) => event.stopPropagation()}>
               <span className={styles.periodSliderValue}>
@@ -477,13 +518,39 @@ export function RaioXPage() {
               entriesByAccount={entriesByAccount}
               patItemsByAccount={patItemsByAccount}
               projectsByAccount={projectsByAccount}
+              showMemberDrill={Boolean(group.data?.groupId) && scope === 'Family'}
               onToggle={toggle}
               onOpenEntry={openEntry}
               onOpenPatItem={openPatItem}
               onOpenProject={openProject}
+              onMemberBreakdown={(item) => void openMemberBreakdown(item)}
             />
           ))}
         </div>
+      ) : null}
+      {breakdownLoading ? <Loading /> : null}
+      {breakdown ? (
+        <section className={styles.section} onClick={(event) => event.stopPropagation()}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>{breakdown.categoryName} por membro</h2>
+            <Button variant="secondary" onClick={() => setBreakdown(null)}>
+              Fechar
+            </Button>
+          </div>
+          <ul className={styles.list}>
+            {breakdown.members.map((member) => (
+              <li key={member.usuarioId} className={styles.row}>
+                <span className={styles.rowMain}>
+                  <strong>{member.name}</strong>
+                </span>
+                <span className={`${styles.moneyValue}`}>{formatMoney(member.amount)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className={styles.muted}>
+            Total: <span className={styles.moneyValue}>{formatMoney(breakdown.total)}</span>
+          </p>
+        </section>
       ) : null}
     </div>
   )
@@ -502,10 +569,12 @@ function RaioXAccountBlock({
   entriesByAccount,
   patItemsByAccount,
   projectsByAccount,
+  showMemberDrill,
   onToggle,
   onOpenEntry,
   onOpenPatItem,
   onOpenProject,
+  onMemberBreakdown,
 }: {
   account: Category
   depth: number
@@ -519,10 +588,12 @@ function RaioXAccountBlock({
   entriesByAccount: Map<string, Entry[]>
   patItemsByAccount: Map<string, PatrimonyItem[]>
   projectsByAccount: Map<string, LifeProject[]>
+  showMemberDrill: boolean
   onToggle: (id: string) => void
   onOpenEntry: (entry: Entry) => void
   onOpenPatItem: (item: PatrimonyItem) => void
   onOpenProject: (project: LifeProject) => void
+  onMemberBreakdown: (account: Category) => void
 }) {
   const children = byParent.get(account.id) ?? []
   const stock = isStockSection(account.section)
@@ -554,6 +625,7 @@ function RaioXAccountBlock({
       : account.level === 'Group'
         ? styles.raioxGroup
         : styles.raioxLeaf
+  const canDrill = showMemberDrill && account.level === 'Analytical' && !stock
 
   return (
     <>
@@ -561,7 +633,15 @@ function RaioXAccountBlock({
         type="button"
         className={`${styles.raioxRow} ${rowClass} ${focused}`}
         style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
-        onClick={() => (expandable ? onToggle(account.id) : undefined)}
+        onClick={(event) => {
+          event.stopPropagation()
+          if (canDrill) {
+            onMemberBreakdown(account)
+          }
+          if (expandable) {
+            onToggle(account.id)
+          }
+        }}
         aria-expanded={expandable ? expanded : undefined}
       >
         <span className={styles.raioxToggle} aria-hidden>
@@ -586,10 +666,12 @@ function RaioXAccountBlock({
               entriesByAccount={entriesByAccount}
               patItemsByAccount={patItemsByAccount}
               projectsByAccount={projectsByAccount}
+              showMemberDrill={showMemberDrill}
               onToggle={onToggle}
               onOpenEntry={onOpenEntry}
               onOpenPatItem={onOpenPatItem}
               onOpenProject={onOpenProject}
+              onMemberBreakdown={onMemberBreakdown}
             />
           ))
         : null}

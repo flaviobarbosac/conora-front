@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
+import { isDarkTheme } from '../theme/themes'
 import { useTheme } from '../theme/ThemeProvider'
 import { Button } from './ui/Button'
 import styles from './Splash.module.css'
@@ -29,7 +30,7 @@ export function Splash({ onFinished }: { onFinished: () => void }) {
   const [phase, setPhase] = useState<Phase>('loading')
   const [progress, setProgress] = useState(reduced ? 1 : 0)
   const [animationDone, setAnimationDone] = useState(reduced)
-  const onraLogo = `${import.meta.env.BASE_URL}brand/${theme === 'dark' ? 'logo-escuro' : 'logo-claro'}.png`
+  const onraLogo = `${import.meta.env.BASE_URL}brand/${isDarkTheme(theme) ? 'logo-escuro' : 'logo-claro'}.png`
 
   useEffect(() => {
     if (reduced) {
