@@ -11,7 +11,6 @@ import {
   type Budget,
   type BudgetYear,
   type Category,
-  type CategoryMemberBreakdown,
   type CategorySection,
   type Entry,
   type LifeProject,
@@ -23,7 +22,6 @@ import {
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { SharingViewToggle } from '../components/SharingViewToggle'
-import { Button } from '../components/ui/Button'
 import { ProgressToneLegend } from '../components/ProgressToneLegend'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
@@ -152,8 +150,6 @@ export function RaioXPage() {
   const [focus, setFocus] = useState<RaioXFocus>(null)
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [scope, setScope] = useState<SharingScope>(readSharingView)
-  const [breakdown, setBreakdown] = useState<CategoryMemberBreakdown | null>(null)
-  const [breakdownLoading, setBreakdownLoading] = useState(false)
   const group = useLoad(() => familyApi.group(), [])
 
   const monthList = useMemo(() => monthsEndingAt(ym, months), [ym, months])
@@ -196,21 +192,6 @@ export function RaioXPage() {
     }
     return map
   }, [list])
-
-  async function openMemberBreakdown(account: Category) {
-    if (!group.data?.groupId || account.level !== 'Analytical' || scope !== 'Family') {
-      return
-    }
-    setBreakdownLoading(true)
-    try {
-      const data = await budgetsApi.breakdown(ym, account.id, scope)
-      setBreakdown(data)
-    } catch {
-      setBreakdown(null)
-    } finally {
-      setBreakdownLoading(false)
-    }
-  }
 
   const patAmounts = useMemo(
     () => patrimonyStockMap(patrimony.data?.items ?? []),
@@ -519,41 +500,62 @@ export function RaioXPage() {
               entriesByAccount={entriesByAccount}
               patItemsByAccount={patItemsByAccount}
               projectsByAccount={projectsByAccount}
-              showMemberDrill={Boolean(group.data?.groupId) && scope === 'Family'}
               onToggle={toggle}
               onOpenEntry={openEntry}
               onOpenPatItem={openPatItem}
               onOpenProject={openProject}
-              onMemberBreakdown={(item) => void openMemberBreakdown(item)}
             />
           ))}
         </div>
       ) : null}
-      {breakdownLoading ? <Loading /> : null}
-      {breakdown ? (
-        <section className={styles.section} onClick={(event) => event.stopPropagation()}>
-          <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>{breakdown.categoryName} por membro</h2>
-            <Button variant="secondary" onClick={() => setBreakdown(null)}>
-              Fechar
-            </Button>
-          </div>
-          <ul className={styles.list}>
-            {breakdown.members.map((member) => (
-              <li key={member.usuarioId} className={styles.row}>
-                <span className={styles.rowMain}>
-                  <strong>{member.name}</strong>
-                </span>
-                <span className={`${styles.moneyValue}`}>{formatMoney(member.amount)}</span>
-              </li>
-            ))}
-          </ul>
-          <p className={styles.muted}>
-            Total: <span className={styles.moneyValue}>{formatMoney(breakdown.total)}</span>
-          </p>
-        </section>
-      ) : null}
     </div>
+  )
+}
+
+function EntrySubRow({
+  entry,
+  depth,
+  onOpen,
+}: {
+  entry: Entry
+  depth: number
+  onOpen: (entry: Entry) => void
+}) {
+  const pad = { paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }
+  const body = (
+    <>
+      <span />
+      <span className={styles.rowMain}>
+        <strong>{entryDisplayDescription(entry)}</strong>
+        <span className={styles.rowSub}>{entry.competenceYm}</span>
+      </span>
+      <span className={styles.raioxTotals}>
+        <span className={styles.raioxAmount} />
+        <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>
+          {formatMoney(Math.abs(entry.amount))}
+        </span>
+        <span className={styles.raioxPercent} />
+      </span>
+    </>
+  )
+
+  if (entry.canEdit === false) {
+    return (
+      <div className={`${styles.raioxRow} ${styles.raioxEntry}`} style={pad}>
+        {body}
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className={`${styles.raioxRow} ${styles.raioxEntry}`}
+      style={pad}
+      onClick={() => onOpen(entry)}
+    >
+      {body}
+    </button>
   )
 }
 
@@ -570,12 +572,10 @@ function RaioXAccountBlock({
   entriesByAccount,
   patItemsByAccount,
   projectsByAccount,
-  showMemberDrill,
   onToggle,
   onOpenEntry,
   onOpenPatItem,
   onOpenProject,
-  onMemberBreakdown,
 }: {
   account: Category
   depth: number
@@ -589,12 +589,10 @@ function RaioXAccountBlock({
   entriesByAccount: Map<string, Entry[]>
   patItemsByAccount: Map<string, PatrimonyItem[]>
   projectsByAccount: Map<string, LifeProject[]>
-  showMemberDrill: boolean
   onToggle: (id: string) => void
   onOpenEntry: (entry: Entry) => void
   onOpenPatItem: (item: PatrimonyItem) => void
   onOpenProject: (project: LifeProject) => void
-  onMemberBreakdown: (account: Category) => void
 }) {
   const children = byParent.get(account.id) ?? []
   const stock = isStockSection(account.section)
@@ -630,7 +628,6 @@ function RaioXAccountBlock({
       : account.level === 'Group'
         ? styles.raioxGroup
         : styles.raioxLeaf
-  const canDrill = showMemberDrill && account.level === 'Analytical' && !stock
 
   return (
     <>
@@ -640,9 +637,6 @@ function RaioXAccountBlock({
         style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
         onClick={(event) => {
           event.stopPropagation()
-          if (canDrill) {
-            onMemberBreakdown(account)
-          }
           if (expandable) {
             onToggle(account.id)
           }
@@ -671,38 +665,16 @@ function RaioXAccountBlock({
               entriesByAccount={entriesByAccount}
               patItemsByAccount={patItemsByAccount}
               projectsByAccount={projectsByAccount}
-              showMemberDrill={showMemberDrill}
               onToggle={onToggle}
               onOpenEntry={onOpenEntry}
               onOpenPatItem={onOpenPatItem}
               onOpenProject={onOpenProject}
-              onMemberBreakdown={onMemberBreakdown}
             />
           ))
         : null}
       {expanded
         ? launchEntries.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              className={`${styles.raioxRow} ${styles.raioxEntry}`}
-              style={{ paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }}
-              onClick={() => onOpenEntry(entry)}
-              disabled={entry.canEdit === false}
-            >
-              <span />
-              <span className={styles.rowMain}>
-                <strong>{entryDisplayDescription(entry)}</strong>
-                <span className={styles.rowSub}>{entry.competenceYm}</span>
-              </span>
-              <span className={styles.raioxTotals}>
-                <span className={styles.raioxAmount} />
-                <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>
-                  {formatMoney(Math.abs(entry.amount))}
-                </span>
-                <span className={styles.raioxPercent} />
-              </span>
-            </button>
+            <EntrySubRow key={entry.id} entry={entry} depth={depth} onOpen={onOpenEntry} />
           ))
         : null}
       {expanded
