@@ -516,9 +516,22 @@ function EntrySubRow({
   depth: number
   onOpen: (entry: Entry) => void
 }) {
-  const pad = { paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }
-  const body = (
-    <>
+  const editable = entry.canEdit !== false
+  return (
+    <button
+      type="button"
+      className={`${styles.raioxRow} ${styles.raioxEntry}`}
+      style={{
+        paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)`,
+        cursor: editable ? undefined : 'default',
+      }}
+      aria-disabled={!editable}
+      onClick={() => {
+        if (editable) {
+          onOpen(entry)
+        }
+      }}
+    >
       <span />
       <span className={styles.rowMain}>
         <strong>{entryDisplayDescription(entry)}</strong>
@@ -531,25 +544,6 @@ function EntrySubRow({
         </span>
         <span className={styles.raioxPercent} />
       </span>
-    </>
-  )
-
-  if (entry.canEdit === false) {
-    return (
-      <div className={`${styles.raioxRow} ${styles.raioxEntry}`} style={pad}>
-        {body}
-      </div>
-    )
-  }
-
-  return (
-    <button
-      type="button"
-      className={`${styles.raioxRow} ${styles.raioxEntry}`}
-      style={pad}
-      onClick={() => onOpen(entry)}
-    >
-      {body}
     </button>
   )
 }
