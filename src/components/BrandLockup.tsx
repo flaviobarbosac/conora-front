@@ -15,7 +15,7 @@ export function BrandLockup({ size = 'nav', compact = false }: Props) {
   const suffix = isDarkTheme(theme) ? 'escuro' : 'claro'
   const conoraLogo = `${import.meta.env.BASE_URL}brand/conora-${suffix}.png`
   const onraLogo = `${import.meta.env.BASE_URL}brand/logo-${suffix}.png`
-  const symbol = `${import.meta.env.BASE_URL}brand/simbolo.png`
+  const symbol = `${import.meta.env.BASE_URL}brand/conora-simbolo.png`
   const [logoReady, setLogoReady] = useState(false)
 
   useEffect(() => {
