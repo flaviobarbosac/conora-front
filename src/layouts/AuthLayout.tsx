@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { BrandLockup } from '../components/BrandLockup'
+import { isDarkTheme } from '../theme/themes'
 import { useTheme } from '../theme/ThemeProvider'
 import styles from './AuthLayout.module.css'
 
@@ -12,7 +13,7 @@ type Props = {
 
 export function AuthLayout({ title, subtitle, children, footer }: Props) {
   const { theme } = useTheme()
-  const illustration = `${import.meta.env.BASE_URL}brand/${theme === 'dark' ? 'ilustracao-escura' : 'ilustracao-login'}.jpg`
+  const illustration = `${import.meta.env.BASE_URL}brand/${isDarkTheme(theme) ? 'ilustracao-escura' : 'ilustracao-login'}.jpg`
 
   return (
     <div className={styles.shell}>

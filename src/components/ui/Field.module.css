@@ -25,7 +25,6 @@
 
 .header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
 }
 
@@ -68,6 +67,9 @@
 }
 
 .hint {
-  font-size: var(--text-md);
-  font-weight: var(--weight-medium);
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  color: var(--text-muted);
+  line-height: var(--leading-body);
 }

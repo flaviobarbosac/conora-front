@@ -375,7 +375,7 @@ function ProjectForm({
         >
           <option value="Personal">Pessoal</option>
           <option value="Group" disabled={!hasFamilyGroup}>
-            Família{hasFamilyGroup ? '' : ' (entre no grupo primeiro)'}
+            Família (meta do grupo){hasFamilyGroup ? '' : ' — entre no grupo primeiro'}
           </option>
         </Select>
         <MoneyField label="Meta (R$)" name="projectGoal" required value={goal} onChange={setGoal} />

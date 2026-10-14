@@ -1,5 +1,6 @@
 import { Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom'
 import { lazy, useEffect, useState } from 'react'
+import { familyApi } from './api/finance'
 import { listenNativeShare } from './share/receiveShare'
 import { useAuth } from './auth/AuthProvider'
 import { ConfirmDialogHost } from './components/ConfirmDialog'
@@ -20,11 +21,15 @@ import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
 import { MonthPage } from './pages/MonthPage'
 import { MorePage } from './pages/MorePage'
+import { OnboardingPage } from './pages/OnboardingPage'
+import { OwnerTransferPage } from './pages/OwnerTransferPage'
 import { PatrimonyPage } from './pages/PatrimonyPage'
 import { PlanPage } from './pages/PlanPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { RetrospectivePage } from './pages/RetrospectivePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ShareTargetPage } from './pages/ShareTargetPage'
 import { WhatsAppPage } from './pages/WhatsAppPage'
@@ -54,6 +59,50 @@ function RequireAuth() {
   return <Outlet />
 }
 
+function RequireOnboarding() {
+  const { session } = useAuth()
+  const [ready, setReady] = useState(false)
+  const [needsOnboarding, setNeedsOnboarding] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function check() {
+      if (!session) {
+        setReady(true)
+        return
+      }
+      try {
+        const profile = await familyApi.profile()
+        if (!cancelled) {
+          setNeedsOnboarding(!profile.onboardingCompleted)
+          setReady(true)
+        }
+      } catch {
+        if (!cancelled) {
+          setReady(true)
+        }
+      }
+    }
+    void check()
+    function onChanged() {
+      void check()
+    }
+    window.addEventListener('conora:profile-changed', onChanged)
+    return () => {
+      cancelled = true
+      window.removeEventListener('conora:profile-changed', onChanged)
+    }
+  }, [session])
+
+  if (!ready) {
+    return null
+  }
+  if (needsOnboarding) {
+    return <Navigate to="/onboarding" replace />
+  }
+  return <Outlet />
+}
+
 export default function App() {
   const [splashDone, setSplashDone] = useState(false)
   const navigate = useNavigate()
@@ -74,31 +123,37 @@ export default function App() {
         <Route path="/grupo/convite/:token" element={<GroupInvitePage />} />
         <Route path="/grupo/bem-vindo" element={<Navigate to="/membros" replace />} />
         <Route element={<RequireAuth />}>
-          <Route element={<AppShell />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/lancamentos" element={<EntriesPage />} />
-            <Route path="/raio-x" element={<RaioXPage />} />
-            <Route path="/orcamento" element={<BudgetPage />} />
-            <Route path="/contas" element={<AccountsPage />} />
-            <Route path="/cartoes" element={<AccountsPage />} />
-            <Route path="/projetos" element={<ProjectsPage />} />
-            <Route path="/projetos/:id" element={<ProjectDetailPage />} />
-            <Route path="/relatorios" element={<MorePage />} />
-            <Route path="/diagnostico" element={<DiagnosisPage />} />
-            <Route path="/categorias" element={<CategoriesPage />} />
-            <Route path="/plano-de-contas" element={<Navigate to="/categorias" replace />} />
-            <Route path="/patrimonio" element={<PatrimonyPage />} />
-            <Route path="/membros" element={<MembersPage />} />
-            <Route path="/plano" element={<PlanPage />} />
-            <Route path="/operacao" element={<AdminPage />} />
-            <Route path="/ajuda" element={<HelpPage />} />
-            <Route path="/configuracoes" element={<SettingsPage />} />
-            <Route path="/ia" element={<AiPage />} />
-            <Route path="/ian/relatorio" element={<IanReportPage />} />
-            <Route path="/whatsapp" element={<WhatsAppPage />} />
-            <Route path="/importar" element={<ImportPage />} />
-            <Route path="/mes" element={<MonthPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/grupo/owner/:token" element={<OwnerTransferPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route element={<RequireOnboarding />}>
+            <Route element={<AppShell />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/lancamentos" element={<EntriesPage />} />
+              <Route path="/raio-x" element={<RaioXPage />} />
+              <Route path="/orcamento" element={<BudgetPage />} />
+              <Route path="/contas" element={<AccountsPage />} />
+              <Route path="/cartoes" element={<AccountsPage />} />
+              <Route path="/projetos" element={<ProjectsPage />} />
+              <Route path="/projetos/:id" element={<ProjectDetailPage />} />
+              <Route path="/relatorios" element={<MorePage />} />
+              <Route path="/retrospectiva" element={<RetrospectivePage />} />
+              <Route path="/diagnostico" element={<DiagnosisPage />} />
+              <Route path="/categorias" element={<CategoriesPage />} />
+              <Route path="/plano-de-contas" element={<Navigate to="/categorias" replace />} />
+              <Route path="/patrimonio" element={<PatrimonyPage />} />
+              <Route path="/membros" element={<MembersPage />} />
+              <Route path="/plano" element={<PlanPage />} />
+              <Route path="/operacao" element={<AdminPage />} />
+              <Route path="/ajuda" element={<HelpPage />} />
+              <Route path="/perfil" element={<ProfilePage />} />
+              <Route path="/configuracoes" element={<SettingsPage />} />
+              <Route path="/ia" element={<AiPage />} />
+              <Route path="/ian/relatorio" element={<IanReportPage />} />
+              <Route path="/whatsapp" element={<WhatsAppPage />} />
+              <Route path="/importar" element={<ImportPage />} />
+              <Route path="/mes" element={<MonthPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
           </Route>
         </Route>
       </Routes>

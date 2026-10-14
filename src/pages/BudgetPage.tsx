@@ -5,9 +5,11 @@ import {
   type Budget,
   type BudgetYear,
   type Category,
+  type SharingScope,
 } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
+import { SharingViewToggle } from '../components/SharingViewToggle'
 import { ProgressToneLegend } from '../components/ProgressToneLegend'
 import { Button } from '../components/ui/Button'
 import { Icon } from '../components/ui/Icon'
@@ -39,6 +41,7 @@ import {
   type ProgressTone,
   type RaioXTotals,
 } from '../lib/raioX'
+import { readSharingView } from '../lib/sharingView'
 import styles from './page.module.css'
 
 function toneClass(tone: ProgressTone): string {
@@ -56,12 +59,17 @@ function toneClass(tone: ProgressTone): string {
 
 export function BudgetPage() {
   const [ym, setYm] = useState(currentCompetence)
+  const [scope, setScope] = useState<SharingScope | undefined>(() => {
+    const stored = readSharingView()
+    return stored
+  })
   const { confirmLeave, isDirty } = useUnsavedChanges()
-  const budget = useLoad(() => budgetsApi.get(ym), [ym])
+  const budget = useLoad(() => budgetsApi.get(ym, scope), [ym, scope])
   const year = useMemo(() => Number(ym.slice(0, 4)), [ym])
-  const yearData = useLoad(() => budgetsApi.getYear(year), [year])
+  const yearData = useLoad(() => budgetsApi.getYear(year, scope), [year, scope])
   const categories = useLoad(() => categoriesApi.list(undefined, false, false), [])
   const copy = useAction()
+  const canEdit = budget.data?.canEdit !== false
 
   async function changeYm(next: string) {
     if (next === ym) {
@@ -111,18 +119,28 @@ export function BudgetPage() {
         title="Orçamento"
         actions={
           <>
+            <SharingViewToggle onChange={setScope} />
             <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
-            <Button variant="secondary" disabled={copy.busy} onClick={() => void copyPrevious()}>
+            <Button
+              variant="secondary"
+              disabled={copy.busy || !canEdit}
+              onClick={() => void copyPrevious()}
+            >
               Copiar mês anterior
             </Button>
           </>
         }
       />
       <ErrorText message={budget.error ?? copy.error ?? categories.error ?? yearData.error} />
+      {data && !canEdit ? (
+        <p className={styles.muted}>Somente o responsável pelo orçamento familiar pode editar o previsto.</p>
+      ) : null}
       {budget.loading && !data ? <Loading /> : null}
       {data ? (
         <BudgetTreeEditor
           ym={ym}
+          scope={scope}
+          canEdit={canEdit}
           budget={data}
           categories={categories.data ?? []}
           year={year}
@@ -139,6 +157,8 @@ export function BudgetPage() {
 
 type EditorProps = {
   ym: string
+  scope: SharingScope | undefined
+  canEdit: boolean
   budget: Budget
   categories: Category[]
   year: number
@@ -146,7 +166,7 @@ type EditorProps = {
   onSaved: () => void
 }
 
-function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: EditorProps) {
+function BudgetTreeEditor({ ym, scope, canEdit, budget, categories, year, yearData, onSaved }: EditorProps) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [drafts, setDrafts] = useState<Record<string, string>>({})
@@ -156,9 +176,12 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: E
   const cashAccounts = useMemo(
     () =>
       categories.filter(
-        (account) => CASH_FLOW_SECTIONS.includes(account.section) && account.isActive,
+        (account) =>
+          CASH_FLOW_SECTIONS.includes(account.section) &&
+          account.isActive &&
+          (!scope || (account.sharingScope ?? 'Personal') === scope),
       ),
-    [categories],
+    [categories, scope],
   )
 
   const byParent = useMemo(() => {
@@ -264,7 +287,7 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: E
     if (lines.length === 0) {
       return
     }
-    const ok = await saveAction.run(() => budgetsApi.upsert(ym, 'Detailed', lines))
+    const ok = await saveAction.run(() => budgetsApi.upsert(ym, 'Detailed', lines, scope))
     if (ok) {
       showSaveToast('Orçamento salvo.')
       onSaved()
@@ -279,17 +302,23 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: E
   return (
     <section className={styles.section}>
       <div className={styles.budgetSaveBar}>
-        <p className={styles.muted}>Edite o previsto e salve.</p>
+        <p className={styles.muted}>
+          {canEdit ? 'Edite o previsto e salve.' : 'Orçamento familiar em modo leitura.'}
+        </p>
         <div className={styles.budgetSaveActions}>
           <Button
             type="button"
             variant="secondary"
-            disabled={saveAction.busy || dirtyIds.size === 0}
+            disabled={!canEdit || saveAction.busy || dirtyIds.size === 0}
             onClick={cancelEdits}
           >
             Cancelar
           </Button>
-          <Button type="button" disabled={saveAction.busy || dirtyIds.size === 0} onClick={() => void saveAll()}>
+          <Button
+            type="button"
+            disabled={!canEdit || saveAction.busy || dirtyIds.size === 0}
+            onClick={() => void saveAll()}
+          >
             Salvar
           </Button>
         </div>
@@ -327,6 +356,7 @@ function BudgetTreeEditor({ ym, budget, categories, year, yearData, onSaved }: E
               open={open}
               matches={matches}
               busy={saveAction.busy}
+              canEdit={canEdit}
               onToggle={toggle}
               onOpenYear={setYearAccountId}
               onDraftChange={(id, value) => setDrafts((current) => ({ ...current, [id]: value }))}
@@ -397,6 +427,7 @@ function BudgetAccountBlock({
   open,
   matches,
   busy,
+  canEdit,
   onToggle,
   onOpenYear,
   onDraftChange,
@@ -410,6 +441,7 @@ function BudgetAccountBlock({
   open: Set<string>
   matches: Set<string> | null
   busy: boolean
+  canEdit: boolean
   onToggle: (id: string) => void
   onOpenYear: (id: string) => void
   onDraftChange: (id: string, value: string) => void
@@ -465,14 +497,14 @@ function BudgetAccountBlock({
                   label={`Orçamento ${categoryLabel(account)}`}
                   name={`budget-${account.id}`}
                   value={draft}
-                  disabled={busy}
+                  disabled={busy || !canEdit}
                   onChange={(value) => onDraftChange(account.id, value)}
                 />
               </span>
               <button
                 type="button"
                 className={styles.budgetSpreadIcon}
-                disabled={busy}
+                disabled={busy || !canEdit}
                 aria-label={`Repetir ou parcelar ${categoryLabel(account)}`}
                 title="Repetir ou parcelar"
                 onClick={() => onOpenYear(account.id)}
@@ -514,6 +546,7 @@ function BudgetAccountBlock({
               open={open}
               matches={matches}
               busy={busy}
+              canEdit={canEdit}
               onToggle={onToggle}
               onOpenYear={onOpenYear}
               onDraftChange={onDraftChange}
@@ -533,6 +566,7 @@ function BudgetAccountBlock({
               open={open}
               matches={matches}
               busy={busy}
+              canEdit={canEdit}
               onToggle={onToggle}
               onOpenYear={onOpenYear}
               onDraftChange={onDraftChange}

@@ -1,26 +1,29 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-
-export const ThemeName = {
-  Light: 'light',
-  Dark: 'dark',
-} as const
-
-export type Theme = (typeof ThemeName)[keyof typeof ThemeName]
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { isDarkTheme, normalizeThemeId, ThemeId, type ThemeId as ThemeIdType } from './themes'
 
 const STORAGE_KEY = 'conora.theme'
 const LEGACY_STORAGE_KEY = 'onra.theme'
 
+/** @deprecated Use ThemeId */
+export const ThemeName = {
+  Light: ThemeId.Clareza,
+  Dark: ThemeId.Noite,
+} as const
+
+export type Theme = ThemeIdType
+
 type ThemeContextValue = {
   theme: Theme
-  setTheme: (theme: Theme) => void
+  setTheme: (theme: Theme | string) => void
   toggleTheme: () => void
+  isDark: boolean
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 function readStoredTheme(): Theme {
   const stored = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY)
-  return stored === ThemeName.Dark ? ThemeName.Dark : ThemeName.Light
+  return normalizeThemeId(stored)
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -32,14 +35,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(LEGACY_STORAGE_KEY)
   }, [theme])
 
+  const setTheme = useCallback((next: Theme | string) => {
+    setThemeState(normalizeThemeId(next))
+  }, [])
+
+  const toggleTheme = useCallback(() => {
+    setThemeState((current) => (current === ThemeId.Noite ? ThemeId.Clareza : ThemeId.Noite))
+  }, [])
+
   const value = useMemo<ThemeContextValue>(
     () => ({
       theme,
-      setTheme: setThemeState,
-      toggleTheme: () =>
-        setThemeState((current) => (current === ThemeName.Light ? ThemeName.Dark : ThemeName.Light)),
+      setTheme,
+      toggleTheme,
+      isDark: isDarkTheme(theme),
     }),
-    [theme],
+    [theme, setTheme, toggleTheme],
   )
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
@@ -52,3 +63,5 @@ export function useTheme() {
   }
   return context
 }
+
+export { ThemeId }

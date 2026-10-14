@@ -1,19 +1,18 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { dashboardApi, exportApi, lgpdApi } from '../api/finance'
-import { useAuth } from '../auth/AuthProvider'
+import { dashboardApi, exportApi } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
-import { confirmDestructive } from '../lib/confirm'
 import { currentCompetence, downloadBlob, formatMoney } from '../lib/format'
 import styles from './page.module.css'
 
 const TILES: ReadonlyArray<{ to: string; title: string; text: string }> = [
   { to: '/diagnostico', title: 'Diagnóstico', text: 'Fontes de renda e valor líquido' },
+  { to: '/retrospectiva', title: 'Retrospectiva', text: 'Resumo do ano e marcos' },
   { to: '/plano', title: 'Plano', text: 'Assinatura e situação' },
   { to: '/operacao', title: 'Operação', text: 'Auditoria, feedback e saúde' },
   { to: '/ajuda', title: 'Central de ajuda', text: 'Módulos, campos e glossário' },
@@ -23,34 +22,15 @@ const TILES: ReadonlyArray<{ to: string; title: string; text: string }> = [
 ]
 
 export function MorePage() {
-  const { logout } = useAuth()
   const [ym, setYm] = useState(currentCompetence)
   const report = useLoad(() => dashboardApi.monthlyReport(ym), [ym])
   const files = useAction()
-  const privacy = useAction()
 
   async function download(load: () => Promise<{ blob: Blob; fileName: string }>) {
     await files.run(async () => {
       const { blob, fileName } = await load()
       downloadBlob(blob, fileName)
     })
-  }
-
-  async function exportData() {
-    await privacy.run(async () => {
-      const data = await lgpdApi.exportData()
-      downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'conora-meus-dados.json')
-    })
-  }
-
-  async function deleteAccount() {
-    const confirmed = await confirmDestructive(
-      'Excluir sua conta remove o acesso ao app. Registros com obrigação fiscal podem ser retidos por até 5 anos. Continuar?',
-      { title: 'Excluir conta' },
-    )
-    if (confirmed && (await privacy.run(() => lgpdApi.deleteAccount()))) {
-      await logout()
-    }
   }
 
   const data = report.data
@@ -119,19 +99,6 @@ export function MorePage() {
         ))}
       </nav>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Privacidade (LGPD)</h2>
-        <p className={styles.muted}>Baixe uma cópia dos seus dados ou exclua sua conta definitivamente.</p>
-        <ErrorText message={privacy.error} />
-        <div className={styles.actions}>
-          <Button variant="secondary" disabled={privacy.busy} onClick={() => void exportData()}>
-            Exportar meus dados
-          </Button>
-          <Button variant="secondary" disabled={privacy.busy} onClick={() => void deleteAccount()}>
-            Excluir minha conta
-          </Button>
-        </div>
-      </section>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { isDarkTheme } from '../theme/themes'
 import { useTheme } from '../theme/ThemeProvider'
 import styles from './BrandLockup.module.css'
 
@@ -11,7 +12,7 @@ type Props = {
 /** Prefers the Conora logo image (public/brand/conora-claro|escuro.png) and falls back to the wordmark. */
 export function BrandLockup({ size = 'nav', compact = false }: Props) {
   const { theme } = useTheme()
-  const suffix = theme === 'dark' ? 'escuro' : 'claro'
+  const suffix = isDarkTheme(theme) ? 'escuro' : 'claro'
   const conoraLogo = `${import.meta.env.BASE_URL}brand/conora-${suffix}.png`
   const onraLogo = `${import.meta.env.BASE_URL}brand/logo-${suffix}.png`
   const symbol = `${import.meta.env.BASE_URL}brand/simbolo.png`

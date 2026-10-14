@@ -70,6 +70,12 @@ export function MembersPage() {
   }
 
   async function leaveGroup() {
+    if (groupData && !groupData.canLeave) {
+      rowAction.setError(
+        'Responsável pelo orçamento precisa transferir o orçamento antes de sair do grupo.',
+      )
+      return
+    }
     if (
       !(await confirmDestructive('Sair do grupo familiar? Seu orçamento volta a ser só pessoal.', {
         title: 'Sair do grupo',
@@ -79,6 +85,27 @@ export function MembersPage() {
       return
     }
     if (await rowAction.run(() => familyApi.leave())) {
+      group.reload()
+    }
+  }
+
+  async function transferOwnership(member: FamilyMemberUser) {
+    if (
+      !(await confirmDestructive(
+        `Transferir o orçamento familiar para ${member.name}? A pessoa receberá um e-mail para aceitar.`,
+        { title: 'Transferir orçamento', confirmLabel: 'Enviar pedido' },
+      ))
+    ) {
+      return
+    }
+    if (await rowAction.run(() => familyApi.requestOwnerTransfer(member.usuarioId))) {
+      showSaveToast('Pedido de transferência enviado.')
+      group.reload()
+    }
+  }
+
+  async function cancelTransfer() {
+    if (await rowAction.run(() => familyApi.cancelOwnerTransfer())) {
       group.reload()
     }
   }
@@ -157,7 +184,17 @@ export function MembersPage() {
                     <span className={styles.rowSub}>{member.email}</span>
                   </span>
                   <span className={styles.rowEnd}>
-                    {!member.isSelf && hasGroup ? (
+                    {member.isBudgetOwner ? <Badge tone="ok">Orçamento</Badge> : null}
+                    {groupData.isBudgetOwner && !member.isSelf && hasGroup ? (
+                      <Button
+                        variant="secondary"
+                        disabled={rowAction.busy || Boolean(groupData.pendingOwnerTransfer)}
+                        onClick={() => void transferOwnership(member)}
+                      >
+                        Transferir orçamento
+                      </Button>
+                    ) : null}
+                    {groupData.isBudgetOwner && !member.isSelf && hasGroup ? (
                       <DeleteIconButton
                         label="Remover"
                         disabled={rowAction.busy}
@@ -168,11 +205,32 @@ export function MembersPage() {
                 </li>
               ))}
             </ul>
+            {groupData.pendingOwnerTransfer ? (
+              <p className={styles.muted}>
+                Transferência pendente para {groupData.pendingOwnerTransfer.toName} (até{' '}
+                {formatDateTime(groupData.pendingOwnerTransfer.expiresAt)}).
+                {groupData.isBudgetOwner ? (
+                  <>
+                    {' '}
+                    <Button variant="secondary" disabled={rowAction.busy} onClick={() => void cancelTransfer()}>
+                      Cancelar pedido
+                    </Button>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
             {hasGroup ? (
               <div className={styles.actions}>
-                <Button variant="secondary" disabled={rowAction.busy} onClick={() => void leaveGroup()}>
+                <Button
+                  variant="secondary"
+                  disabled={rowAction.busy || !groupData.canLeave}
+                  onClick={() => void leaveGroup()}
+                >
                   Sair do grupo
                 </Button>
+                {!groupData.canLeave ? (
+                  <span className={styles.muted}>Transfira o orçamento antes de sair.</span>
+                ) : null}
               </div>
             ) : null}
           </section>
