@@ -875,7 +875,6 @@ button.compact {
   border: 0;
   background: transparent;
   font: inherit;
-  color: inherit;
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;

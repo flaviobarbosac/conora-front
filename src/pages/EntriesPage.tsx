@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   entriesApi,
@@ -424,9 +424,8 @@ export function EntriesPage() {
           tree={lookups.categories}
           onDirtyChange={setFormDirty}
           onCancel={() => void closeForm()}
-          onSaved={() => {
+          onSaved={(mode = 'close') => {
             setFormDirty(false)
-            setShowForm(false)
             setEditing(null)
             setReceiptPrefill(null)
             setReceiptIntakeId(null)
@@ -434,6 +433,9 @@ export function EntriesPage() {
             takePendingShare()
             entries.reload()
             lookups.reloadAccounts()
+            if (mode === 'close') {
+              setShowForm(false)
+            }
           }}
         />
       ) : null}
@@ -536,7 +538,7 @@ type FormProps = {
   tree: Category[]
   onDirtyChange?: (dirty: boolean) => void
   onCancel: () => void
-  onSaved: () => void
+  onSaved: (mode?: 'close' | 'continue') => void
 }
 
 function matchesEntryType(section: string, type: FormType): boolean {
@@ -581,7 +583,26 @@ function EntryForm({
   const [categoryId, setCategoryId] = useState(
     () => initial?.categoryId ?? receiptPrefill?.categoryId ?? '',
   )
+  const amountInputRef = useRef<HTMLInputElement | null>(null)
   const action = useAction()
+
+  function focusAmount() {
+    window.requestAnimationFrame(() => {
+      amountInputRef.current?.focus()
+      amountInputRef.current?.select()
+    })
+  }
+
+  const skipDirtyRef = useRef(false)
+
+  function resetForNextEntry() {
+    skipDirtyRef.current = true
+    setAmount('')
+    setDate(todayInput())
+    setDescription('')
+    onDirtyChange?.(false)
+    focusAmount()
+  }
 
   const baseline = {
     type: (initial && isEditableType(initial.type) ? initial.type : 'Expense') as FormType,
@@ -598,6 +619,11 @@ function EntryForm({
   const kindCategories = categories.filter((category) => matchesEntryType(category.section, type))
 
   useEffect(() => {
+    if (skipDirtyRef.current) {
+      skipDirtyRef.current = false
+      onDirtyChange?.(false)
+      return
+    }
     const dirty =
       type !== baseline.type ||
       amount !== baseline.amount ||
@@ -656,7 +682,7 @@ function EntryForm({
       }
       if (await action.run(() => entriesApi.update(initial.id, input))) {
         showSaveToast('Lançamento salvo.')
-        onSaved()
+        onSaved('close')
       }
       return
     }
@@ -675,7 +701,7 @@ function EntryForm({
         )
       ) {
         showSaveToast('Lançamento salvo.')
-        onSaved()
+        onSaved('close')
       }
       return
     }
@@ -692,7 +718,8 @@ function EntryForm({
 
     if (await action.run(() => entriesApi.create(input))) {
       showSaveToast('Lançamento salvo.')
-      onSaved()
+      resetForNextEntry()
+      onSaved('continue')
     }
   }
 
@@ -727,8 +754,32 @@ function EntryForm({
       </div>
       <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
         {receiptPreview ? <img className={styles.sharePreview} src={receiptPreview} alt="Recibo anexado" /> : null}
-        <MoneyField label="Valor (R$)" name="amount" required value={amount} onChange={setAmount} />
+        <MoneyField
+          label="Valor (R$)"
+          name="amount"
+          required
+          value={amount}
+          onChange={setAmount}
+          inputRef={amountInputRef}
+        />
         <Field label="Data" name="date" type="date" required value={date} onChange={(event) => setDate(event.target.value)} />
+        <CategorySelect
+          label="Conta"
+          name="categoryId"
+          value={categoryId}
+          onChange={setCategoryId}
+          options={kindCategories}
+          tree={tree}
+          emptyLabel="Sem conta"
+        />
+        <Select label="Conta bancária" name="accountId" required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+          <option value="">Selecione</option>
+          {accounts.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.name}
+            </option>
+          ))}
+        </Select>
         <div className={styles.formWide}>
           <Field
             label="Descrição"
@@ -739,23 +790,6 @@ function EntryForm({
             onBlur={() => void suggest()}
           />
         </div>
-        <Select label="Conta bancária" name="accountId" required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
-          <option value="">Selecione</option>
-          {accounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name}
-            </option>
-          ))}
-        </Select>
-        <CategorySelect
-          label="Conta"
-          name="categoryId"
-          value={categoryId}
-          onChange={setCategoryId}
-          options={kindCategories}
-          tree={tree}
-          emptyLabel="Sem conta"
-        />
         <div className={styles.formWide}>
           <ErrorText message={action.error} />
         </div>

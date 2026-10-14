@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { formatMoneyInput, parseMoney, sanitizeMoneyTyping } from '../../lib/format'
 import { Field } from './Field'
 
@@ -16,6 +16,7 @@ type Props = {
   className?: string
   /** Hide the visible label (keeps it for accessibility) and tighten spacing. */
   compact?: boolean
+  inputRef?: Ref<HTMLInputElement>
 }
 
 /** Text money input (pt-BR). Formats as the user types. Persist via onCommit or a Salvar action. */
@@ -31,6 +32,7 @@ export function MoneyField({
   placeholder = '0,00',
   className,
   compact,
+  inputRef,
 }: Props) {
   return (
     <Field
@@ -46,6 +48,7 @@ export function MoneyField({
       className={className}
       compact={compact}
       value={value}
+      ref={inputRef}
       onChange={(event) => onChange(sanitizeMoneyTyping(event.target.value))}
       onBlur={() => {
         let next = value
