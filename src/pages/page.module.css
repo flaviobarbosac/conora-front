@@ -1440,7 +1440,7 @@ button.compact {
 
 .categoryPendingTrail .raioxAccountName,
 .categoryPendingTrail .rowSub {
-  color: var(--danger, #b42318);
+  color: var(--danger);
 }
 
 .categoriesToggleBtn {
@@ -1808,15 +1808,15 @@ button.compact {
   margin: 0 0 var(--space-4);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--danger, #b42318) 35%, var(--border-subtle));
-  background: color-mix(in srgb, var(--danger, #b42318) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border-subtle));
+  background: var(--danger-bg);
   color: var(--text);
   text-decoration: none;
   font-weight: var(--weight-medium);
 }
 
 .homeUrgent:hover {
-  border-color: color-mix(in srgb, var(--danger, #b42318) 55%, var(--border-subtle));
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border-subtle));
 }
 
 .achievementList {
