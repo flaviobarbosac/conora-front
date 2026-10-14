@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   budgetsApi,
   categoriesApi,
@@ -57,8 +58,22 @@ function toneClass(tone: ProgressTone): string {
   return styles.raioxToneOk
 }
 
+function safeReturnTo(raw: string | null): string | null {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) {
+    return null
+  }
+  if (!raw.startsWith('/raio-x')) {
+    return null
+  }
+  return raw
+}
+
 export function BudgetPage() {
-  const [ym, setYm] = useState(currentCompetence)
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const focusCategoryId = searchParams.get('categoryId')
+  const returnTo = safeReturnTo(searchParams.get('returnTo'))
+  const [ym, setYm] = useState(() => searchParams.get('competenceYm') || currentCompetence())
   const [scope, setScope] = useState<SharingScope | undefined>(() => {
     const stored = readSharingView()
     return stored
@@ -146,9 +161,13 @@ export function BudgetPage() {
           categoriesLoading={categories.loading && !categories.data}
           year={year}
           yearData={yearData.data}
+          focusCategoryId={focusCategoryId}
           onSaved={() => {
             budget.reload()
             yearData.reload()
+            if (returnTo) {
+              navigate(returnTo)
+            }
           }}
         />
       ) : null}
@@ -165,6 +184,7 @@ type EditorProps = {
   categoriesLoading: boolean
   year: number
   yearData: BudgetYear | null | undefined
+  focusCategoryId: string | null
   onSaved: () => void
 }
 
@@ -177,13 +197,47 @@ function BudgetTreeEditor({
   categoriesLoading,
   year,
   yearData,
+  focusCategoryId,
   onSaved,
 }: EditorProps) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [yearAccountId, setYearAccountId] = useState<string | null>(null)
+  const [focusedId, setFocusedId] = useState<string | null>(null)
   const saveAction = useAction()
+
+  useEffect(() => {
+    if (!focusCategoryId || categories.length === 0) {
+      return
+    }
+    const byId = new Map(categories.map((account) => [account.id, account]))
+    const target = byId.get(focusCategoryId)
+    if (!target) {
+      return
+    }
+    const ancestors = new Set<string>()
+    let current: Category | undefined = target
+    while (current?.parentId) {
+      ancestors.add(current.parentId)
+      current = byId.get(current.parentId)
+    }
+    if (target.level !== 'Analytical') {
+      ancestors.add(target.id)
+    }
+    setOpen(ancestors)
+    setFocusedId(focusCategoryId)
+    const timer = window.setTimeout(() => {
+      document.getElementById(`budget-account-${focusCategoryId}`)?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      })
+      const input = document.querySelector<HTMLInputElement>(`[name="budget-${focusCategoryId}"]`)
+      input?.focus()
+      input?.select()
+    }, 80)
+    return () => window.clearTimeout(timer)
+  }, [focusCategoryId, categories])
 
   const cashAccounts = useMemo(
     () =>
@@ -371,6 +425,7 @@ function BudgetTreeEditor({
               matches={matches}
               busy={saveAction.busy}
               canEdit={canEdit}
+              focusedId={focusedId}
               onToggle={toggle}
               onOpenYear={setYearAccountId}
               onDraftChange={(id, value) => setDrafts((current) => ({ ...current, [id]: value }))}
@@ -442,6 +497,7 @@ function BudgetAccountBlock({
   matches,
   busy,
   canEdit,
+  focusedId,
   onToggle,
   onOpenYear,
   onDraftChange,
@@ -456,6 +512,7 @@ function BudgetAccountBlock({
   matches: Set<string> | null
   busy: boolean
   canEdit: boolean
+  focusedId: string | null
   onToggle: (id: string) => void
   onOpenYear: (id: string) => void
   onDraftChange: (id: string, value: string) => void
@@ -492,9 +549,11 @@ function BudgetAccountBlock({
       planned: Math.abs(parseMoney(draft) || 0) || (planned.get(account.id) ?? 0),
       actual: actual.get(account.id) ?? 0,
     }
+    const isFocused = focusedId === account.id
     return (
       <div
-        className={`${styles.raioxRow} ${styles.budgetRow} ${rowClass}`}
+        id={`budget-account-${account.id}`}
+        className={`${styles.raioxRow} ${styles.budgetRow} ${rowClass}${isFocused ? ` ${styles.budgetRowFocus}` : ''}`}
         style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
       >
         <span />
@@ -561,6 +620,7 @@ function BudgetAccountBlock({
               matches={matches}
               busy={busy}
               canEdit={canEdit}
+              focusedId={focusedId}
               onToggle={onToggle}
               onOpenYear={onOpenYear}
               onDraftChange={onDraftChange}
@@ -581,6 +641,7 @@ function BudgetAccountBlock({
               matches={matches}
               busy={busy}
               canEdit={canEdit}
+              focusedId={focusedId}
               onToggle={onToggle}
               onOpenYear={onOpenYear}
               onDraftChange={onDraftChange}

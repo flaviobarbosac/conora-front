@@ -869,6 +869,23 @@ button.compact {
   font-weight: var(--weight-semibold);
 }
 
+.raioxPercentLink {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.budgetRowFocus {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
 .raioxLegend {
   display: flex;
   flex-wrap: wrap;

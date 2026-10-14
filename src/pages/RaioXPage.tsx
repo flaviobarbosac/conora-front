@@ -83,7 +83,15 @@ function toneClass(tone: ProgressTone): string {
   return styles.raioxToneOk
 }
 
-function TotalsCell({ totals, stock = false }: { totals: RaioXTotals; stock?: boolean }) {
+function TotalsCell({
+  totals,
+  stock = false,
+  onUnbudgetedClick,
+}: {
+  totals: RaioXTotals
+  stock?: boolean
+  onUnbudgetedClick?: () => void
+}) {
   if (stock) {
     const has = Math.abs(totals.actual) > 0.001
     return (
@@ -100,11 +108,26 @@ function TotalsCell({ totals, stock = false }: { totals: RaioXTotals; stock?: bo
   const percent = progressPercent(totals)
   const tone = progressTone(percent, totals)
   const shown = percent === null ? 0 : percent
+  const percentClass = `${styles.raioxPercent} ${toneClass(tone)}`
   return (
     <span className={styles.raioxTotals}>
       <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.planned)}</span>
       <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.actual)}</span>
-      <span className={`${styles.raioxPercent} ${toneClass(tone)}`}>{formatPercent(shown)}</span>
+      {tone === 'unbudgeted' && onUnbudgetedClick ? (
+        <button
+          type="button"
+          className={`${percentClass} ${styles.raioxPercentLink}`}
+          title="Definir orçamento desta conta"
+          onClick={(event) => {
+            event.stopPropagation()
+            onUnbudgetedClick()
+          }}
+        >
+          {formatPercent(shown)}
+        </button>
+      ) : (
+        <span className={percentClass}>{formatPercent(shown)}</span>
+      )}
     </span>
   )
 }
@@ -145,8 +168,11 @@ export function RaioXPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const focusSection = parseSectionParam(searchParams.get('section'))
-  const [ym, setYm] = useState(currentCompetence)
-  const [months, setMonths] = useState(MONTHS_MIN)
+  const [ym, setYm] = useState(() => searchParams.get('competenceYm') || currentCompetence())
+  const [months, setMonths] = useState(() => {
+    const raw = Number(searchParams.get('months'))
+    return Number.isFinite(raw) && raw >= MONTHS_MIN && raw <= MONTHS_MAX ? raw : MONTHS_MIN
+  })
   const [focus, setFocus] = useState<RaioXFocus>(null)
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [scope, setScope] = useState<SharingScope>(readSharingView)
@@ -329,6 +355,19 @@ export function RaioXPage() {
     setFocus(null)
   }
 
+  function openBudgetForAccount(accountId: string) {
+    const returnParams = new URLSearchParams({ competenceYm: ym })
+    if (months > MONTHS_MIN) {
+      returnParams.set('months', String(months))
+    }
+    const params = new URLSearchParams({
+      competenceYm: ym,
+      categoryId: accountId,
+      returnTo: `/raio-x?${returnParams.toString()}`,
+    })
+    navigate(`/orcamento?${params.toString()}`)
+  }
+
   function openEntry(entry: Entry) {
     if (entry.canEdit === false) {
       return
@@ -499,6 +538,7 @@ export function RaioXPage() {
               onOpenEntry={openEntry}
               onOpenPatItem={openPatItem}
               onOpenProject={openProject}
+              onUnbudgetedClick={openBudgetForAccount}
             />
           ))}
         </div>
@@ -565,6 +605,7 @@ function RaioXAccountBlock({
   onOpenEntry,
   onOpenPatItem,
   onOpenProject,
+  onUnbudgetedClick,
 }: {
   account: Category
   depth: number
@@ -582,6 +623,7 @@ function RaioXAccountBlock({
   onOpenEntry: (entry: Entry) => void
   onOpenPatItem: (item: PatrimonyItem) => void
   onOpenProject: (project: LifeProject) => void
+  onUnbudgetedClick: (accountId: string) => void
 }) {
   const children = byParent.get(account.id) ?? []
   const stock = isStockSection(account.section)
@@ -636,7 +678,15 @@ function RaioXAccountBlock({
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
         <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
-        <TotalsCell totals={totals} stock={stock} />
+        <TotalsCell
+          totals={totals}
+          stock={stock}
+          onUnbudgetedClick={
+            stock || account.section === 'LifeProject' || account.section === 'Patrimony'
+              ? undefined
+              : () => onUnbudgetedClick(account.id)
+          }
+        />
       </button>
       {expanded
         ? children.map((child) => (
@@ -658,6 +708,7 @@ function RaioXAccountBlock({
               onOpenEntry={onOpenEntry}
               onOpenPatItem={onOpenPatItem}
               onOpenProject={onOpenProject}
+              onUnbudgetedClick={onUnbudgetedClick}
             />
           ))
         : null}
