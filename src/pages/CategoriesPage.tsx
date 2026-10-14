@@ -26,6 +26,7 @@ export function CategoriesPage() {
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameName, setRenameName] = useState('')
   const inGroup = Boolean(group.data?.groupId)
+  const selfId = group.data?.members.find((member) => member.isSelf)?.usuarioId
 
   async function toggleSharing(account: Category) {
     const next: SharingScope = (account.sharingScope ?? 'Family') === 'Family' ? 'Personal' : 'Family'
@@ -108,7 +109,7 @@ export function CategoriesPage() {
       {!accounts.loading && roots.length === 0 ? <Empty>Nenhuma categoria.</Empty> : null}
       {inGroup ? (
         <p className={styles.muted}>
-          No grupo, contas começam como Família. Marque como Pessoal as que não devem entrar no Raio-X consolidado.
+          No grupo, contas começam como Família e vão para todo mundo. O nome de quem criou aparece ao lado. Só essa pessoa muda ou exclui.
         </p>
       ) : null}
       {roots.length > 0 ? (
@@ -131,6 +132,7 @@ export function CategoriesPage() {
               renameName={renameName}
               busy={action.busy}
               inGroup={inGroup}
+              selfId={selfId}
               onToggleSharing={(item) => void toggleSharing(item)}
               onToggle={toggle}
               onDraftParent={(parentId) => {
@@ -174,6 +176,7 @@ function CategoryTreeRow({
   renameName,
   busy,
   inGroup,
+  selfId,
   onToggleSharing,
   onToggle,
   onDraftParent,
@@ -196,6 +199,7 @@ function CategoryTreeRow({
   renameName: string
   busy: boolean
   inGroup: boolean
+  selfId?: string
   onToggleSharing: (account: Category) => void
   onToggle: (id: string) => void
   onDraftParent: (parentId: string) => void
@@ -214,6 +218,10 @@ function CategoryTreeRow({
   const drafting = draftParentId === account.id
   const renaming = renameId === account.id
   const expandable = children.length > 0 || canAdd
+  const canManage =
+    !account.isSystem && (!inGroup || (selfId != null && account.createdByUsuarioId === selfId))
+  const canToggleSharing =
+    inGroup && account.level === 'Analytical' && (account.isSystem || canManage)
   const expanded = open.has(account.id) || drafting
   const rowClass =
     account.level === 'Root' ||
@@ -282,6 +290,7 @@ function CategoryTreeRow({
               <span className={styles.rowSub}>
                 {' '}
                 · {(account.sharingScope ?? 'Family') === 'Family' ? 'Família' : 'Pessoal'}
+                {account.createdByName ? ` · ${account.createdByName}` : ''}
               </span>
             ) : null}
           </strong>
@@ -299,12 +308,12 @@ function CategoryTreeRow({
               <Icon name="add" size={20} decorative />
             </Button>
           ) : null}
-          {inGroup && account.level === 'Analytical' && !renaming ? (
+          {canToggleSharing && !renaming ? (
             <Button variant="ghost" disabled={busy} onClick={() => onToggleSharing(account)}>
               {(account.sharingScope ?? 'Family') === 'Family' ? 'Tornar pessoal' : 'Tornar família'}
             </Button>
           ) : null}
-          {!account.isSystem && !renaming ? (
+          {canManage && !renaming ? (
             <>
               <Button variant="ghost" disabled={busy} onClick={() => onStartRename(account)}>
                 Renomear
@@ -330,6 +339,7 @@ function CategoryTreeRow({
               renameName={renameName}
               busy={busy}
               inGroup={inGroup}
+              selfId={selfId}
               onToggleSharing={onToggleSharing}
               onToggle={onToggle}
               onDraftParent={onDraftParent}

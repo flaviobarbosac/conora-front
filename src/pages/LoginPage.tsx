@@ -21,6 +21,7 @@ export function LoginPage() {
   const { session, login, loginGoogle, loginApple } = useAuth()
   const [searchParams] = useSearchParams()
   const afterLogin = safeReturnTo(searchParams.get('returnTo'))
+  const fromInvite = afterLogin.startsWith('/grupo/convite/')
   const registerTo = afterLogin === '/' ? '/register' : `/register?returnTo=${encodeURIComponent(afterLogin)}`
   const showApple = appleSignInAvailable()
   const [usuario, setUsuario] = useState('')
@@ -57,10 +58,40 @@ export function LoginPage() {
     }
   }
 
+  async function onApple() {
+    setBusy(true)
+    setError(null)
+    try {
+      await loginApple(await requestAppleIdentityToken())
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível entrar com Apple.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const socialLogin = (
+    <>
+      <Button variant="secondary" className={styles.google} disabled={busy} onClick={() => void onGoogle()}>
+        <GoogleMark />
+        Continuar com Google
+      </Button>
+      {showApple ? (
+        <Button variant="secondary" disabled={busy} onClick={() => void onApple()}>
+          Continuar com Apple
+        </Button>
+      ) : null}
+    </>
+  )
+
   return (
     <AuthLayout
       title="Entrar"
-      subtitle="Acesse com CPF ou e-mail. Google é opcional."
+      subtitle={
+        fromInvite
+          ? 'Para aceitar o convite, entre com Google. CPF ou e-mail também servem.'
+          : 'Acesse com CPF ou e-mail. Google é opcional.'
+      }
       footer={
         <>
           Ainda não tem conta? <Link to={registerTo}>Criar conta</Link>
@@ -70,13 +101,21 @@ export function LoginPage() {
       }
     >
       <form className={styles.form} onSubmit={(event) => void onSubmit(event)} noValidate>
+        {fromInvite ? (
+          <div className={styles.actions}>
+            {socialLogin}
+            <div className={styles.divider} aria-hidden="true">
+              <span>ou</span>
+            </div>
+          </div>
+        ) : null}
         <Field
           label="CPF ou e-mail"
           name="usuario"
           type="text"
           inputMode="email"
           autoComplete="username"
-          autoFocus
+          autoFocus={!fromInvite}
           required
           value={usuario}
           onChange={(event) => setUsuario(formatLoginUsuario(event.target.value))}
@@ -108,34 +147,14 @@ export function LoginPage() {
           <Button type="submit" disabled={busy} aria-busy={busy}>
             {busy ? 'Entrando…' : 'Entrar'}
           </Button>
-          <div className={styles.divider} aria-hidden="true">
-            <span>ou</span>
-          </div>
-          <Button variant="secondary" className={styles.google} disabled={busy} onClick={() => void onGoogle()}>
-            <GoogleMark />
-            Continuar com Google
-          </Button>
-          {showApple ? (
-            <Button
-              variant="secondary"
-              disabled={busy}
-              onClick={() => {
-                void (async () => {
-                  setBusy(true)
-                  setError(null)
-                  try {
-                    await loginApple(await requestAppleIdentityToken())
-                  } catch (caught) {
-                    setError(caught instanceof Error ? caught.message : 'Não foi possível entrar com Apple.')
-                  } finally {
-                    setBusy(false)
-                  }
-                })()
-              }}
-            >
-              Continuar com Apple
-            </Button>
-          ) : null}
+          {fromInvite ? null : (
+            <>
+              <div className={styles.divider} aria-hidden="true">
+                <span>ou</span>
+              </div>
+              {socialLogin}
+            </>
+          )}
         </div>
       </form>
     </AuthLayout>

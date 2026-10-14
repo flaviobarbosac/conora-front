@@ -135,6 +135,7 @@ export function MembersPage() {
 
   const openInvites = groupData?.pendingInvites.filter((i) => i.isOpen) ?? []
   const hasGroup = Boolean(groupData?.groupId)
+  const canInvite = !hasGroup || Boolean(groupData?.isBudgetOwner)
 
   return (
     <div className={styles.page}>
@@ -237,6 +238,7 @@ export function MembersPage() {
 
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Convidar por e-mail</h2>
+            {canInvite ? (
             <form className={styles.form} onSubmit={(event) => void sendInvite(event)}>
               <div className={styles.formWide}>
                 <Field
@@ -255,7 +257,12 @@ export function MembersPage() {
                 </Button>
               </div>
             </form>
-            {openInvites.length > 0 ? (
+            ) : (
+              <p className={styles.muted}>
+                Só o responsável pelo grupo pode convidar. Se a responsabilidade for transferida para você, o convite passa a aparecer aqui.
+              </p>
+            )}
+            {canInvite && openInvites.length > 0 ? (
               <>
                 <h3 className={styles.sectionTitle}>Convites pendentes</h3>
                 <ul className={styles.list}>

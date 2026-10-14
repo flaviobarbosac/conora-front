@@ -9,7 +9,7 @@ import { AuthLayout } from '../layouts/AuthLayout'
 import { useAction } from '../hooks/useAction'
 import { errorMessage } from '../lib/format'
 import { showSaveToast } from '../lib/saveToast'
-import styles from './page.module.css'
+import styles from './auth.module.css'
 
 export function GroupInvitePage() {
   const { token = '' } = useParams()
@@ -76,28 +76,32 @@ export function GroupInvitePage() {
     return (
       <AuthLayout title="Convite para o grupo" subtitle="Não foi possível carregar o convite.">
         <ErrorText message={loadError} />
-        <p className={styles.muted}>
-          <Link to="/">Voltar ao início</Link>
-        </p>
+        <div className={styles.actions}>
+          <Link to="/">
+            <Button variant="secondary">Voltar ao início</Button>
+          </Link>
+        </div>
       </AuthLayout>
     )
   }
 
   if (accepted) {
     return (
-      <AuthLayout title="Bem-vindo ao grupo" subtitle={`Você entrou no grupo de ${preview.inviterName || 'sua família'}.`}>
-        <section className={styles.section}>
-          <p>
-            A partir de agora você pode usar o <strong>orçamento da família</strong> (visão compartilhada) e continuar com suas{' '}
-            <strong>contas pessoais</strong> quando fizer sentido.
-          </p>
-          <div className={styles.actions}>
-            <Button onClick={() => navigate('/orcamento')}>Ver orçamento</Button>
-            <Button variant="secondary" onClick={() => navigate('/membros')}>
-              Grupo e perfil
-            </Button>
-          </div>
-        </section>
+      <AuthLayout
+        title="Bem-vindo ao grupo"
+        heroHeadline="O plano da família, visto pelos dois."
+        subtitle={`Você entrou no grupo de ${preview.inviterName || 'sua família'}.`}
+      >
+        <ul className={styles.facts}>
+          <li>Orçamento e Raio-X da família passam a ser a visão de vocês.</li>
+          <li>Contas, cartões e lançamentos continuam de cada um.</li>
+        </ul>
+        <div className={styles.actions}>
+          <Button onClick={() => navigate('/orcamento')}>Ver orçamento</Button>
+          <Button variant="secondary" onClick={() => navigate('/membros')}>
+            Grupo e perfil
+          </Button>
+        </div>
       </AuthLayout>
     )
   }
@@ -112,12 +116,15 @@ export function GroupInvitePage() {
 
   const blocked = preview.status !== 'Open'
 
+  const inviter = preview.inviterName.trim() || 'Alguém'
+
   return (
     <AuthLayout
       title="Convite para o grupo"
+      heroHeadline="O plano da família, visto pelos dois."
       subtitle={
         preview.status === 'Open'
-          ? `${preview.inviterName} convidou ${preview.email} para o grupo familiar no Conora.`
+          ? `${inviter} convidou você para o grupo familiar.`
           : statusMessage[preview.status] ?? 'Convite indisponível.'
       }
     >
@@ -131,34 +138,38 @@ export function GroupInvitePage() {
             </Button>
           )}
         </div>
-      ) : !session ? (
-        <>
-          <p className={styles.muted}>
-            Entre ou crie uma conta com o e-mail <strong>{preview.email}</strong> para aceitar o convite.
-          </p>
-          <div className={styles.actions}>
-            <Link to={loginHref}>
-              <Button>Entrar</Button>
-            </Link>
-            <Link to={registerHref}>
-              <Button variant="secondary">Criar conta</Button>
-            </Link>
-          </div>
-        </>
       ) : (
         <>
+          <p>
+            O convite é para <strong className={styles.email}>{preview.email}</strong>.
+          </p>
+          <ul className={styles.facts}>
+            <li>Orçamento e Raio-X da família passam a ser a visão de vocês.</li>
+            <li>Contas, cartões e lançamentos continuam de cada um.</li>
+            <li>Dá para sair do grupo depois, em Membros.</li>
+          </ul>
           {emailMismatch ? (
-            <p className={styles.muted}>
-              Você está logado como <strong>{sessionEmail}</strong>, mas o convite é para <strong>{preview.email}</strong>.
-              Use a conta correta para aceitar.
+            <p>
+              Você está logado como <strong>{sessionEmail}</strong>. Entre com o e-mail do convite para aceitar.
             </p>
           ) : null}
           <ErrorText message={accept.error} />
-          <div className={styles.actions}>
-            <Button disabled={accept.busy || Boolean(emailMismatch)} onClick={() => void onAccept()}>
-              Aceitar convite
-            </Button>
-          </div>
+          {!session ? (
+            <div className={styles.actions}>
+              <Link to={loginHref}>
+                <Button>Entrar para aceitar</Button>
+              </Link>
+              <Link to={registerHref}>
+                <Button variant="secondary">Criar conta com esse e-mail</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className={styles.actions}>
+              <Button disabled={accept.busy || Boolean(emailMismatch)} onClick={() => void onAccept()}>
+                Aceitar convite
+              </Button>
+            </div>
+          )}
         </>
       )}
     </AuthLayout>
