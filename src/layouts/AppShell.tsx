@@ -331,14 +331,15 @@ export function AppShell() {
                   <Icon name="user" size={20} />
                   Perfil
                 </Link>
+                {/* Temporary: onboarding shortcut for QA — remove after tests. */}
                 <Link
-                  to="/configuracoes"
+                  to="/onboarding"
                   className={styles.profileMenuItem}
                   role="menuitem"
                   onClick={() => setProfileMenuOpen(false)}
                 >
-                  <Icon name="settings" size={20} />
-                  Configurações
+                  <Icon name="goal" size={20} />
+                  Onboarding
                 </Link>
                 <div className={styles.themesItemWrap}>
                   <button
