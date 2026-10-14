@@ -28,7 +28,7 @@ export function CategoriesPage() {
   const inGroup = Boolean(group.data?.groupId)
 
   async function toggleSharing(account: Category) {
-    const next: SharingScope = (account.sharingScope ?? 'Personal') === 'Family' ? 'Personal' : 'Family'
+    const next: SharingScope = (account.sharingScope ?? 'Family') === 'Family' ? 'Personal' : 'Family'
     if (await action.run(() => categoriesApi.updateSharing(account.id, next))) {
       showSaveToast(next === 'Family' ? 'Conta no consolidado familiar.' : 'Conta só pessoal.')
       accounts.reload()
@@ -281,7 +281,7 @@ function CategoryTreeRow({
             {inGroup && account.level === 'Analytical' ? (
               <span className={styles.rowSub}>
                 {' '}
-                · {(account.sharingScope ?? 'Personal') === 'Family' ? 'Família' : 'Pessoal'}
+                · {(account.sharingScope ?? 'Family') === 'Family' ? 'Família' : 'Pessoal'}
               </span>
             ) : null}
           </strong>
@@ -301,7 +301,7 @@ function CategoryTreeRow({
           ) : null}
           {inGroup && account.level === 'Analytical' && !renaming ? (
             <Button variant="ghost" disabled={busy} onClick={() => onToggleSharing(account)}>
-              {(account.sharingScope ?? 'Personal') === 'Family' ? 'Tornar pessoal' : 'Tornar família'}
+              {(account.sharingScope ?? 'Family') === 'Family' ? 'Tornar pessoal' : 'Tornar família'}
             </Button>
           ) : null}
           {!account.isSystem && !renaming ? (

@@ -187,12 +187,16 @@ function BudgetTreeEditor({
 
   const cashAccounts = useMemo(
     () =>
-      categories.filter(
-        (account) =>
-          CASH_FLOW_SECTIONS.includes(account.section) &&
-          account.isActive &&
-          (!scope || (account.sharingScope ?? 'Personal') === scope),
-      ),
+      categories.filter((account) => {
+        if (!CASH_FLOW_SECTIONS.includes(account.section) || !account.isActive) {
+          return false
+        }
+        // Keep chart structure; only analytical rows follow Family/Personal opt-out.
+        if (!scope || account.level !== 'Analytical') {
+          return true
+        }
+        return (account.sharingScope ?? 'Family') === scope
+      }),
     [categories, scope],
   )
 
@@ -346,9 +350,9 @@ function BudgetTreeEditor({
       {roots.length === 0 && categoriesLoading ? <Loading /> : null}
       {roots.length === 0 && !categoriesLoading ? (
         <Empty>
-          {scope === 'Family'
-            ? 'Nenhuma categoria familiar. Marque categorias como Família em Categorias ou troque a visão para Pessoal.'
-            : 'Nenhuma categoria para este escopo.'}
+          {scope === 'Personal'
+            ? 'Nenhuma categoria pessoal. Contas privadas ficam só na visão Pessoal.'
+            : 'Nenhuma categoria para montar o orçamento.'}
         </Empty>
       ) : null}
       {roots.length > 0 ? (

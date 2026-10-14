@@ -188,7 +188,7 @@ export function RaioXPage() {
     // Keep structure (roots/groups) + analytical accounts in the active sharing scope.
     return all.filter(
       (account) =>
-        account.level !== 'Analytical' || (account.sharingScope ?? 'Personal') === scope,
+        account.level !== 'Analytical' || (account.sharingScope ?? 'Family') === scope,
     )
   }, [accounts.data, group.data?.groupId, scope])
   const byParent = useMemo(() => {
