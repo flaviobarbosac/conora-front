@@ -381,12 +381,7 @@ export function RaioXPage() {
         title="Raio-X"
         actions={
           <>
-            <SharingViewToggle
-              onChange={(next) => {
-                setScope(next)
-                setBreakdown(null)
-              }}
-            />
+            <SharingViewToggle onChange={setScope} />
             <CompetencePicker value={ym} onChange={setYm} />
             <label className={styles.periodSlider} onClick={(event) => event.stopPropagation()}>
               <span className={styles.periodSliderValue}>
