@@ -13,7 +13,7 @@ import { SharingViewToggle } from '../components/SharingViewToggle'
 import { ProgressToneLegend } from '../components/ProgressToneLegend'
 import { Button } from '../components/ui/Button'
 import { Icon } from '../components/ui/Icon'
-import { ErrorText, Loading } from '../components/ui/Feedback'
+import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
 import { IntegerField } from '../components/ui/IntegerField'
@@ -143,6 +143,7 @@ export function BudgetPage() {
           canEdit={canEdit}
           budget={data}
           categories={categories.data ?? []}
+          categoriesLoading={categories.loading && !categories.data}
           year={year}
           yearData={yearData.data}
           onSaved={() => {
@@ -161,12 +162,23 @@ type EditorProps = {
   canEdit: boolean
   budget: Budget
   categories: Category[]
+  categoriesLoading: boolean
   year: number
   yearData: BudgetYear | null | undefined
   onSaved: () => void
 }
 
-function BudgetTreeEditor({ ym, scope, canEdit, budget, categories, year, yearData, onSaved }: EditorProps) {
+function BudgetTreeEditor({
+  ym,
+  scope,
+  canEdit,
+  budget,
+  categories,
+  categoriesLoading,
+  year,
+  yearData,
+  onSaved,
+}: EditorProps) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [drafts, setDrafts] = useState<Record<string, string>>({})
@@ -331,7 +343,14 @@ function BudgetTreeEditor({ ym, scope, canEdit, budget, categories, year, yearDa
         placeholder="Ex.: aluguel, salário…"
       />
       <ErrorText message={saveAction.error} />
-      {roots.length === 0 ? <Loading /> : null}
+      {roots.length === 0 && categoriesLoading ? <Loading /> : null}
+      {roots.length === 0 && !categoriesLoading ? (
+        <Empty>
+          {scope === 'Family'
+            ? 'Nenhuma categoria familiar. Marque categorias como Família em Categorias ou troque a visão para Pessoal.'
+            : 'Nenhuma categoria para este escopo.'}
+        </Empty>
+      ) : null}
       {roots.length > 0 ? (
         <div className={styles.raioxList}>
           <ProgressToneLegend />

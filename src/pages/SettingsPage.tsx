@@ -223,6 +223,10 @@ export function SettingsPage() {
             <strong>Perfil</strong>
             <span>{profile.data?.name?.trim() || 'Sem nome'}</span>
           </Link>
+          <Link to="/onboarding" className={styles.accountLink}>
+            <strong>Onboarding</strong>
+            <span>Jornada Raio X (teste)</span>
+          </Link>
         </div>
         <p className={styles.muted}>Baixe uma cópia dos seus dados ou exclua sua conta definitivamente.</p>
         <div className={styles.actions}>
