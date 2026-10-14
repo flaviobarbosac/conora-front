@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   entriesApi,
+  entryDisplayDescription,
   monthsApi,
   receiptsApi,
   type Category,
@@ -39,6 +40,7 @@ import {
   todayInput,
 } from '../lib/format'
 import { isNativeApp } from '../lib/platform'
+import { readSharingView } from '../lib/sharingView'
 import { peekPendingShare, takePendingShare } from '../share/pendingShare'
 import {
   peekPendingIntakeId,
@@ -201,6 +203,10 @@ export function EntriesPage() {
     if (!isEditableType(entry.type)) {
       return
     }
+    if (entry.canEdit === false) {
+      setOpenError('Só quem lançou pode editar este lançamento.')
+      return
+    }
     if (monthClosed) {
       setOpenError(closedMonthMessage)
       return
@@ -300,6 +306,7 @@ export function EntriesPage() {
     }
     return [...byId.values()]
   }, [lookups.categories, lookups.cashFlowAccounts])
+  const sharingScope = readSharingView()
   const entries = useLoad(
     () =>
       entriesApi.list({
@@ -308,8 +315,9 @@ export function EntriesPage() {
         categoryId: categoryFilter || undefined,
         search: appliedSearch || undefined,
         take: 100,
+        scope: sharingScope,
       }),
-    [ym, typeFilter, categoryFilter, appliedSearch],
+    [ym, typeFilter, categoryFilter, appliedSearch, sharingScope],
   )
   const rowAction = useAction()
 
@@ -335,6 +343,10 @@ export function EntriesPage() {
   }, [showForm, formDirty])
 
   async function remove(entry: Entry) {
+    if (entry.canEdit === false) {
+      setOpenError('Só quem lançou pode excluir este lançamento.')
+      return
+    }
     if (monthClosed) {
       setOpenError(closedMonthMessage)
       return
@@ -473,7 +485,7 @@ export function EntriesPage() {
         {entries.data && entries.data.items.length > 0 ? (
           <ul className={styles.list}>
             {entries.data.items.map((entry) => {
-              const editable = isEditableType(entry.type) && !monthClosed
+              const editable = isEditableType(entry.type) && !monthClosed && entry.canEdit !== false
               return (
                 <li key={entry.id} className={styles.row}>
                   <button
@@ -484,7 +496,7 @@ export function EntriesPage() {
                     style={editable ? undefined : { cursor: 'default', textAlign: 'left' }}
                   >
                     <strong>
-                      {entry.description}
+                      {entryDisplayDescription(entry)}
                       {entry.installmentCount ? ` (${entry.installmentNumber}/${entry.installmentCount})` : ''}
                     </strong>
                     <span className={styles.rowSub}>{describe(entry)}</span>
@@ -495,7 +507,10 @@ export function EntriesPage() {
                       {entry.type === 'Expense' ? '− ' : ''}
                       {formatMoney(entry.amount)}
                     </span>
-                    <DeleteIconButton disabled={rowAction.busy || monthClosed} onClick={() => void remove(entry)} />
+                    <DeleteIconButton
+                      disabled={rowAction.busy || monthClosed || entry.canEdit === false}
+                      onClick={() => void remove(entry)}
+                    />
                   </span>
                 </li>
               )

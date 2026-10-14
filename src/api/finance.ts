@@ -187,6 +187,9 @@ export type Entry = {
   recurrenceKey: string | null
   installmentNumber: number | null
   installmentCount: number | null
+  usuarioId?: string
+  postedByName?: string | null
+  canEdit?: boolean
 }
 
 export type EntryInput = {
@@ -226,6 +229,15 @@ export type EntryFilter = {
   search?: string
   skip?: number
   take?: number
+  scope?: SharingScope
+}
+
+export function entryDisplayDescription(entry: Entry): string {
+  const base = entry.description?.trim() || 'Lançamento'
+  if (entry.canEdit === false && entry.postedByName) {
+    return `${base} - ${entry.postedByName}`
+  }
+  return base
 }
 
 export const entriesApi = {
