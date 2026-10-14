@@ -66,17 +66,25 @@ export type Category = {
   sharingScope: SharingScope
   createdByUsuarioId?: string | null
   createdByName?: string | null
+  isPendingReview?: boolean
 }
 
 export const categoriesApi = {
-  list: (section?: CategorySection, includeInactive = false, analyticalOnly = false) =>
-    apiFetch<Category[]>(`/categories${query({ section, includeInactive, analyticalOnly })}`),
+  list: (
+    section?: CategorySection,
+    includeInactive = false,
+    analyticalOnly = false,
+    includePending = false,
+  ) =>
+    apiFetch<Category[]>(
+      `/categories${query({ section, includeInactive, analyticalOnly, includePending })}`,
+    ),
   create: (name: string, parentId: string) =>
     apiFetch<Category>('/categories', json('POST', { name, parentId })),
-  update: (id: string, name: string, isActive: boolean, sharingScope?: SharingScope) =>
-    apiFetch<Category>(`/categories/${id}`, json('PUT', { name, isActive, sharingScope })),
-  updateSharing: (id: string, sharingScope: SharingScope) =>
-    apiFetch<Category>(`/categories/${id}/sharing`, json('PUT', { sharingScope })),
+  update: (id: string, name: string, isActive: boolean) =>
+    apiFetch<Category>(`/categories/${id}`, json('PUT', { name, isActive })),
+  approve: (id: string) => apiFetch<Category>(`/categories/${id}/approve`, json('POST')),
+  reject: (id: string) => apiFetch<void>(`/categories/${id}/reject`, json('POST')),
   remove: (id: string) => apiFetch<void>(`/categories/${id}`, json('DELETE')),
 }
 

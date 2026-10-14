@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   entriesApi,
+  monthsApi,
   receiptsApi,
   type Category,
   type Entry,
@@ -69,6 +70,9 @@ const TYPE_LABEL: Record<EntryType, string> = {
 
 const FORM_TYPES: FormType[] = ['Expense', 'Income']
 
+const CLOSED_MONTH_MESSAGE =
+  'Este mês está fechado. Por ora o Conora não permite lançamento retroativo. Reabra o mês em Fechar mês se precisar corrigir.'
+
 function isEditableType(type: EntryType): type is FormType {
   return type === 'Expense' || type === 'Income'
 }
@@ -103,6 +107,12 @@ export function EntriesPage() {
   const [receiptIntakeId, setReceiptIntakeId] = useState<string | null>(null)
 
   useRegisterDirty('entries-form', showForm && formDirty)
+
+  const monthStatus = useLoad(() => monthsApi.get(ym), [ym])
+  const monthClosed = Boolean(monthStatus.data?.isClosed)
+  const closedMonthMessage = monthStatus.data?.isClosed
+    ? `O mês ${ym} está fechado. Por ora o Conora não permite lançamento retroativo. Reabra o mês em Fechar mês se precisar corrigir.`
+    : CLOSED_MONTH_MESSAGE
 
   function applyIntakeToForm(intake: ReceiptIntake) {
     setReceiptIntake(intake)
@@ -174,6 +184,10 @@ export function EntriesPage() {
   }
 
   async function openCreate() {
+    if (monthClosed) {
+      setOpenError(closedMonthMessage)
+      return
+    }
     if (showForm && formDirty && !(await confirmLeave())) {
       return
     }
@@ -185,6 +199,10 @@ export function EntriesPage() {
 
   async function openEdit(entry: Entry) {
     if (!isEditableType(entry.type)) {
+      return
+    }
+    if (monthClosed) {
+      setOpenError(closedMonthMessage)
       return
     }
     if (showForm && formDirty && !(await confirmLeave())) {
@@ -317,6 +335,10 @@ export function EntriesPage() {
   }, [showForm, formDirty])
 
   async function remove(entry: Entry) {
+    if (monthClosed) {
+      setOpenError(closedMonthMessage)
+      return
+    }
     if (!(await confirmDestructive(`Excluir "${entry.description}"?`, { title: 'Excluir lançamento' }))) {
       return
     }
@@ -349,6 +371,7 @@ export function EntriesPage() {
           <>
             <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
             <Button
+              disabled={!showForm && monthClosed}
               onClick={() => {
                 if (showForm) {
                   void closeForm()
@@ -361,6 +384,7 @@ export function EntriesPage() {
             </Button>
             <Button
               variant="secondary"
+              disabled={monthClosed}
               onClick={() => {
                 void scanReceipt()
                   .then(() => void openCreate())
@@ -373,8 +397,9 @@ export function EntriesPage() {
         }
       />
 
+      {monthClosed ? <p className={styles.muted}>{closedMonthMessage}</p> : null}
       {receiptBusy ? <p className={styles.muted}>Lendo o recibo…</p> : null}
-      <ErrorText message={openError} />
+      <ErrorText message={openError ?? monthStatus.error ?? rowAction.error} />
 
       {showForm ? (
         <EntryForm
@@ -448,7 +473,7 @@ export function EntriesPage() {
         {entries.data && entries.data.items.length > 0 ? (
           <ul className={styles.list}>
             {entries.data.items.map((entry) => {
-              const editable = isEditableType(entry.type)
+              const editable = isEditableType(entry.type) && !monthClosed
               return (
                 <li key={entry.id} className={styles.row}>
                   <button
@@ -470,7 +495,7 @@ export function EntriesPage() {
                       {entry.type === 'Expense' ? '− ' : ''}
                       {formatMoney(entry.amount)}
                     </span>
-                    <DeleteIconButton disabled={rowAction.busy} onClick={() => void remove(entry)} />
+                    <DeleteIconButton disabled={rowAction.busy || monthClosed} onClick={() => void remove(entry)} />
                   </span>
                 </li>
               )

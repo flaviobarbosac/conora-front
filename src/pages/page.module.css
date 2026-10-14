@@ -1438,6 +1438,11 @@ button.compact {
   cursor: default;
 }
 
+.categoryPendingTrail .raioxAccountName,
+.categoryPendingTrail .rowSub {
+  color: var(--danger, #b42318);
+}
+
 .categoriesToggleBtn {
   display: inline-flex;
   align-items: center;
@@ -1796,12 +1801,22 @@ button.compact {
   margin-bottom: var(--space-4);
 }
 
-.nextStep {
-  margin: 0;
+.homeUrgent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  background: var(--selected);
+  border: 1px solid color-mix(in srgb, var(--danger, #b42318) 35%, var(--border-subtle));
+  background: color-mix(in srgb, var(--danger, #b42318) 10%, var(--surface));
   color: var(--text);
+  text-decoration: none;
+  font-weight: var(--weight-medium);
+}
+
+.homeUrgent:hover {
+  border-color: color-mix(in srgb, var(--danger, #b42318) 55%, var(--border-subtle));
 }
 
 .achievementList {
