@@ -18,6 +18,7 @@ import {
   type PatrimonyItem,
   type PatrimonySummary,
   type SharingScope,
+  entryDisplayDescription,
 } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
@@ -175,9 +176,9 @@ export function RaioXPage() {
   const entries = useLoad(
     () =>
       months === 1
-        ? entriesApi.list({ competenceYm: ym, take: 200 })
+        ? entriesApi.list({ competenceYm: ym, take: 200, scope })
         : Promise.resolve({ items: [], skip: 0, take: 0, totalCount: 0 }),
-    [ym, months],
+    [ym, months, scope],
   )
 
   const list = useMemo(() => {
@@ -348,6 +349,9 @@ export function RaioXPage() {
   }
 
   function openEntry(entry: Entry) {
+    if (entry.canEdit === false) {
+      return
+    }
     if (entry.type === 'ProjectContribution' || entry.type === 'Contribution') {
       const params = new URLSearchParams()
       if (entry.description) {
@@ -607,7 +611,11 @@ function RaioXAccountBlock({
       ? (projectsByAccount.get(account.id) ?? [])
       : []
   const hasLaunches = launchEntries.length > 0 || launchPatItems.length > 0 || launchProjects.length > 0
-  const expandable = children.length > 0 || hasLaunches
+  const leafActual =
+    !stock && account.level === 'Analytical' && account.section !== 'LifeProject'
+      ? (actual.get(account.id) ?? 0)
+      : 0
+  const expandable = children.length > 0 || hasLaunches || leafActual !== 0
   const expanded = open.has(account.id)
   const totals = stock
     ? sumBranch(account.id, byParent, emptyAmounts, patAmounts)
@@ -680,10 +688,11 @@ function RaioXAccountBlock({
               className={`${styles.raioxRow} ${styles.raioxEntry}`}
               style={{ paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }}
               onClick={() => onOpenEntry(entry)}
+              disabled={entry.canEdit === false}
             >
               <span />
               <span className={styles.rowMain}>
-                <strong>{entry.description || 'Lançamento'}</strong>
+                <strong>{entryDisplayDescription(entry)}</strong>
                 <span className={styles.rowSub}>{entry.competenceYm}</span>
               </span>
               <span className={styles.raioxTotals}>
