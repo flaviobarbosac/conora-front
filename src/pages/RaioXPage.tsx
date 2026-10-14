@@ -356,7 +356,7 @@ export function RaioXPage() {
   }
 
   function openBudgetForAccount(accountId: string) {
-    const returnParams = new URLSearchParams({ competenceYm: ym })
+    const returnParams = new URLSearchParams({ competenceYm: ym, categoryId: accountId })
     if (months > MONTHS_MIN) {
       returnParams.set('months', String(months))
     }
@@ -367,6 +367,38 @@ export function RaioXPage() {
     })
     navigate(`/orcamento?${params.toString()}`)
   }
+
+  useEffect(() => {
+    const focusId = searchParams.get('categoryId')
+    if (!focusId || list.length === 0) {
+      return
+    }
+    const byId = new Map(list.map((account) => [account.id, account]))
+    if (!byId.has(focusId)) {
+      return
+    }
+    const ancestors = new Set<string>()
+    let current = byId.get(focusId)
+    while (current?.parentId) {
+      ancestors.add(current.parentId)
+      current = byId.get(current.parentId)
+    }
+    ancestors.add(focusId)
+    setOpen((prev) => {
+      const next = new Set(prev)
+      for (const id of ancestors) {
+        next.add(id)
+      }
+      return next
+    })
+    const timer = window.setTimeout(() => {
+      document.getElementById(`raiox-account-${focusId}`)?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      })
+    }, 80)
+    return () => window.clearTimeout(timer)
+  }, [searchParams, list])
 
   function openEntry(entry: Entry) {
     if (entry.canEdit === false) {
@@ -664,6 +696,7 @@ function RaioXAccountBlock({
     <>
       <button
         type="button"
+        id={`raiox-account-${account.id}`}
         className={`${styles.raioxRow} ${rowClass} ${focused}`}
         style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
         onClick={(event) => {

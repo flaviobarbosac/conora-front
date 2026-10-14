@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from 'react'
+import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react'
 import styles from './Field.module.css'
 
 type Props = InputHTMLAttributes<HTMLInputElement> & {
@@ -9,7 +9,10 @@ type Props = InputHTMLAttributes<HTMLInputElement> & {
   compact?: boolean
 }
 
-export function Field({ label, hint, id, className, compact, ...props }: Props) {
+export const Field = forwardRef<HTMLInputElement, Props>(function Field(
+  { label, hint, id, className, compact, ...props },
+  ref,
+) {
   const inputId = id ?? props.name
   return (
     <div className={[styles.field, compact ? styles.compact : ''].filter(Boolean).join(' ')}>
@@ -17,7 +20,12 @@ export function Field({ label, hint, id, className, compact, ...props }: Props) 
         <label htmlFor={inputId}>{label}</label>
       </div>
       {hint ? <p className={styles.hint}>{hint}</p> : null}
-      <input id={inputId} className={[styles.input, className].filter(Boolean).join(' ')} {...props} />
+      <input
+        id={inputId}
+        ref={ref}
+        className={[styles.input, className].filter(Boolean).join(' ')}
+        {...props}
+      />
     </div>
   )
-}
+})
