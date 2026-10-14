@@ -26,7 +26,16 @@ export default defineConfig(({ mode }) => {
               srcDir: 'src/pwa',
               filename: 'sw.ts',
               registerType: 'autoUpdate',
-              includeAssets: ['brand/simbolo.png', 'brand/logo-claro.png', 'brand/logo-escuro.png'],
+              includeAssets: [
+                'brand/conora-simbolo.svg',
+                'brand/favicon-16.png',
+                'brand/favicon-32.png',
+                'brand/apple-touch-icon.png',
+                'brand/conora-claro.png',
+                'brand/conora-escuro.png',
+                'brand/logo-claro.png',
+                'brand/logo-escuro.png',
+              ],
               injectManifest: {
                 globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
                 maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
@@ -42,8 +51,9 @@ export default defineConfig(({ mode }) => {
                 start_url: '/app/',
                 scope: '/app/',
                 icons: [
-                  { src: '/app/brand/simbolo.png', sizes: '192x192', type: 'image/png' },
-                  { src: '/app/brand/simbolo.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+                  { src: '/app/brand/pwa-192.png', sizes: '192x192', type: 'image/png' },
+                  { src: '/app/brand/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+                  { src: '/app/brand/pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
                 ],
                 share_target: {
                   action: '/app/compartilhar',
