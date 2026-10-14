@@ -185,12 +185,9 @@ export function RaioXPage() {
     if (!group.data?.groupId) {
       return all
     }
-    // Keep structure (roots/groups) + analytical accounts in the active sharing scope.
-    return all.filter(
-      (account) =>
-        account.level !== 'Analytical' || (account.sharingScope ?? 'Family') === scope,
-    )
-  }, [accounts.data, group.data?.groupId, scope])
+    // Shared chart: every analytical line is the same for the group. Scope only changes totals.
+    return all
+  }, [accounts.data])
   const byParent = useMemo(() => {
     const map = groupAccountsByParent(list)
     for (const bucket of map.values()) {

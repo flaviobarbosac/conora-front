@@ -57,6 +57,7 @@ export function HomePage() {
   const progress = useLoad(() => gamificationApi.home(ym), [ym])
   const name = firstName(profile.data?.name)
   const data = dashboard.data
+  const pendingCategories = data?.alerts.find((alert) => alert.code === 'CATEGORY_PENDING_REVIEW')
 
   return (
     <div className={styles.page}>
@@ -87,7 +88,7 @@ export function HomePage() {
 
       {dashboard.loading && !data ? (
         <div className={styles.skeletonStack} aria-busy="true" aria-live="polite">
-          <Skeleton height={140} />
+          <Skeleton height={120} />
           <div className={styles.grid3}>
             <Skeleton height={96} />
             <Skeleton height={96} />
@@ -98,16 +99,46 @@ export function HomePage() {
 
       {data ? (
         <>
-          <HomeProgressPanel data={progress.data} loading={progress.loading && !progress.data} />
+          {pendingCategories ? (
+            <Link className={styles.homeUrgent} to="/categorias">
+              <Icon name="alert" size={20} />
+              <span>{pendingCategories.message}</span>
+            </Link>
+          ) : null}
+
+          <section className={styles.heroCards} aria-label="Resumo do mês">
+            <Link className={styles.heroCard} to="/raio-x">
+              <span>Renda</span>
+              <strong className={`${styles.moneyValue} ${styles.positive}`}>
+                {formatMoney(data.incomeTotal)}
+              </strong>
+            </Link>
+            <Link className={styles.heroCard} to="/raio-x?section=Expense">
+              <span>Despesa</span>
+              <strong className={`${styles.moneyValue} ${styles.negative}`}>
+                {formatMoney(data.expenseTotal)}
+              </strong>
+            </Link>
+            <Link className={styles.heroCard} to="/orcamento">
+              <span>Resultado</span>
+              <strong
+                className={`${styles.moneyValue} ${data.result < 0 ? styles.negative : styles.positive}`}
+              >
+                {formatMoney(data.result)}
+              </strong>
+            </Link>
+          </section>
 
           <HomeRealizedCharts budget={budget.data} loading={budget.loading && !budget.data} />
 
-          <section className={styles.macroGrid} aria-label="Visão macro">
+          <HomeProgressPanel data={progress.data} loading={progress.loading && !progress.data} />
+
+          <section className={styles.macroGrid} aria-label="Orçamento e patrimônio">
             <BudgetMacroChart budget={budget.data} loading={budget.loading && !budget.data} />
             <PatrimonyMacroChart summary={patrimony.data} loading={patrimony.loading && !patrimony.data} />
           </section>
 
-          <nav className={styles.homeBlocks} aria-label="Atalhos principais">
+          <nav className={styles.homeBlocks} aria-label="Projetos de vida">
             <ProjectsHomeTile projects={projects.data ?? []} loading={projects.loading && !projects.data} />
           </nav>
 
@@ -129,14 +160,7 @@ function HomeProgressPanel({ data, loading }: { data: HomeProgress | null | unde
   }
 
   return (
-    <section className={styles.homeProgress} aria-label="Progresso do método">
-      {!data.quietMode && data.nextStep ? (
-        <p className={styles.nextStep}>
-          Próximo passo:{' '}
-          <Link to={data.nextStep.route}>{data.nextStep.title}</Link>
-        </p>
-      ) : null}
-
+    <section className={styles.homeProgress} aria-label="Reserva e fechamento">
       <div className={styles.macroGrid}>
         <ReserveCard reserve={data.reserve} />
         <BudgetCloseCard status={data.budgetClose} />

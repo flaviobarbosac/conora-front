@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react'
-import { categoriesApi, familyApi, type Category, type SharingScope } from '../api/finance'
+import { categoriesApi, familyApi, type Category } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
@@ -17,7 +17,7 @@ import { groupAccountsByParent } from '../lib/raioX'
 import styles from './page.module.css'
 
 export function CategoriesPage() {
-  const accounts = useLoad(() => categoriesApi.list(undefined, true), [])
+  const accounts = useLoad(() => categoriesApi.list(undefined, true, false, true), [])
   const group = useLoad(() => familyApi.group(), [])
   const action = useAction()
   const [open, setOpen] = useState<Set<string>>(() => new Set())
@@ -26,15 +26,8 @@ export function CategoriesPage() {
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameName, setRenameName] = useState('')
   const inGroup = Boolean(group.data?.groupId)
-  const selfId = group.data?.members.find((member) => member.isSelf)?.usuarioId
-
-  async function toggleSharing(account: Category) {
-    const next: SharingScope = (account.sharingScope ?? 'Family') === 'Family' ? 'Personal' : 'Family'
-    if (await action.run(() => categoriesApi.updateSharing(account.id, next))) {
-      showSaveToast(next === 'Family' ? 'Conta no consolidado familiar.' : 'Conta só pessoal.')
-      accounts.reload()
-    }
-  }
+  const isBudgetOwner = Boolean(group.data?.isBudgetOwner)
+  const canEditChart = !inGroup || isBudgetOwner
 
   useRegisterDirty(
     'categories-edit',
@@ -42,6 +35,22 @@ export function CategoriesPage() {
   )
 
   const list = accounts.data ?? []
+  const pendingAncestorIds = useMemo(() => {
+    const byId = new Map(list.map((account) => [account.id, account]))
+    const marked = new Set<string>()
+    for (const account of list) {
+      if (!account.isPendingReview) {
+        continue
+      }
+      let current: Category | undefined = account
+      while (current) {
+        marked.add(current.id)
+        current = current.parentId ? byId.get(current.parentId) : undefined
+      }
+    }
+    return marked
+  }, [list])
+
   const byParent = useMemo(() => {
     const map = groupAccountsByParent(list)
     for (const bucket of map.values()) {
@@ -101,6 +110,27 @@ export function CategoriesPage() {
     }
   }
 
+  async function approveAccount(account: Category) {
+    if (await action.run(() => categoriesApi.approve(account.id))) {
+      showSaveToast('Categoria aceita no plano.')
+      accounts.reload()
+    }
+  }
+
+  async function rejectAccount(account: Category) {
+    const ok = await confirmDestructive(
+      `Recusar "${account.name}"? Ela sai do plano de todos no grupo.`,
+      { title: 'Recusar categoria' },
+    )
+    if (!ok) {
+      return
+    }
+    if (await action.run(() => categoriesApi.reject(account.id))) {
+      showSaveToast('Categoria recusada.')
+      accounts.reload()
+    }
+  }
+
   return (
     <div className={styles.page}>
       <PageHeader secondary title="Categorias" />
@@ -109,7 +139,9 @@ export function CategoriesPage() {
       {!accounts.loading && roots.length === 0 ? <Empty>Nenhuma categoria.</Empty> : null}
       {inGroup ? (
         <p className={styles.muted}>
-          No grupo, contas começam como Família e vão para todo mundo. O nome de quem criou aparece ao lado. Só essa pessoa muda ou exclui.
+          {isBudgetOwner
+            ? 'O plano é o mesmo para o grupo. Linhas em vermelho estão sob análise — aceite ou recuse.'
+            : 'O plano é o mesmo para o grupo. Só o responsável cria ou altera categorias.'}
         </p>
       ) : null}
       {roots.length > 0 ? (
@@ -131,9 +163,9 @@ export function CategoriesPage() {
               renameId={renameId}
               renameName={renameName}
               busy={action.busy}
-              inGroup={inGroup}
-              selfId={selfId}
-              onToggleSharing={(item) => void toggleSharing(item)}
+              canEditChart={canEditChart}
+              isBudgetOwner={isBudgetOwner}
+              pendingAncestorIds={pendingAncestorIds}
               onToggle={toggle}
               onDraftParent={(parentId) => {
                 setDraftParentId(parentId)
@@ -157,6 +189,8 @@ export function CategoriesPage() {
               onCancelRename={() => setRenameId(null)}
               onSaveRename={(item) => void saveRename(item)}
               onRemove={(item) => void removeAccount(item)}
+              onApprove={(item) => void approveAccount(item)}
+              onReject={(item) => void rejectAccount(item)}
             />
           ))}
         </div>
@@ -175,9 +209,9 @@ function CategoryTreeRow({
   renameId,
   renameName,
   busy,
-  inGroup,
-  selfId,
-  onToggleSharing,
+  canEditChart,
+  isBudgetOwner,
+  pendingAncestorIds,
   onToggle,
   onDraftParent,
   onDraftName,
@@ -188,6 +222,8 @@ function CategoryTreeRow({
   onCancelRename,
   onSaveRename,
   onRemove,
+  onApprove,
+  onReject,
 }: {
   account: Category
   depth: number
@@ -198,9 +234,9 @@ function CategoryTreeRow({
   renameId: string | null
   renameName: string
   busy: boolean
-  inGroup: boolean
-  selfId?: string
-  onToggleSharing: (account: Category) => void
+  canEditChart: boolean
+  isBudgetOwner: boolean
+  pendingAncestorIds: Set<string>
   onToggle: (id: string) => void
   onDraftParent: (parentId: string) => void
   onDraftName: (value: string) => void
@@ -211,18 +247,20 @@ function CategoryTreeRow({
   onCancelRename: () => void
   onSaveRename: (account: Category) => void
   onRemove: (account: Category) => void
+  onApprove: (account: Category) => void
+  onReject: (account: Category) => void
 }) {
   const children = byParent.get(account.id) ?? []
-  // Only non-analytical parents in posting sections may receive a new leaf (API rejects analytical parents).
-  const canAdd = account.level !== 'Analytical' && acceptsAnalyticalChild(account.section)
+  const canAdd =
+    canEditChart && account.level !== 'Analytical' && acceptsAnalyticalChild(account.section)
   const drafting = draftParentId === account.id
   const renaming = renameId === account.id
   const expandable = children.length > 0 || canAdd
-  const canManage =
-    !account.isSystem && (!inGroup || (selfId != null && account.createdByUsuarioId === selfId))
-  const canToggleSharing =
-    inGroup && account.level === 'Analytical' && (account.isSystem || canManage)
-  const expanded = open.has(account.id) || drafting
+  const canManage = canEditChart && !account.isSystem && !account.isPendingReview
+  const canReview =
+    isBudgetOwner && account.level === 'Analytical' && Boolean(account.isPendingReview)
+  const expanded = open.has(account.id) || drafting || pendingAncestorIds.has(account.id)
+  const pendingTrail = pendingAncestorIds.has(account.id)
   const rowClass =
     account.level === 'Root' ||
     account.section === 'Expense' ||
@@ -240,7 +278,7 @@ function CategoryTreeRow({
   return (
     <>
       <div
-        className={`${styles.raioxRow} ${styles.categoriesRow} ${rowClass}`}
+        className={`${styles.raioxRow} ${styles.categoriesRow} ${rowClass} ${pendingTrail ? styles.categoryPendingTrail : ''}`}
         style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
       >
         <button
@@ -286,10 +324,10 @@ function CategoryTreeRow({
           <strong className={styles.raioxAccountName}>
             {categoryLabel(account)}
             {!account.isActive ? <span className={styles.rowSub}> · Inativa</span> : null}
-            {inGroup && account.level === 'Analytical' ? (
+            {account.isPendingReview ? (
               <span className={styles.rowSub}>
                 {' '}
-                · {(account.sharingScope ?? 'Family') === 'Family' ? 'Família' : 'Pessoal'}
+                · Sob análise
                 {account.createdByName ? ` · ${account.createdByName}` : ''}
               </span>
             ) : null}
@@ -308,10 +346,15 @@ function CategoryTreeRow({
               <Icon name="add" size={20} decorative />
             </Button>
           ) : null}
-          {canToggleSharing && !renaming ? (
-            <Button variant="ghost" disabled={busy} onClick={() => onToggleSharing(account)}>
-              {(account.sharingScope ?? 'Family') === 'Family' ? 'Tornar pessoal' : 'Tornar família'}
-            </Button>
+          {canReview && !renaming ? (
+            <>
+              <Button variant="ghost" disabled={busy} onClick={() => onApprove(account)}>
+                Aceitar
+              </Button>
+              <Button variant="ghost" disabled={busy} onClick={() => onReject(account)}>
+                Recusar
+              </Button>
+            </>
           ) : null}
           {canManage && !renaming ? (
             <>
@@ -338,9 +381,9 @@ function CategoryTreeRow({
               renameId={renameId}
               renameName={renameName}
               busy={busy}
-              inGroup={inGroup}
-              selfId={selfId}
-              onToggleSharing={onToggleSharing}
+              canEditChart={canEditChart}
+              isBudgetOwner={isBudgetOwner}
+              pendingAncestorIds={pendingAncestorIds}
               onToggle={onToggle}
               onDraftParent={onDraftParent}
               onDraftName={onDraftName}
@@ -351,6 +394,8 @@ function CategoryTreeRow({
               onCancelRename={onCancelRename}
               onSaveRename={onSaveRename}
               onRemove={onRemove}
+              onApprove={onApprove}
+              onReject={onReject}
             />
           ))
         : null}

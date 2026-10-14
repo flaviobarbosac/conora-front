@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { gamificationApi, monthsApi } from '../api/finance'
+import { familyApi, gamificationApi, monthsApi } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -13,17 +13,36 @@ import { currentCompetence, formatDateTime, formatMoney } from '../lib/format'
 import { showSaveToast } from '../lib/saveToast'
 import styles from './page.module.css'
 
+function closeBlockedReason(ym: string, monthCloseDay: number | undefined): string | null {
+  if (ym !== currentCompetence() || !monthCloseDay) {
+    return null
+  }
+  const today = new Date()
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+  const closeDay = Math.min(monthCloseDay, daysInMonth)
+  if (today.getDate() < closeDay) {
+    return `O mês atual só pode ser fechado a partir do dia ${closeDay} (configurado em Preferências).`
+  }
+  return null
+}
+
 export function MonthPage() {
   const [ym, setYm] = useState(currentCompetence)
   const [reason, setReason] = useState('')
   const [justClosed, setJustClosed] = useState(false)
+  const profile = useLoad(() => familyApi.profile(), [])
   const status = useLoad(() => monthsApi.get(ym), [ym])
   const summary = useLoad(() => gamificationApi.monthSummary(ym), [ym, justClosed, status.data?.isClosed])
   const action = useAction()
   const data = status.data
   const closeSummary = summary.data
+  const blockedReason = closeBlockedReason(ym, profile.data?.monthCloseDay)
 
   async function close() {
+    if (blockedReason) {
+      action.setError(blockedReason)
+      return
+    }
     if (
       !(await confirmDestructive(`Fechar ${ym}? Lançamentos ficam bloqueados até reabrir.`, {
         title: 'Fechar mês',
@@ -114,7 +133,8 @@ export function MonthPage() {
             </form>
           ) : (
             <div className={styles.actions}>
-              <Button disabled={action.busy} onClick={() => void close()}>
+              {blockedReason ? <p className={styles.muted}>{blockedReason}</p> : null}
+              <Button disabled={action.busy || Boolean(blockedReason)} onClick={() => void close()}>
                 Fechar mês
               </Button>
             </div>

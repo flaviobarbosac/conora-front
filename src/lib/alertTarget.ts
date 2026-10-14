@@ -2,6 +2,9 @@ import type { Alert } from '../api/finance'
 
 /** Route where the user can act on the alert. */
 export function alertTarget(alert: Alert, competenceYm: string): string {
+  if (alert.code === 'CATEGORY_PENDING_REVIEW') {
+    return '/categorias'
+  }
   if (alert.code === 'CARD_LIMIT') {
     return '/cartoes'
   }
