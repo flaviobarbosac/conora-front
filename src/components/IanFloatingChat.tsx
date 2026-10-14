@@ -18,18 +18,30 @@ type ChatMessage = {
   choices?: string[] | null
 }
 
+const OPEN_KEY = 'conora.ianOpen'
+
 function newId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+function readOpenState(): boolean {
+  const stored = localStorage.getItem(OPEN_KEY)
+  if (stored === null) return false
+  return stored === 'true'
+}
+
 export function IanFloatingChat() {
   const navigate = useNavigate()
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(readOpenState)
   const [analyzeOpen, setAnalyzeOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const action = useAction()
   const listRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    localStorage.setItem(OPEN_KEY, String(open))
+  }, [open])
 
   useEffect(() => {
     if (!listRef.current || !open) return

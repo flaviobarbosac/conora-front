@@ -49,6 +49,8 @@ const json = (method: string, body?: unknown) => ({ method, body })
 
 /* ---------- Categories ---------- */
 
+export type SharingScope = 'Personal' | 'Family'
+
 export type Category = {
   id: string
   parentId: string | null
@@ -61,6 +63,7 @@ export type Category = {
   isActive: boolean
   sortOrder: number
   acceptsPosting: boolean
+  sharingScope: SharingScope
 }
 
 export const categoriesApi = {
@@ -68,8 +71,10 @@ export const categoriesApi = {
     apiFetch<Category[]>(`/categories${query({ section, includeInactive, analyticalOnly })}`),
   create: (name: string, parentId: string) =>
     apiFetch<Category>('/categories', json('POST', { name, parentId })),
-  update: (id: string, name: string, isActive: boolean) =>
-    apiFetch<Category>(`/categories/${id}`, json('PUT', { name, isActive })),
+  update: (id: string, name: string, isActive: boolean, sharingScope?: SharingScope) =>
+    apiFetch<Category>(`/categories/${id}`, json('PUT', { name, isActive, sharingScope })),
+  updateSharing: (id: string, sharingScope: SharingScope) =>
+    apiFetch<Category>(`/categories/${id}/sharing`, json('PUT', { sharingScope })),
   remove: (id: string) => apiFetch<void>(`/categories/${id}`, json('DELETE')),
 }
 
@@ -314,6 +319,18 @@ export type Budget = {
   incomeSources: BudgetIncomeSource[]
   sections: BudgetSectionBlock[]
   lines: BudgetLine[]
+  sharingScope?: SharingScope
+  canEdit?: boolean
+  budgetOwnerUsuarioId?: string | null
+}
+
+export type CategoryMemberBreakdown = {
+  competenceYm: string
+  categoryKey: string
+  categoryName: string
+  scope: SharingScope
+  total: number
+  members: Array<{ usuarioId: string; name: string; amount: number }>
 }
 
 export type BudgetYearMonthCell = {
@@ -338,10 +355,18 @@ export type BudgetYear = {
 }
 
 export const budgetsApi = {
-  get: (ym: string) => apiFetch<Budget>(`/budgets/${ym}`),
-  getYear: (year: number) => apiFetch<BudgetYear>(`/budgets/year/${year}`),
-  upsert: (ym: string, mode: BudgetMode, lines: { categoryId: string; plannedAmount: number }[]) =>
-    apiFetch<Budget>(`/budgets/${ym}`, json('PUT', { mode, lines })),
+  get: (ym: string, scope?: SharingScope) =>
+    apiFetch<Budget>(`/budgets/${ym}${query({ scope })}`),
+  breakdown: (ym: string, categoryId: string, scope?: SharingScope) =>
+    apiFetch<CategoryMemberBreakdown>(`/budgets/${ym}/breakdown/${categoryId}${query({ scope })}`),
+  getYear: (year: number, scope?: SharingScope) =>
+    apiFetch<BudgetYear>(`/budgets/year/${year}${query({ scope })}`),
+  upsert: (
+    ym: string,
+    mode: BudgetMode,
+    lines: { categoryId: string; plannedAmount: number }[],
+    scope?: SharingScope,
+  ) => apiFetch<Budget>(`/budgets/${ym}${query({ scope })}`, json('PUT', { mode, lines })),
   copyPrevious: (ym: string, overwrite = false) =>
     apiFetch<Budget>(`/budgets/${ym}/copy-previous`, json('POST', { overwrite })),
   repeat: (
@@ -489,6 +514,122 @@ export type Reserve = {
   monthlyEssentialAverage: number
   monthsConsidered: number
   source: string
+  reserveBalance: number
+  monthsCovered: number
+  targetMonths: number
+  progressPercent: number
+}
+
+export type JourneyStep = {
+  key: string
+  title: string
+  route: string
+  completed: boolean
+  isNext: boolean
+}
+
+export type Journey = {
+  quietMode: boolean
+  steps: JourneyStep[]
+  nextStep: JourneyStep | null
+}
+
+export type Achievement = {
+  key: string
+  title: string
+  description: string
+  earned: boolean
+  earnedAt: string | null
+}
+
+export type Achievements = {
+  quietMode: boolean
+  items: Achievement[]
+}
+
+export type ReserveThermometer = {
+  referenceYm: string
+  monthlyEssentialAverage: number
+  monthsConsidered: number
+  source: string
+  reserveBalance: number
+  monthsCovered: number
+  targetMonths: number
+  progressPercent: number
+}
+
+export type ProjectProgress = {
+  id: string
+  name: string
+  scope: string
+  goalAmount: number
+  accumulatedAmount: number
+  progressPercent: number
+  estimatedArrival: string | null
+  horizon: string | null
+}
+
+export type BudgetCloseStatus = {
+  competenceYm: string
+  isClosed: boolean
+  hasBudget: boolean
+  plannedExpense: number
+  actualExpense: number
+  withinBudget: boolean
+}
+
+export type HomeProgress = {
+  quietMode: boolean
+  nextStep: JourneyStep | null
+  reserve: ReserveThermometer
+  budgetClose: BudgetCloseStatus
+  projects: ProjectProgress[]
+  achievements: Achievement[]
+}
+
+export type MonthCloseSummary = {
+  competenceYm: string
+  isClosed: boolean
+  closedAt: string | null
+  reopenReason: string | null
+  closedByUsuarioId: string | null
+  incomeTotal: number
+  expenseTotal: number
+  result: number
+  withinBudget: boolean
+  quietMode: boolean
+  celebrationMessage: string | null
+  nextStep: JourneyStep | null
+}
+
+export type YearRetrospectiveMonth = {
+  competenceYm: string
+  isClosed: boolean
+  withinBudget: boolean
+  incomeTotal: number | null
+  expenseTotal: number | null
+  result: number | null
+}
+
+export type YearRetrospective = {
+  year: number
+  quietMode: boolean
+  includeAbsoluteValues: boolean
+  closedMonths: number
+  withinBudgetMonths: number
+  months: YearRetrospectiveMonth[]
+  achievements: Achievement[]
+}
+
+export const gamificationApi = {
+  journey: () => apiFetch<Journey>('/gamification/journey'),
+  achievements: () => apiFetch<Achievements>('/gamification/achievements'),
+  home: (competenceYm?: string) =>
+    apiFetch<HomeProgress>(`/gamification/home${query({ competenceYm })}`),
+  reserve: (competenceYm?: string) =>
+    apiFetch<ReserveThermometer>(`/gamification/reserve${query({ competenceYm })}`),
+  monthSummary: (ym: string) => apiFetch<MonthCloseSummary>(`/gamification/months/${ym}/summary`),
+  retrospective: (year: number) => apiFetch<YearRetrospective>(`/gamification/retrospective/${year}`),
 }
 
 export const patrimonyApi = {
@@ -519,6 +660,20 @@ export type FamilyProfile = {
   usuarioId: string
   name: string
   email: string
+  onboardingCompleted: boolean
+  themeId: string
+  quietMode: boolean
+  reserveTargetMonths: number
+  monthCloseDay: number
+  includeAbsoluteValuesInRetrospective: boolean
+}
+
+export type UserPreferencesInput = {
+  themeId: string
+  quietMode: boolean
+  reserveTargetMonths: number
+  monthCloseDay: number
+  includeAbsoluteValuesInRetrospective: boolean
 }
 
 export type FamilyMemberUser = {
@@ -526,6 +681,18 @@ export type FamilyMemberUser = {
   name: string
   email: string
   isSelf: boolean
+  isBudgetOwner: boolean
+}
+
+export type FamilyOwnerTransfer = {
+  id: string
+  fromUsuarioId: string
+  fromName: string
+  toUsuarioId: string
+  toName: string
+  expiresAt: string
+  isOpen: boolean
+  isIncoming: boolean
 }
 
 export type FamilyInvite = {
@@ -554,22 +721,34 @@ export type FamilyNotice = {
 
 export type FamilyGroupResponse = {
   groupId: string | null
+  budgetOwnerUsuarioId: string | null
+  isBudgetOwner: boolean
+  canLeave: boolean
   members: FamilyMemberUser[]
   pendingInvites: FamilyInvite[]
   notices: FamilyNotice[]
+  pendingOwnerTransfer: FamilyOwnerTransfer | null
 }
 
 export const familyApi = {
   profile: () => apiFetch<FamilyProfile>('/family/profile'),
   updateProfile: (name: string) => apiFetch<FamilyProfile>('/family/profile', json('PUT', { name })),
+  updatePreferences: (input: UserPreferencesInput) =>
+    apiFetch<FamilyProfile>('/family/preferences', json('PUT', input)),
+  completeOnboarding: () => apiFetch<FamilyProfile>('/family/onboarding/complete', json('POST')),
   group: () => apiFetch<FamilyGroupResponse>('/family/group'),
   invite: (email: string) => apiFetch<FamilyInvite>('/family/invites', json('POST', { email })),
   cancelInvite: (id: string) => apiFetch<void>(`/family/invites/${id}`, json('DELETE')),
   previewInvite: (token: string) =>
     apiFetch<FamilyInvitePreview>(`/family/invites/${token}/preview`, { auth: false }),
   acceptInvite: (token: string) => apiFetch<FamilyGroupResponse>(`/family/invites/${token}/accept`, json('POST')),
-  leave: () => apiFetch<FamilyGroupResponse>('/family/leave', json('POST')),
-  removeMember: (usuarioId: string) => apiFetch<FamilyGroupResponse>(`/family/members/${usuarioId}`, json('DELETE')),
+  leave: () => apiFetch<void>('/family/leave', json('POST')),
+  removeMember: (usuarioId: string) => apiFetch<void>(`/family/members/${usuarioId}`, json('DELETE')),
+  requestOwnerTransfer: (toUsuarioId: string) =>
+    apiFetch<FamilyOwnerTransfer>('/family/owner-transfer', json('POST', { toUsuarioId })),
+  cancelOwnerTransfer: () => apiFetch<void>('/family/owner-transfer', json('DELETE')),
+  acceptOwnerTransfer: (token: string) =>
+    apiFetch<FamilyGroupResponse>(`/family/owner-transfer/${token}/accept`, json('POST')),
   readNotice: (id: string) => apiFetch<void>(`/family/notices/${id}/read`, json('POST')),
 }
 

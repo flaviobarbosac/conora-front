@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Icon } from '../../components/ui/Icon'
+import { isDarkTheme } from '../../theme/themes'
 import { useTheme } from '../../theme/ThemeProvider'
 import { PresentationChrome } from './Chrome'
 import { feature, type Feature } from './content'
@@ -56,7 +57,7 @@ const CHAPTERS: ReadonlyArray<Chapter> = [
 export function VarianteJornada() {
   const navigate = useNavigate()
   const { theme } = useTheme()
-  const illustration = `${import.meta.env.BASE_URL}brand/${theme === 'dark' ? 'ilustracao-escura' : 'ilustracao-login'}.jpg`
+  const illustration = `${import.meta.env.BASE_URL}brand/${isDarkTheme(theme) ? 'ilustracao-escura' : 'ilustracao-login'}.jpg`
 
   return (
     <PresentationChrome>

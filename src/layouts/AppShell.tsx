@@ -11,7 +11,8 @@ import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
 import { PREFERENCES_CHANGED, readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
 import { CADASTROS_ITEMS, NAV_ITEMS } from '../nav'
-import { ThemeName, useTheme } from '../theme/ThemeProvider'
+import { ALL_THEMES, type ThemeId } from '../theme/themes'
+import { useTheme } from '../theme/ThemeProvider'
 import styles from './AppShell.module.css'
 
 function initialsFrom(name: string, email: string): string {
@@ -37,8 +38,15 @@ export function AppShell() {
     window.addEventListener('conora:profile-changed', onProfileChanged)
     return () => window.removeEventListener('conora:profile-changed', onProfileChanged)
   }, [profile.reload])
+
+  useEffect(() => {
+    if (profile.data?.themeId) {
+      setTheme(profile.data.themeId)
+    }
+  }, [profile.data?.themeId, setTheme])
   const [cadastrosOpen, setCadastrosOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [themesMenuOpen, setThemesMenuOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed)
@@ -68,8 +76,34 @@ export function AppShell() {
 
   useEffect(() => {
     setProfileMenuOpen(false)
+    setThemesMenuOpen(false)
     setMobileNavOpen(false)
   }, [pathname])
+
+  async function applyTheme(themeId: ThemeId) {
+    setTheme(themeId)
+    const current = profile.data
+    if (!current) {
+      setThemesMenuOpen(false)
+      setProfileMenuOpen(false)
+      return
+    }
+    try {
+      await familyApi.updatePreferences({
+        themeId,
+        quietMode: current.quietMode,
+        reserveTargetMonths: current.reserveTargetMonths,
+        monthCloseDay: current.monthCloseDay,
+        includeAbsoluteValuesInRetrospective: current.includeAbsoluteValuesInRetrospective,
+      })
+      profile.reload()
+      window.dispatchEvent(new Event('conora:profile-changed'))
+    } catch {
+      // Preview stays; profile reload will restore server theme if save failed.
+    }
+    setThemesMenuOpen(false)
+    setProfileMenuOpen(false)
+  }
 
   useEffect(() => {
     if (!profileMenuOpen && !mobileNavOpen) {
@@ -78,6 +112,7 @@ export function AppShell() {
     function onPointerDown(event: MouseEvent) {
       if (profileMenuOpen && profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setProfileMenuOpen(false)
+        setThemesMenuOpen(false)
       }
     }
     function onKeyDown(event: KeyboardEvent) {
@@ -227,6 +262,18 @@ export function AppShell() {
           </div>
         </nav>
         <div className={styles.sidebarFoot}>
+          <NavLink
+            to="/configuracoes"
+            className={({ isActive }) => (isActive ? styles.settingsLinkActive : styles.settingsLink)}
+            title={sidebarCollapsed && !mobileNavOpen ? 'Configurações' : undefined}
+          >
+            {({ isActive }) => (
+              <>
+                <Icon name="settings" variant={isActive ? 'duo' : 'linear'} size={24} />
+                <span className={styles.linkLabel}>Configurações</span>
+              </>
+            )}
+          </NavLink>
           <span className={styles.appVersion} title={`Versão ${__APP_VERSION__}`}>
             v{__APP_VERSION__}
           </span>
@@ -256,7 +303,13 @@ export function AppShell() {
               aria-label="Menu do perfil"
               aria-haspopup="menu"
               aria-expanded={profileMenuOpen}
-              onClick={() => setProfileMenuOpen((open) => !open)}
+              onClick={() =>
+                setProfileMenuOpen((open) => {
+                  const next = !open
+                  if (!next) setThemesMenuOpen(false)
+                  return next
+                })
+              }
             >
               <span className={styles.avatar} aria-hidden="true">
                 {initialsFrom(displayName, email)}
@@ -269,7 +322,7 @@ export function AppShell() {
             {profileMenuOpen ? (
               <div className={styles.profileMenu} role="menu" aria-label="Conta">
                 <Link
-                  to="/configuracoes#perfil"
+                  to="/perfil"
                   className={styles.profileMenuItem}
                   role="menuitem"
                   onClick={() => setProfileMenuOpen(false)}
@@ -277,18 +330,49 @@ export function AppShell() {
                   <Icon name="user" size={20} />
                   Perfil
                 </Link>
-                <button
-                  type="button"
+                <Link
+                  to="/configuracoes"
                   className={styles.profileMenuItem}
                   role="menuitem"
-                  onClick={() => {
-                    setTheme(theme === ThemeName.Light ? ThemeName.Dark : ThemeName.Light)
-                    setProfileMenuOpen(false)
-                  }}
+                  onClick={() => setProfileMenuOpen(false)}
                 >
-                  <Icon name={theme === ThemeName.Light ? 'moon' : 'sun'} size={20} />
-                  {theme === ThemeName.Light ? 'Escuro' : 'Claro'}
-                </button>
+                  <Icon name="settings" size={20} />
+                  Configurações
+                </Link>
+                <div className={styles.themesItemWrap}>
+                  <button
+                    type="button"
+                    className={styles.profileMenuItem}
+                    role="menuitem"
+                    aria-expanded={themesMenuOpen}
+                    aria-haspopup="menu"
+                    onClick={() => setThemesMenuOpen((open) => !open)}
+                  >
+                    <Icon name={theme === 'noite' || theme === 'contraste' ? 'moon' : 'sun'} size={20} />
+                    Temas
+                    <Icon name="chevron" size={16} className={styles.themesChevron} />
+                  </button>
+                  {themesMenuOpen ? (
+                    <div className={styles.themesMenu} role="menu" aria-label="Temas">
+                      {ALL_THEMES.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={theme === item.id}
+                          className={theme === item.id ? styles.profileMenuItemActive : styles.profileMenuItem}
+                          onClick={() => void applyTheme(item.id)}
+                        >
+                          <span className={styles.themeSwatch} data-theme-preview={item.id} aria-hidden />
+                          <span className={styles.themeOptionText}>
+                            <strong>{item.label}</strong>
+                            <span>{item.climate}</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
                 <Link
                   to="/plano"
                   className={styles.profileMenuItem}

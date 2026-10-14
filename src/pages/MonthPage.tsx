@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { monthsApi } from '../api/finance'
+import { Link } from 'react-router-dom'
+import { gamificationApi, monthsApi } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -8,16 +9,19 @@ import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { confirmDestructive } from '../lib/confirm'
+import { currentCompetence, formatDateTime, formatMoney } from '../lib/format'
 import { showSaveToast } from '../lib/saveToast'
-import { currentCompetence, formatDateTime } from '../lib/format'
 import styles from './page.module.css'
 
 export function MonthPage() {
   const [ym, setYm] = useState(currentCompetence)
   const [reason, setReason] = useState('')
+  const [justClosed, setJustClosed] = useState(false)
   const status = useLoad(() => monthsApi.get(ym), [ym])
+  const summary = useLoad(() => gamificationApi.monthSummary(ym), [ym, justClosed, status.data?.isClosed])
   const action = useAction()
   const data = status.data
+  const closeSummary = summary.data
 
   async function close() {
     if (
@@ -31,7 +35,9 @@ export function MonthPage() {
     }
     if (await action.run(() => monthsApi.close(ym))) {
       showSaveToast('Mês fechado.')
+      setJustClosed(true)
       status.reload()
+      summary.reload()
     }
   }
 
@@ -40,15 +46,18 @@ export function MonthPage() {
     if (await action.run(() => monthsApi.reopen(ym, reason.trim()))) {
       showSaveToast('Mês reaberto.')
       setReason('')
+      setJustClosed(false)
       status.reload()
+      summary.reload()
     }
   }
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="Fechar mês" actions={<CompetencePicker value={ym} onChange={setYm} />} />
-      <ErrorText message={status.error ?? action.error} />
+      <PageHeader secondary title="Fechar mês" actions={<CompetencePicker value={ym} onChange={(value) => { setYm(value); setJustClosed(false) }} />} />
+      <ErrorText message={status.error ?? summary.error ?? action.error} />
       {status.loading && !data ? <Loading /> : null}
+
       {data ? (
         <section className={styles.section}>
           <div className={styles.sectionHead}>
@@ -56,7 +65,42 @@ export function MonthPage() {
             <Badge tone={data.isClosed ? 'warning' : 'ok'}>{data.isClosed ? 'Fechado' : 'Aberto'}</Badge>
           </div>
           {data.closedAt ? <p className={styles.muted}>Fechado em {formatDateTime(data.closedAt)}</p> : null}
+
+          {data.isClosed && closeSummary ? (
+            <div className={styles.closeRitual}>
+              <div className={styles.grid3}>
+                <div className={styles.stat}>
+                  <span>Renda</span>
+                  <strong>{formatMoney(closeSummary.incomeTotal)}</strong>
+                </div>
+                <div className={styles.stat}>
+                  <span>Despesas</span>
+                  <strong>{formatMoney(closeSummary.expenseTotal)}</strong>
+                </div>
+                <div className={styles.stat}>
+                  <span>Resultado</span>
+                  <strong className={closeSummary.result < 0 ? styles.negative : styles.positive}>
+                    {formatMoney(closeSummary.result)}
+                  </strong>
+                </div>
+              </div>
+              <p className={styles.muted}>
+                {closeSummary.withinBudget ? 'Dentro do orçamento.' : 'Acima do orçamento neste mês.'}
+              </p>
+              {closeSummary.celebrationMessage ? (
+                <p className={styles.celebration}>{closeSummary.celebrationMessage}</p>
+              ) : null}
+              {closeSummary.nextStep ? (
+                <p className={styles.muted}>
+                  Próximo passo:{' '}
+                  <Link to={closeSummary.nextStep.route}>{closeSummary.nextStep.title}</Link>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           {data.reopenReason ? <p className={styles.muted}>Último motivo de reabertura: {data.reopenReason}</p> : null}
+
           {data.isClosed ? (
             <form className={styles.form} onSubmit={(event) => void reopen(event)}>
               <div className={styles.formWide}>
