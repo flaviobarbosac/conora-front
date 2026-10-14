@@ -663,6 +663,7 @@ export type FamilyProfile = {
   onboardingCompleted: boolean
   themeId: string
   quietMode: boolean
+  emailsEnabled: boolean
   reserveTargetMonths: number
   monthCloseDay: number
   includeAbsoluteValuesInRetrospective: boolean
@@ -671,6 +672,7 @@ export type FamilyProfile = {
 export type UserPreferencesInput = {
   themeId: string
   quietMode: boolean
+  emailsEnabled: boolean
   reserveTargetMonths: number
   monthCloseDay: number
   includeAbsoluteValuesInRetrospective: boolean

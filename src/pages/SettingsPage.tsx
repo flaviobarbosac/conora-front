@@ -44,12 +44,14 @@ type PrefDraft = Omit<UserPreferencesInput, 'themeId'>
 
 function fromProfile(
   quietMode: boolean,
+  emailsEnabled: boolean,
   reserveTargetMonths: number,
   monthCloseDay: number,
   includeAbsoluteValuesInRetrospective: boolean,
 ): PrefDraft {
   return {
     quietMode,
+    emailsEnabled,
     reserveTargetMonths,
     monthCloseDay,
     includeAbsoluteValuesInRetrospective,
@@ -73,6 +75,7 @@ export function SettingsPage() {
     if (!profile.data) return
     const next = fromProfile(
       profile.data.quietMode,
+      profile.data.emailsEnabled ?? true,
       profile.data.reserveTargetMonths,
       profile.data.monthCloseDay,
       profile.data.includeAbsoluteValuesInRetrospective,
@@ -98,6 +101,7 @@ export function SettingsPage() {
       familyApi.updatePreferences({
         themeId: theme,
         quietMode: draft.quietMode,
+        emailsEnabled: draft.emailsEnabled,
         reserveTargetMonths: draft.reserveTargetMonths,
         monthCloseDay: draft.monthCloseDay,
         includeAbsoluteValuesInRetrospective: draft.includeAbsoluteValuesInRetrospective,
@@ -145,6 +149,15 @@ export function SettingsPage() {
             >
               <option value="off">Desligado — mostra jornada e celebrações</option>
               <option value="on">Ligado — só números, sem celebrações</option>
+            </Select>
+            <Select
+              label="E-mails do Conora"
+              name="emailsEnabled"
+              value={draft.emailsEnabled ? 'on' : 'off'}
+              onChange={(event) => patch({ emailsEnabled: event.target.value === 'on' })}
+            >
+              <option value="on">Receber — avisos e convites do sistema</option>
+              <option value="off">Não receber — desliga e-mails do Conora</option>
             </Select>
             <Field
               label="Meta da reserva (meses)"
