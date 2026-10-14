@@ -92,6 +92,7 @@ export function AppShell() {
       await familyApi.updatePreferences({
         themeId,
         quietMode: current.quietMode,
+        emailsEnabled: current.emailsEnabled ?? true,
         reserveTargetMonths: current.reserveTargetMonths,
         monthCloseDay: current.monthCloseDay,
         includeAbsoluteValuesInRetrospective: current.includeAbsoluteValuesInRetrospective,
