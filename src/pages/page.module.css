@@ -1400,6 +1400,7 @@ button.compact {
   border-bottom: 1px solid var(--border-subtle);
   background: transparent;
   text-align: left;
+  font: inherit;
   color: inherit;
   cursor: pointer;
 }
