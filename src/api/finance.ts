@@ -26,7 +26,17 @@ export type EntryType =
 export type ImportFormat = 'Csv' | 'Ofx'
 export type ImportStatus = 'Preview' | 'Committed'
 export type InvoiceStatus = 'Open' | 'Closed' | 'Paid'
-export type PlanKind = 'Monthly1490' | 'Yearly14990'
+export type PlanKind =
+  | 'Monthly1490'
+  | 'Yearly14990'
+  | 'IndividualMonthly'
+  | 'IndividualYearly'
+  | 'FamilyMonthly'
+  | 'FamilyYearly'
+  | 'FamilyPlusMonthly'
+  | 'FamilyPlusYearly'
+export type PlanTier = 'Individual' | 'Family' | 'FamilyPlus'
+export type AccessPhase = 'Trial' | 'Subscribed' | 'Grace' | 'Expired' | 'Blocked'
 export type SubscriptionStatus = 'Active' | 'Expired' | 'ReadOnly'
 export type WhatsAppDraftStatus = 'Pending' | 'Confirmed' | 'Discarded'
 
@@ -778,12 +788,30 @@ export const familyApi = {
 
 /* ---------- Plan ---------- */
 
+export type PlanOffer = {
+  kind: PlanKind
+  tier: PlanTier
+  yearly: boolean
+  price: number
+  monthlyEquivalent: number
+  /** Extra people besides the owner; null = no plan limit. */
+  maxExtraMembers: number | null
+}
+
 export type Plan = {
   plan: PlanKind | null
+  tier: PlanTier | null
+  yearly: boolean
   status: SubscriptionStatus
   expiresAt: string | null
   isReadOnly: boolean
   price: number | null
+  phase: AccessPhase
+  trialEndsAt: string
+  blockAt: string
+  daysLeft: number
+  coveredByFamily: boolean
+  offers: PlanOffer[]
 }
 
 export const planApi = {
@@ -1031,4 +1059,87 @@ export type AuditEvent = {
 export const auditApi = {
   list: (entityName?: string, entityId?: string, skip = 0, take = 50) =>
     apiFetch<Paged<AuditEvent>>(`/audit-events${query({ entityName, entityId, skip, take })}`),
+}
+
+export type ConsoleMetric = {
+  key: string
+  label: string
+  count: number
+  base: number
+  percent: number
+}
+
+export type ConsoleFeature = {
+  key: string
+  label: string
+  users: number
+  events: number
+  percent: number
+}
+
+export type ConsoleWeek = {
+  weekStart: string
+  signups: number
+  active: number
+  budgets: number
+  closes: number
+  errors: number
+}
+
+export type ConsoleErrorRow = {
+  day: string
+  statusCode: number
+  title: string
+  area: string
+  count: number
+}
+
+export type ConsoleMonth = {
+  competenceYm: string
+  base: number
+  withBudget: number
+  withoutBudget: number
+  budgetWithin: number
+  budgetOver: number
+  budgetEmpty: number
+  withEntry: number
+  closed: number
+  closedWithin: number
+  closedOver: number
+  signups: number
+  errors: number
+  budgetPercent: number
+  withinPercent: number
+  closedPercent: number
+}
+
+export type ConsoleKpis = {
+  generatedAtUtc: string
+  competenceYm: string
+  previousCompetenceYm: string
+  accounts: number
+  active1d: number
+  active7d: number
+  active30d: number
+  errors7d: number
+  errors30d: number
+  withBudget: number
+  withoutBudget: number
+  budgetWithin: number
+  budgetOver: number
+  budgetEmpty: number
+  journey: ConsoleMetric[]
+  achievements: ConsoleMetric[]
+  previousMonth: ConsoleMetric[]
+  features: ConsoleFeature[]
+  weeks: ConsoleWeek[]
+  errorDays: ConsoleMetric[]
+  errorsByStatus: ConsoleMetric[]
+  errorsByArea: ConsoleMetric[]
+  errorRows: ConsoleErrorRow[]
+  months: ConsoleMonth[]
+}
+
+export const consoleApi = {
+  kpis: () => apiFetch<ConsoleKpis>('/console/kpis'),
 }

@@ -945,7 +945,7 @@ function RaioXSideCards({
                   <span className={styles.macroBarLabel}>
                     <strong>{bar.name}</strong>
                     <span className={styles.moneyValue}>
-                      {formatMoney(bar.actual)} / {formatMoney(bar.planned)}
+                      {formatMoney(bar.planned)} / {formatMoney(bar.actual)}
                     </span>
                   </span>
                   <span className={styles.progress} aria-hidden>

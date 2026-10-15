@@ -3,13 +3,16 @@ import { lazy, useEffect, useState } from 'react'
 import { familyApi } from './api/finance'
 import { listenNativeShare } from './share/receiveShare'
 import { useAuth } from './auth/AuthProvider'
+import { isConsoleOperator } from './auth/consoleAccess'
 import { ConfirmDialogHost } from './components/ConfirmDialog'
 import { SaveToastHost } from './components/SaveToast'
 import { Splash } from './components/Splash'
+import { RequirePlanAccess } from './components/PlanAccessGate'
 import { UnsavedChangesProvider } from './hooks/useUnsavedChanges'
 import { AppShell } from './layouts/AppShell'
 import { AdminPage } from './pages/AdminPage'
 import { AiPage } from './pages/AiPage'
+import { ConsolePage } from './pages/ConsolePage'
 import { IanReportPage } from './pages/IanReportPage'
 import { ApresentacaoPage } from './pages/ApresentacaoPage'
 import { ApresentacaoVariantesPage } from './pages/apresentacao/ApresentacaoVariantesPage'
@@ -57,6 +60,14 @@ function RequireAuth() {
     return <Navigate to="/login" replace />
   }
   return <Outlet />
+}
+
+function RequireConsole() {
+  const { session } = useAuth()
+  if (!isConsoleOperator(session?.email)) {
+    return <Navigate to="/" replace />
+  }
+  return <ConsolePage />
 }
 
 function RequireOnboarding() {
@@ -126,33 +137,36 @@ export default function App() {
           <Route path="/grupo/owner/:token" element={<OwnerTransferPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route element={<RequireOnboarding />}>
-            <Route element={<AppShell />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/lancamentos" element={<EntriesPage />} />
-              <Route path="/raio-x" element={<RaioXPage />} />
-              <Route path="/orcamento" element={<BudgetPage />} />
-              <Route path="/contas" element={<AccountsPage />} />
-              <Route path="/cartoes" element={<AccountsPage />} />
-              <Route path="/projetos" element={<ProjectsPage />} />
-              <Route path="/projetos/:id" element={<ProjectDetailPage />} />
-              <Route path="/relatorios" element={<MorePage />} />
-              <Route path="/retrospectiva" element={<RetrospectivePage />} />
-              <Route path="/diagnostico" element={<DiagnosisPage />} />
-              <Route path="/categorias" element={<CategoriesPage />} />
-              <Route path="/plano-de-contas" element={<Navigate to="/categorias" replace />} />
-              <Route path="/patrimonio" element={<PatrimonyPage />} />
-              <Route path="/membros" element={<MembersPage />} />
-              <Route path="/plano" element={<PlanPage />} />
-              <Route path="/operacao" element={<AdminPage />} />
-              <Route path="/ajuda" element={<HelpPage />} />
-              <Route path="/perfil" element={<ProfilePage />} />
-              <Route path="/configuracoes" element={<SettingsPage />} />
-              <Route path="/ia" element={<AiPage />} />
-              <Route path="/ian/relatorio" element={<IanReportPage />} />
-              <Route path="/whatsapp" element={<WhatsAppPage />} />
-              <Route path="/importar" element={<ImportPage />} />
-              <Route path="/mes" element={<MonthPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+            <Route element={<RequirePlanAccess />}>
+              <Route element={<AppShell />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/lancamentos" element={<EntriesPage />} />
+                <Route path="/raio-x" element={<RaioXPage />} />
+                <Route path="/orcamento" element={<BudgetPage />} />
+                <Route path="/contas" element={<AccountsPage />} />
+                <Route path="/cartoes" element={<AccountsPage />} />
+                <Route path="/projetos" element={<ProjectsPage />} />
+                <Route path="/projetos/:id" element={<ProjectDetailPage />} />
+                <Route path="/relatorios" element={<MorePage />} />
+                <Route path="/retrospectiva" element={<RetrospectivePage />} />
+                <Route path="/diagnostico" element={<DiagnosisPage />} />
+                <Route path="/categorias" element={<CategoriesPage />} />
+                <Route path="/plano-de-contas" element={<Navigate to="/categorias" replace />} />
+                <Route path="/patrimonio" element={<PatrimonyPage />} />
+                <Route path="/membros" element={<MembersPage />} />
+                <Route path="/plano" element={<PlanPage />} />
+                <Route path="/operacao" element={<AdminPage />} />
+                <Route path="/ajuda" element={<HelpPage />} />
+                <Route path="/perfil" element={<ProfilePage />} />
+                <Route path="/configuracoes" element={<SettingsPage />} />
+                <Route path="/console" element={<RequireConsole />} />
+                <Route path="/ia" element={<AiPage />} />
+                <Route path="/ian/relatorio" element={<IanReportPage />} />
+                <Route path="/whatsapp" element={<WhatsAppPage />} />
+                <Route path="/importar" element={<ImportPage />} />
+                <Route path="/mes" element={<MonthPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
             </Route>
           </Route>
         </Route>

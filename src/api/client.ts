@@ -236,11 +236,11 @@ export const authApi = {
       auth: false,
       body: { idToken },
     }),
-  apple: (identityToken: string) =>
+  apple: (identityToken: string, name?: string | null, email?: string | null) =>
     apiFetch<AuthResponse>('/auth/apple', {
       method: 'POST',
       auth: false,
-      body: { identityToken },
+      body: { identityToken, name, email },
     }),
   logout: () => apiFetch<void>('/auth/logout', { method: 'POST' }),
 }

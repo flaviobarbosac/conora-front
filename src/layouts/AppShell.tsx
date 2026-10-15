@@ -2,10 +2,12 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { familyApi } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
+import { isConsoleOperator } from '../auth/consoleAccess'
 import { scanReceipt } from '../camera/scanReceipt'
 import { AlertsBell } from '../components/AlertsBell'
 import { BrandLockup } from '../components/BrandLockup'
 import { IanFloatingChat } from '../components/IanFloatingChat'
+import { PlanBanner } from '../components/PlanBanner'
 import { Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
@@ -263,6 +265,20 @@ export function AppShell() {
           </div>
         </nav>
         <div className={styles.sidebarFoot}>
+          {isConsoleOperator(email) ? (
+            <NavLink
+              to="/console"
+              className={({ isActive }) => (isActive ? styles.settingsLinkActive : styles.settingsLink)}
+              title={sidebarCollapsed && !mobileNavOpen ? 'Console' : undefined}
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon name="console" variant={isActive ? 'duo' : 'linear'} size={24} />
+                  <span className={styles.linkLabel}>Console</span>
+                </>
+              )}
+            </NavLink>
+          ) : null}
           <NavLink
             to="/configuracoes"
             className={({ isActive }) => (isActive ? styles.settingsLinkActive : styles.settingsLink)}
@@ -411,6 +427,7 @@ export function AppShell() {
         </header>
 
         <main className={styles.main} id="conteudo-principal">
+          <PlanBanner />
           <Suspense
             fallback={
               <div aria-busy="true" aria-live="polite">
