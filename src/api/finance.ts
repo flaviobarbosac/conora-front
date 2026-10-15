@@ -1094,6 +1094,25 @@ export type ConsoleErrorRow = {
   count: number
 }
 
+export type ConsoleMonth = {
+  competenceYm: string
+  base: number
+  withBudget: number
+  withoutBudget: number
+  budgetWithin: number
+  budgetOver: number
+  budgetEmpty: number
+  withEntry: number
+  closed: number
+  closedWithin: number
+  closedOver: number
+  signups: number
+  errors: number
+  budgetPercent: number
+  withinPercent: number
+  closedPercent: number
+}
+
 export type ConsoleKpis = {
   generatedAtUtc: string
   competenceYm: string
@@ -1118,6 +1137,7 @@ export type ConsoleKpis = {
   errorsByStatus: ConsoleMetric[]
   errorsByArea: ConsoleMetric[]
   errorRows: ConsoleErrorRow[]
+  months: ConsoleMonth[]
 }
 
 export const consoleApi = {
