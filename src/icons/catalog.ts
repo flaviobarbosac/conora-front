@@ -24,6 +24,7 @@ export type IconName =
   | 'repeat'
   | 'menu'
   | 'camera'
+  | 'console'
 
 type IconDef = {
   label: string
@@ -161,5 +162,10 @@ export const ICON_CATALOG: Record<IconName, IconDef> = {
       'M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z',
     ],
     accent: ['M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
+  },
+  console: {
+    label: 'Console',
+    base: ['M4 19V10', 'M10 19V5', 'M16 19v-7', 'M3 19h18'],
+    accent: ['M15 8l2.2-2.2L20 8.5'],
   },
 }

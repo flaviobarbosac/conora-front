@@ -100,6 +100,7 @@ export default defineConfig(({ mode }) => {
           '/whatsapp',
           '/receipts',
           '/audit-events',
+          '/console',
         ].map((path) => [
           `^${path}(/|\\?|$)`,
           {

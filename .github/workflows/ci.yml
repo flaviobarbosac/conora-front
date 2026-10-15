@@ -22,6 +22,8 @@ jobs:
         env:
           VITE_API_URL: https://api.conora.com.br
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_APPLE_CLIENT_ID: br.com.conora.app
+          VITE_APPLE_SERVICES_ID: br.com.conora.web
         run: |
           npm ci
           npm run lint

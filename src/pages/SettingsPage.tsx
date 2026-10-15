@@ -4,8 +4,6 @@ import {
   familyApi,
   lgpdApi,
   planApi,
-  type Plan,
-  type SubscriptionStatus,
   type UserPreferencesInput,
 } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
@@ -18,27 +16,11 @@ import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
-import { downloadBlob, formatMoney } from '../lib/format'
+import { downloadBlob } from '../lib/format'
+import { planSummary } from '../lib/planAccess'
 import { showSaveToast } from '../lib/saveToast'
 import { useTheme } from '../theme/ThemeProvider'
 import styles from './page.module.css'
-
-const STATUS_LABEL: Record<SubscriptionStatus, string> = {
-  Active: 'Ativo',
-  Expired: 'Expirado',
-  ReadOnly: 'Somente leitura',
-}
-
-function planSummary(plan: Plan | null | undefined): string {
-  if (!plan) return 'Carregando…'
-  const status = STATUS_LABEL[plan.status]
-  if (!plan.plan) {
-    return `Teste · ${status}`
-  }
-  const kind = plan.plan === 'Monthly1490' ? 'Mensal' : 'Anual'
-  const price = plan.price !== null ? ` · ${formatMoney(plan.price)}` : ''
-  return `${kind}${price} · ${status}`
-}
 
 type PrefDraft = Omit<UserPreferencesInput, 'themeId'>
 

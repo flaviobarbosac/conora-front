@@ -1,0 +1,37 @@
+.board {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.table th:not(:first-child),
+.table td:not(:first-child) {
+  text-align: right;
+}
+
+@media (min-width: 900px) {
+  .board {
+    grid-template-columns: 1fr 1fr;
+  }
+}

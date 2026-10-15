@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { appleSignInAvailable, requestAppleIdentityToken } from '../auth/apple'
 import { requestGoogleIdToken } from '../auth/google'
 import { formatLoginUsuario } from '../auth/loginIdentifier'
+import { AppleMark } from '../components/AppleMark'
 import { GoogleMark } from '../components/GoogleMark'
 import { Button } from '../components/ui/Button'
 import { Field } from '../components/ui/Field'
@@ -62,7 +63,8 @@ export function LoginPage() {
     setBusy(true)
     setError(null)
     try {
-      await loginApple(await requestAppleIdentityToken())
+      const apple = await requestAppleIdentityToken()
+      await loginApple(apple.identityToken, apple.name, apple.email)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Não foi possível entrar com Apple.')
     } finally {
@@ -77,7 +79,8 @@ export function LoginPage() {
         Continuar com Google
       </Button>
       {showApple ? (
-        <Button variant="secondary" disabled={busy} onClick={() => void onApple()}>
+        <Button variant="secondary" className={styles.google} disabled={busy} onClick={() => void onApple()}>
+          <AppleMark />
           Continuar com Apple
         </Button>
       ) : null}
@@ -89,8 +92,8 @@ export function LoginPage() {
       title="Entrar"
       subtitle={
         fromInvite
-          ? 'Para aceitar o convite, entre com Google. CPF ou e-mail também servem.'
-          : 'Acesse com CPF ou e-mail. Google é opcional.'
+          ? 'Para aceitar o convite, entre com Google ou Apple. CPF ou e-mail também servem.'
+          : 'Acesse com CPF ou e-mail. Google e Apple são opcionais.'
       }
       footer={
         <>

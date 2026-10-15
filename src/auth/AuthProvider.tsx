@@ -17,7 +17,7 @@ type AuthContextValue = {
   login: (usuario: string, password: string) => Promise<void>
   register: (name: string, email: string, cpf: string, password: string) => Promise<void>
   loginGoogle: (idToken: string) => Promise<void>
-  loginApple: (identityToken: string) => Promise<void>
+  loginApple: (identityToken: string, name?: string | null, email?: string | null) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -60,8 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const loginApple = useCallback(
-    async (identityToken: string) => {
-      applyAuth(await authApi.apple(identityToken))
+    async (identityToken: string, name?: string | null, email?: string | null) => {
+      applyAuth(await authApi.apple(identityToken, name, email))
     },
     [applyAuth],
   )
