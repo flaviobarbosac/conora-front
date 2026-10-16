@@ -13,13 +13,13 @@ if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
 }
 
 const year = new Date().getFullYear()
+const shortYear = year % 100
 const [versionYear, minor, patch] = parts
 
-if (versionYear !== year) {
-  // New calendar year: YEAR.1.0
-  pkg.version = `${year}.1.0`
+if (versionYear === year || versionYear === shortYear) {
+  pkg.version = `${versionYear}.${minor}.${patch + 1}`
 } else {
-  pkg.version = `${year}.${minor}.${patch + 1}`
+  pkg.version = `${shortYear}.1.0`
 }
 
 writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8')
