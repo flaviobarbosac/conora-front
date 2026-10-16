@@ -85,8 +85,13 @@ type RequestOptions = {
 
 async function parseError(response: Response): Promise<string> {
   try {
-    const payload = (await response.json()) as { title?: string; detail?: string }
-    return payload.detail ?? payload.title ?? response.statusText
+    const payload = (await response.json()) as {
+      title?: string
+      detail?: string
+      errors?: Record<string, string[]>
+    }
+    const fieldError = payload.errors ? Object.values(payload.errors).flat().find(Boolean) : undefined
+    return fieldError ?? payload.detail ?? payload.title ?? response.statusText
   } catch {
     return response.statusText
   }
@@ -243,4 +248,16 @@ export const authApi = {
       body: { identityToken, name, email },
     }),
   logout: () => apiFetch<void>('/auth/logout', { method: 'POST' }),
+  forgotPassword: (usuario: string) =>
+    apiFetch<void>('/auth/forgot-password', {
+      method: 'POST',
+      auth: false,
+      body: { usuario },
+    }),
+  resetPassword: (token: string, password: string) =>
+    apiFetch<void>('/auth/reset-password', {
+      method: 'POST',
+      auth: false,
+      body: { token, password },
+    }),
 }

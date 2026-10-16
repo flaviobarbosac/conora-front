@@ -27,6 +27,9 @@ export function LoginPage() {
   const showApple = appleSignInAvailable()
   const [usuario, setUsuario] = useState(() => searchParams.get('usuario') ?? '')
   const [password, setPassword] = useState('')
+  const forgotTo = usuario.trim()
+    ? `/recuperar-senha?usuario=${encodeURIComponent(usuario.trim())}`
+    : '/recuperar-senha'
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -132,13 +135,9 @@ export function LoginPage() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           hint={
-            <button
-              type="button"
-              className={styles.linkBtn}
-              onClick={() => setError('Recuperação de senha entra na próxima etapa.')}
-            >
+            <Link className={styles.linkBtn} to={forgotTo}>
               Esqueci a senha
-            </button>
+            </Link>
           }
         />
         {error ? (

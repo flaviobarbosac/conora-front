@@ -48,6 +48,11 @@
   margin: 0;
 }
 
+.notice {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
 .divider {
   display: flex;
   align-items: center;
