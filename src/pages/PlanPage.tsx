@@ -16,6 +16,7 @@ import {
   tierOfKind,
   TRIAL_DAYS,
 } from '../lib/planAccess'
+import { isAndroidApp } from '../lib/platform'
 import { showSaveToast } from '../lib/saveToast'
 import styles from './PlanPage.module.css'
 
@@ -71,6 +72,8 @@ export function PlanPage() {
   const subscribe = useAction()
   const exporter = useAction()
   const data = plan.data
+  // Digital plans are sold outside the store. Android must not show prices or a subscribe action.
+  const hideCheckout = isAndroidApp()
   const [cycleChoice, setYearly] = useState<boolean | null>(null)
   // Default to yearly (best value); subscribers start on their current cycle.
   const yearly = cycleChoice ?? (data?.phase === 'Subscribed' && data.plan ? data.yearly : true)
@@ -111,17 +114,29 @@ export function PlanPage() {
   return (
     <div className={styles.page}>
       <header className={styles.intro}>
-        <span className={styles.eyebrow}>Planos Conora</span>
-        <h1>Sua vida financeira organizada, com quem você ama</h1>
-        <p>Todas as funcionalidades em todos os planos. Escolha só quantas pessoas vão usar com você.</p>
+        {hideCheckout ? (
+          <>
+            <span className={styles.eyebrow}>Sua conta</span>
+            <h1>Situação do plano</h1>
+            <p>O acesso contratado fora da loja continua valendo aqui. Este app não vende assinatura.</p>
+          </>
+        ) : (
+          <>
+            <span className={styles.eyebrow}>Planos Conora</span>
+            <h1>Sua vida financeira organizada, com quem você ama</h1>
+            <p>Todas as funcionalidades em todos os planos. Escolha só quantas pessoas vão usar com você.</p>
+          </>
+        )}
       </header>
 
       <ErrorText message={plan.error ?? subscribe.error ?? exporter.error} />
       {plan.loading && !data ? <Loading /> : null}
 
-      {data ? <StatusHero plan={data} exporting={exporter.busy} onExport={() => void exportData()} /> : null}
-
       {data ? (
+        <StatusHero plan={data} exporting={exporter.busy} onExport={() => void exportData()} hideCheckout={hideCheckout} />
+      ) : null}
+
+      {data && !hideCheckout ? (
         <>
           <div className={styles.cycleRow}>
             <div className={styles.cycle} role="radiogroup" aria-label="Forma de cobrança">
@@ -207,6 +222,7 @@ export function PlanPage() {
         </>
       ) : null}
 
+      {hideCheckout ? null : (
       <section className={styles.included}>
         <h2>Incluído em todos os planos</h2>
         <ul>
@@ -215,26 +231,29 @@ export function PlanPage() {
           ))}
         </ul>
       </section>
+      )}
 
-      <section className={styles.faq}>
-        <h2>Dúvidas frequentes</h2>
-        {FAQ.map((item) => (
-          <details key={item.q}>
-            <summary>{item.q}</summary>
-            <p>{item.a}</p>
-          </details>
-        ))}
-        <p className={styles.support}>
-          Ainda com dúvida? <Link to="/ajuda">Fale com o suporte</Link>.
-        </p>
-      </section>
+      {hideCheckout ? null : (
+        <section className={styles.faq}>
+          <h2>Dúvidas frequentes</h2>
+          {FAQ.map((item) => (
+            <details key={item.q}>
+              <summary>{item.q}</summary>
+              <p>{item.a}</p>
+            </details>
+          ))}
+          <p className={styles.support}>
+            Ainda com dúvida? <Link to="/ajuda">Fale com o suporte</Link>.
+          </p>
+        </section>
+      )}
     </div>
   )
 }
 
-type HeroProps = { plan: Plan; exporting: boolean; onExport: () => void }
+type HeroProps = { plan: Plan; exporting: boolean; onExport: () => void; hideCheckout: boolean }
 
-function StatusHero({ plan, exporting, onExport }: HeroProps) {
+function StatusHero({ plan, exporting, onExport, hideCheckout }: HeroProps) {
   if (plan.phase === 'Subscribed') {
     const tier = plan.plan ? tierOfKind(plan.plan) : 'Individual'
     return (
@@ -253,7 +272,10 @@ function StatusHero({ plan, exporting, onExport }: HeroProps) {
     return (
       <section className={`${styles.hero} ${styles.heroWarn}`}>
         <strong>Seu plano venceu</strong>
-        <span>O Conora está em modo somente leitura. Renove para voltar a lançar — seus dados continuam guardados.</span>
+        <span>
+          O Conora está em modo somente leitura.
+          {hideCheckout ? ' Seus dados continuam guardados.' : ' Renove para voltar a lançar — seus dados continuam guardados.'}
+        </span>
       </section>
     )
   }
@@ -264,7 +286,10 @@ function StatusHero({ plan, exporting, onExport }: HeroProps) {
         <strong>Sua conta está bloqueada</strong>
         <span>
           O acesso gratuito terminou em {formatDate(plan.trialEndsAt)} e o prazo de consulta em{' '}
-          {formatDate(plan.blockAt)}. Assine um plano para reativar na hora: seus dados continuam guardados.
+          {formatDate(plan.blockAt)}.
+          {hideCheckout
+            ? ' Seus dados continuam guardados.'
+            : ' Assine um plano para reativar na hora: seus dados continuam guardados.'}
         </span>
         <span>
           Precisa só dos seus dados? <Link to="/ajuda">Abra um chamado no suporte</Link>.
@@ -299,8 +324,8 @@ function StatusHero({ plan, exporting, onExport }: HeroProps) {
         Você é aluno: {plan.daysLeft} {plan.daysLeft === 1 ? 'dia' : 'dias'} de acesso completo e gratuito
       </strong>
       <span>
-        Cortesia do treinamento financeiro do Leomar Campos, até {formatDate(plan.trialEndsAt)}. Assine antes e continue
-        sem nenhuma interrupção.
+        Cortesia do treinamento financeiro do Leomar Campos, até {formatDate(plan.trialEndsAt)}.
+        {hideCheckout ? '' : ' Assine antes e continue sem nenhuma interrupção.'}
       </span>
       <Timeline plan={plan} />
     </section>
