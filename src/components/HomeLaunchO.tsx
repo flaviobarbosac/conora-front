@@ -111,21 +111,21 @@ export function HomeLaunchO({ listening = false, onScan, onVoice, onManual }: Pr
           style={{ left: `${scanX}%`, top: `${scanY}%` }}
           aria-hidden
         >
-          <Icon name="camera" size={28} />
+          <Icon name="camera" size={24} />
         </span>
         <span
           className={`${styles.homeLaunchOIcon} ${styles.homeLaunchOIconVoice} ${listening ? styles.homeLaunchOIconPulse : ''}`}
           style={{ left: `${voiceX}%`, top: `${voiceY}%` }}
           aria-hidden
         >
-          <Icon name="mic" size={28} />
+          <Icon name="mic" size={24} />
         </span>
         <span
           className={`${styles.homeLaunchOIcon} ${styles.homeLaunchOIconManual} ${listening ? styles.homeLaunchOHitDim : ''}`}
           style={{ left: `${manualX}%`, top: `${manualY}%` }}
           aria-hidden
         >
-          <Icon name="pen" size={28} />
+          <Icon name="pen" size={24} />
         </span>
       </div>
     </div>
