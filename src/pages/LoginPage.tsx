@@ -23,6 +23,7 @@ export function LoginPage() {
   const [searchParams] = useSearchParams()
   const afterLogin = safeReturnTo(searchParams.get('returnTo'))
   const fromInvite = afterLogin.startsWith('/grupo/convite/')
+  const emailSent = searchParams.get('aviso') === 'email-enviado'
   const registerTo = afterLogin === '/' ? '/register' : `/register?returnTo=${encodeURIComponent(afterLogin)}`
   const showApple = appleSignInAvailable()
   const [usuario, setUsuario] = useState(() => searchParams.get('usuario') ?? '')
@@ -107,6 +108,11 @@ export function LoginPage() {
       }
     >
       <form className={styles.form} onSubmit={(event) => void onSubmit(event)} noValidate>
+        {emailSent ? (
+          <p className={styles.notice} role="status">
+            E-mail enviado. Abra o link para definir a senha e entre com ela aqui.
+          </p>
+        ) : null}
         {fromInvite ? (
           <div className={styles.actions}>
             {socialLogin}
