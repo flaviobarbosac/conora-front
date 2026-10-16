@@ -17,6 +17,14 @@ buildscript {
 
 apply from: "variables.gradle"
 
+subprojects { subproject ->
+    subproject.afterEvaluate {
+        if (subproject.plugins.hasPlugin("com.android.library")) {
+            subproject.android.compileSdk rootProject.ext.compileSdkVersion
+        }
+    }
+}
+
 allprojects {
     repositories {
         google()

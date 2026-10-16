@@ -27,6 +27,7 @@ dist-ssr
 .env.ios
 .env.android.release
 mobile/android/keystore.properties
+mobile/android/play-service-account.json
 mobile/android/release-signing-fingerprints.txt
 mobile/android/app/google-services.json
 *.keystore
