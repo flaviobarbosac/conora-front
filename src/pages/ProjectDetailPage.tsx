@@ -160,7 +160,7 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
           dueDate: data.dueDate,
           contributionStartYm: data.contributionStartYm,
           scope: projectScope,
-          categoryId: data.categoryId ?? undefined,
+          categoryId: data.categoryId ?? '',
           detailedDescription: detailedDescription.trim() || undefined,
         }),
       )
