@@ -22,6 +22,7 @@ import { HomePage } from './pages/HomePage'
 import { ImportPage } from './pages/ImportPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
+import { MarcosPage } from './pages/MarcosPage'
 import { MonthPage } from './pages/MonthPage'
 import { MorePage } from './pages/MorePage'
 import { OnboardingPage } from './pages/OnboardingPage'
@@ -148,6 +149,7 @@ export default function App() {
                 <Route path="/projetos" element={<ProjectsPage />} />
                 <Route path="/projetos/:id" element={<ProjectDetailPage />} />
                 <Route path="/relatorios" element={<MorePage />} />
+                <Route path="/marcos" element={<MarcosPage />} />
                 <Route path="/retrospectiva" element={<RetrospectivePage />} />
                 <Route path="/diagnostico" element={<DiagnosisPage />} />
                 <Route path="/categorias" element={<CategoriesPage />} />

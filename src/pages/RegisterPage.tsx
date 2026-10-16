@@ -26,6 +26,7 @@ export function RegisterPage() {
   const [cpf, setCpf] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [duplicateLoginTo, setDuplicateLoginTo] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   if (session) {
@@ -39,7 +40,18 @@ export function RegisterPage() {
     try {
       await register(name, email, cpf, password)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Não foi possível criar o acesso.')
+      const message = caught instanceof Error ? caught.message : 'Não foi possível criar o acesso.'
+      if (/já existe.*e-?mail|email duplicado|já cadastrado com o email/i.test(message)) {
+        const loginWithEmail =
+          loginTo.includes('?')
+            ? `${loginTo}&usuario=${encodeURIComponent(email.trim())}`
+            : `${loginTo}?usuario=${encodeURIComponent(email.trim())}`
+        setError(`${message} Entre com a conta existente.`)
+        setDuplicateLoginTo(loginWithEmail)
+      } else {
+        setDuplicateLoginTo(null)
+        setError(message)
+      }
     } finally {
       setBusy(false)
     }
@@ -94,6 +106,11 @@ export function RegisterPage() {
         {error ? (
           <p className={styles.error} role="alert">
             {error}
+          </p>
+        ) : null}
+        {duplicateLoginTo ? (
+          <p>
+            <Link to={duplicateLoginTo}>Entrar com este e-mail</Link>
           </p>
         ) : null}
         <div className={styles.actions}>

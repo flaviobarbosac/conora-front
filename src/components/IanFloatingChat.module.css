@@ -1,10 +1,11 @@
 .fab {
   position: fixed;
-  right: max(1rem, env(safe-area-inset-right));
-  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 0.75rem);
+  /* Sit just above the rightmost bottom-nav item (Categoria). */
+  right: max(0.35rem, env(safe-area-inset-right));
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 0.2rem);
   z-index: 30;
-  width: 3.75rem;
-  height: 3.75rem;
+  width: 3.25rem;
+  height: 3.25rem;
   padding: 0;
   border: 2px solid var(--surface, #fff);
   border-radius: 50%;
@@ -56,8 +57,9 @@
 
 .panel {
   position: fixed;
-  right: max(0.75rem, env(safe-area-inset-right));
-  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 4.5rem);
+  right: max(0.5rem, env(safe-area-inset-right));
+  /* Clear the fab (3.25rem) + tiny gap above the nav. */
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 3.25rem + 0.35rem);
   z-index: 30;
   width: min(22rem, calc(100vw - 1.5rem));
   max-height: min(70vh, 32rem);
@@ -195,14 +197,29 @@
   gap: 0.5rem;
 }
 
+@media (min-width: 768px) {
+  .fab {
+    right: max(1rem, env(safe-area-inset-right));
+    width: 3.75rem;
+    height: 3.75rem;
+  }
+}
+
 @media (min-width: 1200px) {
   .fab,
   .panel {
     bottom: max(1.25rem, env(safe-area-inset-bottom));
   }
 
+  .fab {
+    right: max(1rem, env(safe-area-inset-right));
+    width: 3.75rem;
+    height: 3.75rem;
+  }
+
   .panel {
     bottom: calc(max(1.25rem, env(safe-area-inset-bottom)) + 4.25rem);
+    right: max(0.75rem, env(safe-area-inset-right));
   }
 }
 

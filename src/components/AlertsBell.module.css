@@ -62,6 +62,23 @@
   box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / 12%));
 }
 
+/* Mobile: fixed within the viewport — absolute+right escapes off-screen
+   because the bell sits near the left of the header. */
+@media (max-width: 767px) {
+  .panel {
+    position: fixed;
+    top: calc(56px + env(safe-area-inset-top, 0px) + var(--space-2));
+    left: var(--space-3);
+    right: var(--space-3);
+    width: auto;
+    max-width: none;
+    max-height: min(
+      70vh,
+      calc(100dvh - var(--bottom-nav-h, 64px) - 56px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--space-6))
+    );
+  }
+}
+
 .panelHead {
   display: flex;
   align-items: baseline;

@@ -83,6 +83,11 @@ function toneClass(tone: ProgressTone): string {
   return styles.raioxToneOk
 }
 
+/** Green when value >= 0, red when negative (saldos e resultado). */
+function signedMoneyClass(value: number): string {
+  return value < 0 ? styles.negative : styles.positive
+}
+
 function TotalsCell({
   totals,
   stock = false,
@@ -850,7 +855,7 @@ function RaioXHero({
       <div className={`${styles.heroCards} ${styles.heroCardsRaioX}`} aria-label="Indicadores do Raio-X">
         <div className={`${styles.heroCard} ${styles.heroCardStatic}`}>
           <span>Saldo do mês anterior</span>
-          <strong className={`${styles.moneyValue} ${previousMonthBalance < 0 ? styles.negative : ''}`}>
+          <strong className={`${styles.moneyValue} ${signedMoneyClass(previousMonthBalance)}`}>
             {formatMoney(previousMonthBalance)}
           </strong>
           <span className={styles.muted}>Caixa ao fim do mês anterior</span>
@@ -862,7 +867,7 @@ function RaioXHero({
           onClick={() => onFocus('income')}
         >
           <span>Renda recebida</span>
-          <strong className={styles.moneyValue}>{formatMoney(incomeActual)}</strong>
+          <strong className={`${styles.moneyValue} ${styles.positive}`}>{formatMoney(incomeActual)}</strong>
         </button>
         <button
           type="button"
@@ -871,7 +876,9 @@ function RaioXHero({
           onClick={() => onFocus('discount')}
         >
           <span>Descontos realizados</span>
-          <strong className={styles.moneyValue}>{formatMoney(discountActual)}</strong>
+          <strong className={`${styles.moneyValue} ${discountActual > 0 ? styles.negative : ''}`}>
+            {formatMoney(discountActual)}
+          </strong>
         </button>
         <button
           type="button"
@@ -880,7 +887,7 @@ function RaioXHero({
           onClick={() => onFocus('spendable')}
         >
           <span>Renda gastável</span>
-          <strong className={`${styles.moneyValue} ${gastavel < 0 ? styles.negative : ''}`}>
+          <strong className={`${styles.moneyValue} ${signedMoneyClass(gastavel)}`}>
             {formatMoney(gastavel)}
           </strong>
           <span className={styles.muted}>Renda recebida − descontos realizados</span>
@@ -892,14 +899,16 @@ function RaioXHero({
           onClick={() => onFocus('life')}
         >
           <span>Projetos de vida</span>
-          <strong className={styles.moneyValue}>{formatMoney(lifeActual)}</strong>
+          <strong className={`${styles.moneyValue} ${lifeActual > 0 ? styles.positive : ''}`}>
+            {formatMoney(lifeActual)}
+          </strong>
           <span className={styles.muted}>
             {months === 1 ? 'Separado neste mês' : `Separado em ${months} meses`}
           </span>
         </button>
         <div className={`${styles.heroCard} ${styles.heroCardStatic}`}>
           <span>Saldo do mês</span>
-          <strong className={`${styles.moneyValue} ${monthBalance < 0 ? styles.negative : ''}`}>
+          <strong className={`${styles.moneyValue} ${signedMoneyClass(monthBalance)}`}>
             {formatMoney(monthBalance)}
           </strong>
           <span className={styles.muted}>Renda − descontos − projetos − essencial − social</span>

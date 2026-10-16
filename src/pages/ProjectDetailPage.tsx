@@ -17,7 +17,6 @@ import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import {
-  currentCompetence,
   dateToApi,
   formatCompetence,
   formatDate,
@@ -26,7 +25,6 @@ import {
   formatPercent,
   monthsInclusive,
   parseMoney,
-  shiftCompetence,
   todayInput,
 } from '../lib/format'
 import {
@@ -134,64 +132,35 @@ export function ProjectDetailPage() {
 
 function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => void }) {
   const family = useLoad(() => familyApi.group(), [])
-  const lookups = useLookups()
-  const lifeAccounts = lookups.cashFlowAccounts.filter((account) => account.section === 'LifeProject')
   const save = useAction()
   const [name, setName] = useState(data.name)
   const [detailedDescription, setDetailedDescription] = useState(data.detailedDescription ?? '')
-  const [goal, setGoal] = useState(formatMoneyInput(data.goalAmount))
-  const [dueYm, setDueYm] = useState(ymFromIso(data.dueDate))
-  const [startYm, setStartYm] = useState(data.contributionStartYm || shiftCompetence(currentCompetence(), 1))
   const [scope, setScope] = useState<LifeProjectScope>(data.scope)
-  const [categoryId, setCategoryId] = useState(data.categoryId ?? '')
   const hasFamilyGroup = Boolean(family.data?.groupId)
-  const currentYm = currentCompetence()
-  const months = dueYm ? monthsInclusive(startYm, dueYm) : []
-  const goalAmount = parseMoney(goal)
-  const parcel = months.length > 0 && Number.isFinite(goalAmount) && goalAmount > 0 ? goalAmount / months.length : null
-  const isDirty = useMemo(() => {
-    const originalGoal = formatMoneyInput(data.goalAmount)
-    return (
+  const months = monthsInclusive(data.contributionStartYm, ymFromIso(data.dueDate))
+  const parcel = months.length > 0 ? data.goalAmount / months.length : null
+  const isDirty = useMemo(
+    () =>
       name.trim() !== data.name ||
       (detailedDescription.trim() || '') !== (data.detailedDescription ?? '').trim() ||
-      goal !== originalGoal ||
-      dueYm !== ymFromIso(data.dueDate) ||
-      startYm !== data.contributionStartYm ||
-      scope !== data.scope ||
-      categoryId !== (data.categoryId ?? '')
-    )
-  }, [name, detailedDescription, goal, dueYm, startYm, scope, categoryId, data])
+      scope !== data.scope,
+    [name, detailedDescription, scope, data],
+  )
 
   useRegisterDirty(`project-edit:${data.id}`, isDirty)
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!Number.isFinite(goalAmount) || goalAmount <= 0) {
-      save.setError('Informe uma meta maior que zero.')
-      return
-    }
-    if (!categoryId) {
-      save.setError('Escolha a categoria.')
-      return
-    }
-    if (!dueYm) {
-      save.setError('Informe o prazo.')
-      return
-    }
-    if (startYm > dueYm) {
-      save.setError('O início do aporte não pode ser depois do prazo.')
-      return
-    }
     const projectScope = scope === 'Group' && hasFamilyGroup ? 'Group' : 'Personal'
     if (
       await save.run(() =>
         projectsApi.update(data.id, {
           name: name.trim(),
-          goalAmount,
-          dueDate: dateToApi(`${dueYm}-01`),
-          contributionStartYm: startYm,
+          goalAmount: data.goalAmount,
+          dueDate: data.dueDate,
+          contributionStartYm: data.contributionStartYm,
           scope: projectScope,
-          categoryId,
+          categoryId: data.categoryId ?? undefined,
           detailedDescription: detailedDescription.trim() || undefined,
         }),
       )
@@ -204,6 +173,9 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
   return (
     <section className={styles.section}>
       <h2 className={styles.sectionTitle}>Editar projeto</h2>
+      <p className={styles.muted}>
+        Meta, prazo, início e conta ficam fixos depois da criação. O previsto no orçamento vem do rateio automático.
+      </p>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
         <div className={styles.formWide}>
           <Field label="Nome" name="projectName" required value={name} onChange={(event) => setName(event.target.value)} />
@@ -218,16 +190,6 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
             maxLength={4000}
           />
         </div>
-        <CategorySelect
-          label="Categoria"
-          name="projectCategory"
-          required
-          value={categoryId}
-          onChange={setCategoryId}
-          options={lifeAccounts}
-          tree={lookups.categories}
-          emptyLabel="Selecione"
-        />
         <Select
           label="Escopo"
           name="projectScope"
@@ -239,36 +201,29 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
             Família{hasFamilyGroup ? '' : ' (entre no grupo primeiro)'}
           </option>
         </Select>
-        <MoneyField label="Meta (R$)" name="projectGoal" required value={goal} onChange={setGoal} />
-        <Field
-          label="Prazo"
-          name="projectDue"
-          type="month"
-          required
-          value={dueYm}
-          min={startYm || currentYm}
-          onChange={(event) => setDueYm(event.target.value)}
-        />
+        <Field label="Categoria" name="projectCategoryLocked" value={data.categoryName ?? '—'} disabled readOnly />
+        <MoneyField label="Meta (R$)" name="projectGoal" value={formatMoneyInput(data.goalAmount)} disabled onChange={() => undefined} />
+        <Field label="Prazo" name="projectDue" type="month" value={ymFromIso(data.dueDate)} disabled readOnly />
         <Field
           label="Início do aporte"
           name="projectStart"
           type="month"
-          required
-          value={startYm}
-          max={dueYm || undefined}
-          onChange={(event) => setStartYm(event.target.value)}
+          value={data.contributionStartYm}
+          disabled
+          readOnly
         />
         {parcel !== null ? (
           <p className={`${styles.muted} ${styles.formWide}`}>
-            Parcela sugerida: {formatMoney(parcel)}/mês · {months.length} {months.length === 1 ? 'mês' : 'meses'} (de{' '}
-            {formatCompetence(months[0])} até {formatCompetence(months[months.length - 1])})
+            Parcela no orçamento: {formatMoney(parcel)}/mês · {months.length}{' '}
+            {months.length === 1 ? 'mês' : 'meses'} (de {formatCompetence(months[0])} até{' '}
+            {formatCompetence(months[months.length - 1])})
           </p>
         ) : null}
         <div className={styles.formWide}>
           <ErrorText message={save.error} />
         </div>
         <div className={styles.formActions}>
-          <Button type="submit" disabled={save.busy}>
+          <Button type="submit" disabled={save.busy || !isDirty}>
             Salvar projeto
           </Button>
         </div>

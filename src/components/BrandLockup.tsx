@@ -5,20 +5,25 @@ import styles from './BrandLockup.module.css'
 
 type Props = {
   size?: 'nav' | 'auth'
-  /** Rail/collapsed sidebar: only the Conora symbol, no wordmark. */
+  /** Rail/collapsed sidebar: only the symbol. */
   compact?: boolean
+  /** Show “uma solução Onra”. Default: only on auth screens. */
+  showOnra?: boolean
 }
 
-/** Prefers the Conora logo image (public/brand/conora-claro|escuro.png) and falls back to the wordmark. */
-export function BrandLockup({ size = 'nav', compact = false }: Props) {
+/** App chrome uses the O symbol; auth may show wordmark + Onra signature. */
+export function BrandLockup({ size = 'nav', compact = false, showOnra = size === 'auth' }: Props) {
   const { theme } = useTheme()
   const suffix = isDarkTheme(theme) ? 'escuro' : 'claro'
   const conoraLogo = `${import.meta.env.BASE_URL}brand/conora-${suffix}.png`
   const onraLogo = `${import.meta.env.BASE_URL}brand/logo-${suffix}.png`
-  const symbol = `${import.meta.env.BASE_URL}brand/conora-simbolo.png`
+  const symbol = `${import.meta.env.BASE_URL}brand/simbolo.png`
   const [logoReady, setLogoReady] = useState(false)
 
   useEffect(() => {
+    if (size !== 'auth' || compact) {
+      return
+    }
     let cancelled = false
     const probe = new Image()
     probe.onload = () => {
@@ -35,9 +40,9 @@ export function BrandLockup({ size = 'nav', compact = false }: Props) {
     return () => {
       cancelled = true
     }
-  }, [conoraLogo])
+  }, [conoraLogo, compact, size])
 
-  if (compact) {
+  if (compact || size === 'nav') {
     return (
       <div className={`${styles.lockup} ${styles[size]} ${styles.compact}`}>
         <img className={styles.mark} src={symbol} alt="Conora" />
@@ -52,9 +57,11 @@ export function BrandLockup({ size = 'nav', compact = false }: Props) {
       ) : (
         <span className={styles.conora}>Conora</span>
       )}
-      <span className={styles.signature}>
-        uma solução <img src={onraLogo} alt="Onra" />
-      </span>
+      {showOnra ? (
+        <span className={styles.signature}>
+          uma solução <img src={onraLogo} alt="Onra" />
+        </span>
+      ) : null}
     </div>
   )
 }

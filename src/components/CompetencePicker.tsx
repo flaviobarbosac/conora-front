@@ -9,11 +9,11 @@ type Props = {
 
 export function CompetencePicker({ value, onChange }: Props) {
   return (
-    <div className={styles.picker}>
+    <div className={styles.picker} role="group" aria-label="Competência">
       <Button variant="secondary" aria-label="Mês anterior" onClick={() => onChange(shiftCompetence(value, -1))}>
         ‹
       </Button>
-      <strong>{formatCompetence(value)}</strong>
+      <strong className={styles.pickerLabel}>{formatCompetence(value)}</strong>
       <Button variant="secondary" aria-label="Próximo mês" onClick={() => onChange(shiftCompetence(value, 1))}>
         ›
       </Button>

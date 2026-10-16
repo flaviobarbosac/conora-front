@@ -772,6 +772,8 @@ export const familyApi = {
   completeOnboarding: () => apiFetch<FamilyProfile>('/family/onboarding/complete', json('POST')),
   group: () => apiFetch<FamilyGroupResponse>('/family/group'),
   invite: (email: string) => apiFetch<FamilyInvite>('/family/invites', json('POST', { email })),
+  createQrInvite: () =>
+    apiFetch<{ id: string; token: string; expiresAt: string; joinUrl: string }>('/family/invites/qr', json('POST')),
   cancelInvite: (id: string) => apiFetch<void>(`/family/invites/${id}`, json('DELETE')),
   previewInvite: (token: string) =>
     apiFetch<FamilyInvitePreview>(`/family/invites/${token}/preview`, { auth: false }),
