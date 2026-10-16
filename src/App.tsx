@@ -20,6 +20,7 @@ import { DiagnosisPage } from './pages/DiagnosisPage'
 import { HelpPage } from './pages/HelpPage'
 import { HomePage } from './pages/HomePage'
 import { ImportPage } from './pages/ImportPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
 import { MarcosPage } from './pages/MarcosPage'
@@ -33,6 +34,7 @@ import { ProfilePage } from './pages/ProfilePage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { RetrospectivePage } from './pages/RetrospectivePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ShareTargetPage } from './pages/ShareTargetPage'
@@ -128,6 +130,8 @@ export default function App() {
       <SaveToastHost />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/recuperar-senha" element={<ForgotPasswordPage />} />
+        <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/apresentacao" element={<ApresentacaoPage />} />
         <Route path="/apresentacao/:variante" element={<ApresentacaoVariantesPage />} />
