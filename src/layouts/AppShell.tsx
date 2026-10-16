@@ -309,9 +309,6 @@ export function AppShell() {
           >
             <Icon name="menu" size={24} />
           </button>
-          <div className={styles.appHeaderBrand}>
-            <BrandLockup size="nav" />
-          </div>
           <div className={styles.appHeaderUser} ref={profileMenuRef}>
             <AlertsBell peerOpen={profileMenuOpen} onOpen={() => setProfileMenuOpen(false)} />
             <button
@@ -449,19 +446,6 @@ export function AppShell() {
             </>
           )}
         </NavLink>
-        <NavLink to="/lancamentos" className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
-          {({ isActive }) => (
-            <>
-              <Icon name="list" variant={isActive ? 'duo' : 'linear'} size={24} />
-              <span>Lançar</span>
-            </>
-          )}
-        </NavLink>
-        <button type="button" className={styles.fab} aria-label="Fotografar recibo" onClick={() => void openCameraEntry()}>
-          <span className={styles.fabDisc}>
-            <Icon name="camera" variant="tile" size={24} />
-          </span>
-        </button>
         <NavLink to="/raio-x" className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
           {({ isActive }) => (
             <>
@@ -470,21 +454,28 @@ export function AppShell() {
             </>
           )}
         </NavLink>
-        <button
-          type="button"
-          className={mobileNavOpen || cadastrosActive ? styles.bottomLinkActive : styles.bottomLink}
-          aria-label="Abrir menu Cadastros e Orçamento"
-          aria-expanded={mobileNavOpen}
-          aria-controls="menu-lateral"
-          onClick={() => setMobileNavOpen(true)}
-        >
-          <Icon name="menu" variant={mobileNavOpen || cadastrosActive ? 'duo' : 'linear'} size={24} />
-          <span>Menu</span>
+        <button type="button" className={styles.fab} aria-label="Fotografar recibo" onClick={() => void openCameraEntry()}>
+          <span className={styles.fabDisc}>
+            <Icon name="camera" variant="tile" size={24} />
+          </span>
         </button>
+        <NavLink to="/orcamento" className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
+          {({ isActive }) => (
+            <>
+              <Icon name="wallet" variant={isActive ? 'duo' : 'linear'} size={24} />
+              <span>Orçam.</span>
+            </>
+          )}
+        </NavLink>
+        <NavLink to="/categorias" className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
+          {({ isActive }) => (
+            <>
+              <Icon name="folder" variant={isActive ? 'duo' : 'linear'} size={24} />
+              <span>Categoria</span>
+            </>
+          )}
+        </NavLink>
       </nav>
-      <span className={styles.mobileVersion} title={`Versão ${__APP_VERSION__}`}>
-        v{__APP_VERSION__}
-      </span>
       <IanFloatingChat />
     </div>
   )

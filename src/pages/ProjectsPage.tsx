@@ -335,7 +335,7 @@ function ProjectForm({
         createdId = created.id
       })
     ) {
-      showSaveToast('Projeto criado.')
+      showSaveToast('Projeto criado e rateado no orçamento.')
       onSaved(createdId)
     }
   }

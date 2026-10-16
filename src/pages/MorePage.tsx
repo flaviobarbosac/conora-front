@@ -12,13 +12,13 @@ import styles from './page.module.css'
 
 const TILES: ReadonlyArray<{ to: string; title: string; text: string }> = [
   { to: '/diagnostico', title: 'Diagnóstico', text: 'Fontes de renda e valor líquido' },
-  { to: '/retrospectiva', title: 'Retrospectiva', text: 'Resumo do ano e marcos' },
+  { to: '/marcos', title: 'Marcos', text: 'Conquistas do método' },
+  { to: '/retrospectiva', title: 'Retrospectiva', text: 'Resumo do ano' },
   { to: '/plano', title: 'Plano', text: 'Assinatura e situação' },
   { to: '/operacao', title: 'Operação', text: 'Auditoria, feedback e saúde' },
   { to: '/ajuda', title: 'Central de ajuda', text: 'Módulos, campos e glossário' },
   { to: '/ia', title: 'Ian', text: 'Pergunte e abra um relatório com gráfico' },
   { to: '/importar', title: 'Importar extrato', text: 'CSV ou OFX' },
-  { to: '/mes', title: 'Fechar mês', text: 'Fechar ou reabrir competência' },
 ]
 
 export function MorePage() {

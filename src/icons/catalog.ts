@@ -24,6 +24,8 @@ export type IconName =
   | 'repeat'
   | 'menu'
   | 'camera'
+  | 'mic'
+  | 'pen'
   | 'console'
 
 type IconDef = {
@@ -162,6 +164,16 @@ export const ICON_CATALOG: Record<IconName, IconDef> = {
       'M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z',
     ],
     accent: ['M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
+  },
+  mic: {
+    label: 'Microfone',
+    base: ['M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z', 'M5 11a7 7 0 0 0 14 0'],
+    accent: ['M12 18v3', 'M9 21h6'],
+  },
+  pen: {
+    label: 'Escrever',
+    base: ['M5 19h4l10.5-10.5a2.1 2.1 0 0 0-3-3L6 16v3z'],
+    accent: ['M13.5 6.5l3 3', 'M4 21h7'],
   },
   console: {
     label: 'Console',

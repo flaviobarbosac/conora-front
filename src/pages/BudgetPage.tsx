@@ -1,11 +1,16 @@
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   budgetsApi,
   categoriesApi,
+  familyApi,
+  monthsApi,
+  projectsApi,
   type Budget,
   type BudgetYear,
   type Category,
+  type LifeProject,
+  type LifeProjectScope,
   type SharingScope,
 } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
@@ -18,6 +23,8 @@ import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
 import { IntegerField } from '../components/ui/IntegerField'
+import { Select } from '../components/ui/Select'
+import { TextArea } from '../components/ui/TextArea'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
@@ -28,9 +35,11 @@ import { CASH_FLOW_SECTIONS, compareCategorySiblings } from '../lib/categoryOrde
 import {
   competencesFrom,
   currentCompetence,
+  dateToApi,
   formatCompetence,
   formatMoney,
   formatMoneyInput,
+  monthsInclusive,
   parseMoney,
 } from '../lib/format'
 import {
@@ -83,8 +92,11 @@ export function BudgetPage() {
   const year = useMemo(() => Number(ym.slice(0, 4)), [ym])
   const yearData = useLoad(() => budgetsApi.getYear(year, scope), [year, scope])
   const categories = useLoad(() => categoriesApi.list(undefined, false, false), [])
+  const projects = useLoad(() => projectsApi.list(), [])
+  const monthStatus = useLoad(() => monthsApi.get(ym), [ym])
   const copy = useAction()
   const canEdit = budget.data?.canEdit !== false
+  const monthClosed = Boolean(monthStatus.data?.isClosed)
 
   async function changeYm(next: string) {
     if (next === ym) {
@@ -143,10 +155,19 @@ export function BudgetPage() {
             >
               Copiar mês anterior
             </Button>
+            <Button
+              variant="secondary"
+              disabled={monthClosed}
+              onClick={() => navigate(`/mes?competenceYm=${encodeURIComponent(ym)}`)}
+            >
+              Fechar mês
+            </Button>
           </>
         }
       />
-      <ErrorText message={budget.error ?? copy.error ?? categories.error ?? yearData.error} />
+      <ErrorText
+        message={budget.error ?? copy.error ?? categories.error ?? yearData.error ?? projects.error ?? monthStatus.error}
+      />
       {data && !canEdit ? (
         <p className={styles.muted}>Somente o responsável pelo orçamento familiar pode editar o previsto.</p>
       ) : null}
@@ -159,12 +180,14 @@ export function BudgetPage() {
           budget={data}
           categories={categories.data ?? []}
           categoriesLoading={categories.loading && !categories.data}
+          projects={projects.data ?? []}
           year={year}
           yearData={yearData.data}
           focusCategoryId={focusCategoryId}
           onSaved={() => {
             budget.reload()
             yearData.reload()
+            projects.reload()
             if (returnTo) {
               navigate(returnTo)
             }
@@ -182,6 +205,7 @@ type EditorProps = {
   budget: Budget
   categories: Category[]
   categoriesLoading: boolean
+  projects: LifeProject[]
   year: number
   yearData: BudgetYear | null | undefined
   focusCategoryId: string | null
@@ -195,6 +219,7 @@ function BudgetTreeEditor({
   budget,
   categories,
   categoriesLoading,
+  projects,
   year,
   yearData,
   focusCategoryId,
@@ -204,8 +229,19 @@ function BudgetTreeEditor({
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [yearAccountId, setYearAccountId] = useState<string | null>(null)
+  const [createCategoryId, setCreateCategoryId] = useState<string | null>(null)
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const saveAction = useAction()
+
+  const lockedCategoryIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const project of projects) {
+      if (project.categoryId) {
+        ids.add(project.categoryId)
+      }
+    }
+    return ids
+  }, [projects])
 
   useEffect(() => {
     if (!focusCategoryId || categories.length === 0) {
@@ -425,15 +461,27 @@ function BudgetTreeEditor({
               matches={matches}
               busy={saveAction.busy}
               canEdit={canEdit}
+              lockedCategoryIds={lockedCategoryIds}
               focusedId={focusedId}
               onToggle={toggle}
-              onOpenYear={setYearAccountId}
-              onDraftChange={(id, value) => setDrafts((current) => ({ ...current, [id]: value }))}
+              onOpenYear={(id) => {
+                if (lockedCategoryIds.has(id)) {
+                  return
+                }
+                setYearAccountId(id)
+              }}
+              onCreateProject={(id) => setCreateCategoryId(id)}
+              onDraftChange={(id, value) => {
+                if (lockedCategoryIds.has(id)) {
+                  return
+                }
+                setDrafts((current) => ({ ...current, [id]: value }))
+              }}
             />
           ))}
         </div>
       ) : null}
-      {yearAccount ? (
+      {yearAccount && !lockedCategoryIds.has(yearAccount.id) ? (
         <BudgetYearSheet
           ym={ym}
           year={year}
@@ -451,6 +499,19 @@ function BudgetTreeEditor({
           })()}
           onClose={() => setYearAccountId(null)}
           onChanged={() => {
+            onSaved()
+          }}
+        />
+      ) : null}
+      {createCategoryId ? (
+        <LifeProjectCreateSheet
+          categoryId={createCategoryId}
+          categoryName={
+            cashAccounts.find((account) => account.id === createCategoryId)?.name ?? 'Projeto de vida'
+          }
+          onClose={() => setCreateCategoryId(null)}
+          onCreated={() => {
+            setCreateCategoryId(null)
             onSaved()
           }}
         />
@@ -497,9 +558,11 @@ function BudgetAccountBlock({
   matches,
   busy,
   canEdit,
+  lockedCategoryIds,
   focusedId,
   onToggle,
   onOpenYear,
+  onCreateProject,
   onDraftChange,
 }: {
   account: Category
@@ -512,9 +575,11 @@ function BudgetAccountBlock({
   matches: Set<string> | null
   busy: boolean
   canEdit: boolean
+  lockedCategoryIds: Set<string>
   focusedId: string | null
   onToggle: (id: string) => void
   onOpenYear: (id: string) => void
+  onCreateProject: (id: string) => void
   onDraftChange: (id: string, value: string) => void
 }) {
   const children = byParent.get(account.id) ?? []
@@ -544,9 +609,13 @@ function BudgetAccountBlock({
   }
 
   if (account.level === 'Analytical') {
+    const locked = lockedCategoryIds.has(account.id)
+    const needsProject = account.section === 'LifeProject' && !locked
     const draft = drafts[account.id] ?? formatMoneyInput(planned.get(account.id) ?? 0)
     const lineTotals = {
-      planned: Math.abs(parseMoney(draft) || 0) || (planned.get(account.id) ?? 0),
+      planned: locked
+        ? (planned.get(account.id) ?? 0)
+        : Math.abs(parseMoney(draft) || 0) || (planned.get(account.id) ?? 0),
       actual: actual.get(account.id) ?? 0,
     }
     const isFocused = focusedId === account.id
@@ -559,6 +628,16 @@ function BudgetAccountBlock({
         <span />
         <span className={styles.budgetAccountCell}>
           <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
+          {needsProject && canEdit ? (
+            <button
+              type="button"
+              className={styles.budgetAccountLink}
+              onClick={() => onCreateProject(account.id)}
+            >
+              Criar projeto de vida
+            </button>
+          ) : null}
+          {locked ? <span className={styles.muted}>Rateio do projeto</span> : null}
         </span>
         <BudgetTotalsCell
           totals={{ planned: lineTotals.planned, actual: lineTotals.actual }}
@@ -569,15 +648,15 @@ function BudgetAccountBlock({
                   compact
                   label={`Orçamento ${categoryLabel(account)}`}
                   name={`budget-${account.id}`}
-                  value={draft}
-                  disabled={busy || !canEdit}
+                  value={locked ? formatMoneyInput(planned.get(account.id) ?? 0) : draft}
+                  disabled={busy || !canEdit || locked || needsProject}
                   onChange={(value) => onDraftChange(account.id, value)}
                 />
               </span>
               <button
                 type="button"
                 className={styles.budgetSpreadIcon}
-                disabled={busy || !canEdit}
+                disabled={busy || !canEdit || locked || needsProject}
                 aria-label={`Repetir ou parcelar ${categoryLabel(account)}`}
                 title="Repetir ou parcelar"
                 onClick={() => onOpenYear(account.id)}
@@ -620,9 +699,11 @@ function BudgetAccountBlock({
               matches={matches}
               busy={busy}
               canEdit={canEdit}
+              lockedCategoryIds={lockedCategoryIds}
               focusedId={focusedId}
               onToggle={onToggle}
               onOpenYear={onOpenYear}
+              onCreateProject={onCreateProject}
               onDraftChange={onDraftChange}
             />
           ))
@@ -641,9 +722,11 @@ function BudgetAccountBlock({
               matches={matches}
               busy={busy}
               canEdit={canEdit}
+              lockedCategoryIds={lockedCategoryIds}
               focusedId={focusedId}
               onToggle={onToggle}
               onOpenYear={onOpenYear}
+              onCreateProject={onCreateProject}
               onDraftChange={onDraftChange}
             />
           ))
@@ -899,6 +982,157 @@ function BudgetYearSheet({
           </div>
         </div>
         <ErrorText message={action.error} />
+      </div>
+    </div>
+  )
+}
+
+function LifeProjectCreateSheet({
+  categoryId,
+  categoryName,
+  onClose,
+  onCreated,
+}: {
+  categoryId: string
+  categoryName: string
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const titleId = useId()
+  const family = useLoad(() => familyApi.group(), [])
+  const action = useAction()
+  const [name, setName] = useState(categoryName)
+  const [detailedDescription, setDetailedDescription] = useState('')
+  const [goal, setGoal] = useState('')
+  const [dueYm, setDueYm] = useState('')
+  const [startYm, setStartYm] = useState(() => currentCompetence())
+  const [scope, setScope] = useState<LifeProjectScope>('Personal')
+  const hasFamilyGroup = Boolean(family.data?.groupId)
+  const currentYm = currentCompetence()
+  const months = dueYm ? monthsInclusive(startYm, dueYm) : []
+  const goalAmount = parseMoney(goal)
+  const parcel =
+    months.length > 0 && Number.isFinite(goalAmount) && goalAmount > 0 ? goalAmount / months.length : null
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    if (!Number.isFinite(goalAmount) || goalAmount <= 0) {
+      action.setError('Informe uma meta maior que zero.')
+      return
+    }
+    if (!dueYm) {
+      action.setError('Informe o prazo.')
+      return
+    }
+    if (startYm < currentYm) {
+      action.setError('O início do aporte não pode ser antes do mês atual.')
+      return
+    }
+    if (startYm > dueYm) {
+      action.setError('O início do aporte não pode ser depois do prazo.')
+      return
+    }
+    const projectScope = scope === 'Group' && hasFamilyGroup ? 'Group' : 'Personal'
+    if (
+      await action.run(() =>
+        projectsApi.create({
+          name: name.trim() || categoryName,
+          goalAmount,
+          dueDate: dateToApi(`${dueYm}-01`),
+          contributionStartYm: startYm,
+          scope: projectScope,
+          categoryId,
+          detailedDescription: detailedDescription.trim() || undefined,
+        }),
+      )
+    ) {
+      showSaveToast('Projeto criado e rateado no orçamento.')
+      onCreated()
+    }
+  }
+
+  return (
+    <div
+      className={styles.sheetOverlay}
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose()
+        }
+      }}
+    >
+      <div className={`${styles.sheet} ${styles.budgetSheet}`} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className={styles.sectionHead}>
+          <h2 id={titleId} className={styles.sectionTitle}>
+            Novo projeto · {categoryName}
+          </h2>
+          <Button variant="ghost" onClick={onClose}>
+            Fechar
+          </Button>
+        </div>
+        <form className={styles.form} onSubmit={(event) => void submit(event)}>
+          <div className={styles.formWide}>
+            <Field label="Nome" name="budgetProjectName" required value={name} onChange={(event) => setName(event.target.value)} />
+          </div>
+          <div className={styles.formWide}>
+            <TextArea
+              label="Descrição detalhada"
+              name="budgetProjectDescription"
+              rows={3}
+              value={detailedDescription}
+              onChange={(event) => setDetailedDescription(event.target.value)}
+              maxLength={4000}
+            />
+          </div>
+          <Select
+            label="Escopo"
+            name="budgetProjectScope"
+            value={scope}
+            onChange={(event) => setScope(event.target.value as LifeProjectScope)}
+          >
+            <option value="Personal">Pessoal</option>
+            <option value="Group" disabled={!hasFamilyGroup}>
+              Família{hasFamilyGroup ? '' : ' — entre no grupo primeiro'}
+            </option>
+          </Select>
+          <MoneyField label="Meta (R$)" name="budgetProjectGoal" required value={goal} onChange={setGoal} />
+          <Field
+            label="Prazo"
+            name="budgetProjectDue"
+            type="month"
+            required
+            value={dueYm}
+            min={startYm || currentYm}
+            onChange={(event) => setDueYm(event.target.value)}
+          />
+          <Field
+            label="Início do aporte"
+            name="budgetProjectStart"
+            type="month"
+            required
+            value={startYm}
+            min={currentYm}
+            max={dueYm || undefined}
+            onChange={(event) => setStartYm(event.target.value)}
+          />
+          {parcel !== null ? (
+            <p className={`${styles.muted} ${styles.formWide}`}>
+              Rateio automático: {formatMoney(parcel)}/mês · {months.length}{' '}
+              {months.length === 1 ? 'mês' : 'meses'}
+            </p>
+          ) : null}
+          <div className={styles.formWide}>
+            <ErrorText message={action.error} />
+          </div>
+          <div className={styles.formActions}>
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={action.busy}>
+              Salvar projeto
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   )

@@ -25,7 +25,7 @@ export function LoginPage() {
   const fromInvite = afterLogin.startsWith('/grupo/convite/')
   const registerTo = afterLogin === '/' ? '/register' : `/register?returnTo=${encodeURIComponent(afterLogin)}`
   const showApple = appleSignInAvailable()
-  const [usuario, setUsuario] = useState('')
+  const [usuario, setUsuario] = useState(() => searchParams.get('usuario') ?? '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { familyApi, gamificationApi, monthsApi } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
@@ -27,7 +27,8 @@ function closeBlockedReason(ym: string, monthCloseDay: number | undefined): stri
 }
 
 export function MonthPage() {
-  const [ym, setYm] = useState(currentCompetence)
+  const [searchParams] = useSearchParams()
+  const [ym, setYm] = useState(() => searchParams.get('competenceYm') || currentCompetence())
   const [reason, setReason] = useState('')
   const [justClosed, setJustClosed] = useState(false)
   const profile = useLoad(() => familyApi.profile(), [])

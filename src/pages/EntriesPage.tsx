@@ -41,6 +41,7 @@ import {
 } from '../lib/format'
 import { isNativeApp } from '../lib/platform'
 import { readSharingView } from '../lib/sharingView'
+import { takeVoiceDraft } from '../lib/voiceDraft'
 import { peekPendingShare, takePendingShare } from '../share/pendingShare'
 import {
   peekPendingIntakeId,
@@ -239,6 +240,24 @@ export function EntriesPage() {
       next.delete('recibo')
       changed = true
       void bootstrapReceipt(searchParams.get('canal') === 'share' ? 'ShareTarget' : 'App')
+    }
+
+    if (searchParams.get('voz') === '1') {
+      next.delete('voz')
+      changed = true
+      const draft = takeVoiceDraft()
+      if (draft) {
+        setReceiptPrefill({
+          description: draft.description,
+          amount: draft.amount,
+          date: todayInput(),
+          categoryId: '',
+          accountId: '',
+        })
+        setEditing(null)
+        setShowForm(true)
+        setFormDirty(Boolean(draft.description || draft.amount))
+      }
     }
 
     const competenceYm = searchParams.get('competenceYm')

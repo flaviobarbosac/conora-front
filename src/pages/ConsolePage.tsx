@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   consoleApi,
   type ConsoleFeature,
@@ -214,7 +214,7 @@ export function ConsolePage() {
 function MethodTab({ data }: { data: ConsoleKpis }) {
   return (
     <div className={styles.stack}>
-      <div className={layout.grid3}>
+      <div className={`${layout.grid3} ${styles.stats}`}>
         <Stat label="Usuários" value={count(data.accounts)} hint={STAT_HINTS.users} />
         <Stat label="Com orçamento neste mês" value={count(data.withBudget)} note={percent(share(data.withBudget, data.accounts))} hint={STAT_HINTS.withBudget} />
         <Stat label="Sem orçamento neste mês" value={count(data.withoutBudget)} note={percent(share(data.withoutBudget, data.accounts))} hint={STAT_HINTS.withoutBudget} />
@@ -299,7 +299,7 @@ function MethodTab({ data }: { data: ConsoleKpis }) {
 function UsageTab({ data }: { data: ConsoleKpis }) {
   return (
     <div className={styles.stack}>
-      <div className={layout.grid3}>
+      <div className={`${layout.grid3} ${styles.stats}`}>
         <Stat label="Ativos hoje" value={count(data.active1d)} note={percent(share(data.active1d, data.accounts))} hint={STAT_HINTS.active1} />
         <Stat label="Ativos em 7 dias" value={count(data.active7d)} note={percent(share(data.active7d, data.accounts))} hint={STAT_HINTS.active7} />
         <Stat label="Ativos em 30 dias" value={count(data.active30d)} note={percent(share(data.active30d, data.accounts))} hint={STAT_HINTS.active30} />
@@ -394,7 +394,7 @@ function EvolutionTab({
 function ErrorsTab({ data }: { data: ConsoleKpis }) {
   return (
     <div className={styles.stack}>
-      <div className={layout.grid3}>
+      <div className={`${layout.grid3} ${styles.stats}`}>
         <Stat label="Erros em 7 dias" value={count(data.errors7d)} hint={STAT_HINTS.errors7} />
         <Stat label="Erros em 30 dias" value={count(data.errors30d)} hint={STAT_HINTS.errors30} />
       </div>
@@ -565,7 +565,14 @@ function SimpleTable({ headers, rows }: { headers: Cell[]; rows: Cell[][] }) {
             <tr key={`${cellText(row[0])}-${index}`}>
               {row.map((cell, cellIndex) => (
                 <td key={`${cellText(headers[cellIndex])}-${cellText(cell)}`}>
-                  <CellView cell={cell} />
+                  {cellIndex > 0 ? (
+                    <span className={styles.fieldLabel}>
+                      <CellView cell={headers[cellIndex]} />
+                    </span>
+                  ) : null}
+                  <span className={styles.fieldValue}>
+                    <CellView cell={cell} />
+                  </span>
                 </td>
               ))}
             </tr>
@@ -581,23 +588,56 @@ function CellView({ cell }: { cell: Cell }) {
   return <Tip text={cell.text} hint={cell.hint} />
 }
 
+function placeTip(target: HTMLElement) {
+  const rect = target.getBoundingClientRect()
+  const width = Math.min(320, window.innerWidth - 16)
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))
+  const estimated = 128
+  const below = rect.bottom + 8
+  const top = below + estimated > window.innerHeight - 96 ? Math.max(8, rect.top - estimated - 8) : below
+  return { top, left }
+}
+
+function coarsePointer() {
+  return window.matchMedia('(pointer: coarse)').matches
+}
+
 function Tip({ text, hint }: { text: string; hint?: string }) {
   const [place, setPlace] = useState<{ top: number; left: number } | null>(null)
+  const ref = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!place) return
+    function close(event: Event) {
+      if (event.target instanceof Node && ref.current?.contains(event.target)) return
+      setPlace(null)
+    }
+    document.addEventListener('pointerdown', close)
+    window.addEventListener('scroll', close, true)
+    return () => {
+      document.removeEventListener('pointerdown', close)
+      window.removeEventListener('scroll', close, true)
+    }
+  }, [place])
+
   if (!hint) return text
 
-  function show(target: HTMLElement) {
-    const rect = target.getBoundingClientRect()
-    setPlace({ top: rect.bottom + 8, left: Math.max(8, Math.min(rect.left, window.innerWidth - 328)) })
-  }
-
   return (
-    <span
+    <button
+      ref={ref}
+      type="button"
       className={styles.tip}
-      tabIndex={0}
-      onMouseEnter={(event) => show(event.currentTarget)}
-      onFocus={(event) => show(event.currentTarget)}
-      onMouseLeave={() => setPlace(null)}
-      onBlur={() => setPlace(null)}
+      aria-expanded={place !== null}
+      onMouseEnter={(event) => {
+        if (!coarsePointer()) setPlace(placeTip(event.currentTarget))
+      }}
+      onMouseLeave={() => {
+        if (!coarsePointer()) setPlace(null)
+      }}
+      onClick={() => {
+        if (!coarsePointer()) return
+        setPlace((current) => (current || !ref.current ? null : placeTip(ref.current)))
+      }}
     >
       {text}
       {place ? (
@@ -605,6 +645,6 @@ function Tip({ text, hint }: { text: string; hint?: string }) {
           {hint}
         </span>
       ) : null}
-    </span>
+    </button>
   )
 }
