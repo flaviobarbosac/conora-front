@@ -1,9 +1,8 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { familyApi } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
 import { isConsoleOperator } from '../auth/consoleAccess'
-import { scanReceipt } from '../camera/scanReceipt'
 import { AlertsBell } from '../components/AlertsBell'
 import { BrandLockup } from '../components/BrandLockup'
 import { IanFloatingChat } from '../components/IanFloatingChat'
@@ -29,7 +28,6 @@ function initialsFrom(name: string, email: string): string {
 export function AppShell() {
   const { session, logout } = useAuth()
   const { theme, setTheme } = useTheme()
-  const navigate = useNavigate()
   const { pathname } = useLocation()
   const email = session?.email || 'conta'
   const profile = useLoad(() => familyApi.profile(), [session?.email])
@@ -155,15 +153,6 @@ export function AppShell() {
   ]
     .filter(Boolean)
     .join(' ')
-
-  async function openCameraEntry() {
-    try {
-      await scanReceipt()
-      navigate('/lancamentos?novo=1&recibo=1')
-    } catch {
-      // User cancelled the camera/gallery prompt.
-    }
-  }
 
   return (
     <div className={shellClass}>
@@ -299,16 +288,6 @@ export function AppShell() {
 
       <div className={styles.content}>
         <header className={styles.appHeader}>
-          <button
-            type="button"
-            className={styles.menuBtn}
-            aria-label="Abrir menu"
-            aria-controls="menu-lateral"
-            aria-expanded={mobileNavOpen}
-            onClick={() => setMobileNavOpen(true)}
-          >
-            <Icon name="menu" size={24} />
-          </button>
           <div className={styles.appHeaderUser} ref={profileMenuRef}>
             <AlertsBell peerOpen={profileMenuOpen} onOpen={() => setProfileMenuOpen(false)} />
             <button
@@ -446,24 +425,19 @@ export function AppShell() {
             </>
           )}
         </NavLink>
-        <NavLink to="/raio-x" className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
-          {({ isActive }) => (
-            <>
-              <Icon name="budget" variant={isActive ? 'duo' : 'linear'} size={24} />
-              <span>Raio-X</span>
-            </>
-          )}
-        </NavLink>
-        <button type="button" className={styles.fab} aria-label="Fotografar recibo" onClick={() => void openCameraEntry()}>
-          <span className={styles.fabDisc}>
-            <Icon name="camera" variant="tile" size={24} />
-          </span>
-        </button>
         <NavLink to="/orcamento" className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
           {({ isActive }) => (
             <>
               <Icon name="wallet" variant={isActive ? 'duo' : 'linear'} size={24} />
               <span>Orçam.</span>
+            </>
+          )}
+        </NavLink>
+        <NavLink to="/raio-x" className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
+          {({ isActive }) => (
+            <>
+              <Icon name="budget" variant={isActive ? 'duo' : 'linear'} size={24} />
+              <span>Raio-X</span>
             </>
           )}
         </NavLink>
@@ -475,6 +449,17 @@ export function AppShell() {
             </>
           )}
         </NavLink>
+        <button
+          type="button"
+          className={mobileNavOpen ? styles.bottomLinkActive : styles.bottomLink}
+          aria-label="Abrir menu"
+          aria-controls="menu-lateral"
+          aria-expanded={mobileNavOpen}
+          onClick={() => setMobileNavOpen(true)}
+        >
+          <Icon name="menu" variant={mobileNavOpen ? 'duo' : 'linear'} size={24} />
+          <span>Menu</span>
+        </button>
       </nav>
       <IanFloatingChat />
     </div>

@@ -2,6 +2,11 @@ import type { Alert } from '../api/finance'
 
 /** Route where the user can act on the alert. */
 export function alertTarget(alert: Alert, competenceYm: string): string {
+  const ym = encodeURIComponent(competenceYm)
+  const category = alert.categoryId
+    ? `&categoryId=${encodeURIComponent(alert.categoryId)}`
+    : ''
+
   if (alert.code === 'CATEGORY_PENDING_REVIEW') {
     return '/categorias'
   }
@@ -9,10 +14,15 @@ export function alertTarget(alert: Alert, competenceYm: string): string {
     return '/cartoes'
   }
   if (alert.code === 'NEGATIVE_RESULT') {
-    return `/raio-x?competenceYm=${encodeURIComponent(competenceYm)}`
+    return `/raio-x?competenceYm=${ym}`
   }
-  if (alert.code.startsWith('BUDGET_') && alert.categoryId) {
-    return `/lancamentos?competenceYm=${encodeURIComponent(competenceYm)}&categoryId=${encodeURIComponent(alert.categoryId)}`
+  // Spend with no plan: the entries on that account are what to review.
+  if (alert.code.startsWith('BUDGET_') && alert.percent === null && alert.categoryId) {
+    return `/lancamentos?competenceYm=${ym}${category}`
   }
-  return `/raio-x?competenceYm=${encodeURIComponent(competenceYm)}`
+  // Attention, limit, or overrun: Raio-X shows planned against actual.
+  if (alert.code.startsWith('BUDGET_')) {
+    return `/raio-x?competenceYm=${ym}${category}`
+  }
+  return `/raio-x?competenceYm=${ym}`
 }

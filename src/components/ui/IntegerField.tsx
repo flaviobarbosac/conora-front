@@ -8,6 +8,7 @@ type Props = {
   onChange: (value: string) => void
   required?: boolean
   disabled?: boolean
+  compact?: boolean
   hint?: ReactNode
   placeholder?: string
   maxLength?: number
@@ -21,6 +22,7 @@ export function IntegerField({
   onChange,
   required,
   disabled,
+  compact,
   hint,
   placeholder,
   maxLength,
@@ -35,6 +37,7 @@ export function IntegerField({
       placeholder={placeholder}
       required={required}
       disabled={disabled}
+      compact={compact}
       hint={hint}
       maxLength={maxLength}
       value={value}

@@ -5,8 +5,56 @@ export type VoiceDraft = {
   amount: string
 }
 
+export type VoiceFill = {
+  type: 'Expense' | 'Income' | null
+  amount: number | null
+  date: string | null
+  description: string | null
+  categoryName: string | null
+  accountName: string | null
+}
+
+let currentFill: VoiceFill | null = null
+const fillListeners = new Set<(fill: VoiceFill) => void>()
+
+export function publishVoiceFill(fill: VoiceFill): void {
+  currentFill = fill
+  for (const listener of fillListeners) {
+    listener(fill)
+  }
+  window.dispatchEvent(new CustomEvent('conora:voice-fill'))
+}
+
+export function subscribeVoiceFill(listener: (fill: VoiceFill) => void): () => void {
+  fillListeners.add(listener)
+  if (currentFill) {
+    listener(currentFill)
+  }
+  return () => fillListeners.delete(listener)
+}
+
+export function clearVoiceFill(): void {
+  currentFill = null
+}
+
 export function setVoiceDraft(draft: VoiceDraft): void {
   sessionStorage.setItem(KEY, JSON.stringify(draft))
+}
+
+export function clearVoiceDraft(): void {
+  sessionStorage.removeItem(KEY)
+}
+
+/** True when the speaker told the guided entry to stop. */
+export function isCancelPhrase(text: string): boolean {
+  const spoken = text
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return /\bcancela/.test(spoken) || spoken === 'nao'
 }
 
 export function takeVoiceDraft(): VoiceDraft | null {
@@ -233,6 +281,176 @@ export function beginVoiceListen(options?: {
     promise,
     confirm: () => settleOk(),
     cancel: () => settleErr(new Error('Ditado cancelado.')),
+  }
+}
+
+export type VoiceSessionHandle = {
+  pause: () => void
+  resume: () => void
+  cancel: () => void
+}
+
+/**
+ * Keeps the mic open and emits each finished phrase. Home dictation stays on beginVoiceListen.
+ * pause() while a phrase is handled so the speaker is not transcribed.
+ */
+export function beginVoiceSession(options: {
+  onPhrase: (text: string) => void
+  onActivity?: () => void
+  onError?: (message: string) => void
+  gapMs?: number
+}): VoiceSessionHandle {
+  const w = window as SpeechWindow
+  const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition
+  if (!Ctor) {
+    options.onError?.('Este navegador não liberou o microfone para ditado.')
+    return { pause: () => undefined, resume: () => undefined, cancel: () => undefined }
+  }
+
+  let stopped = false
+  let paused = false
+  let buffer = ''
+  let interim = ''
+  let timer: ReturnType<typeof setTimeout> | null = null
+  const gapMs = options.gapMs ?? 1000
+  const recognition = new Ctor()
+  recognition.lang = 'pt-BR'
+  recognition.continuous = true
+  recognition.interimResults = true
+  recognition.maxAlternatives = 1
+
+  function clearTimer() {
+    if (timer) {
+      clearTimeout(timer)
+      timer = null
+    }
+  }
+
+  function emit() {
+    const phrase = `${buffer} ${interim}`.trim()
+    buffer = ''
+    interim = ''
+    clearTimer()
+    if (!phrase || stopped || paused) {
+      return
+    }
+    options.onPhrase(phrase)
+  }
+
+  function arm() {
+    clearTimer()
+    timer = setTimeout(emit, gapMs)
+  }
+
+  recognition.onresult = (event) => {
+    if (stopped || paused) {
+      return
+    }
+    let finals = ''
+    let nextInterim = ''
+    for (let i = event.resultIndex; i < event.results.length; i += 1) {
+      const piece = event.results[i]
+      const text = piece?.[0]?.transcript?.trim() ?? ''
+      if (!text) {
+        continue
+      }
+      if (piece.isFinal) {
+        finals += (finals ? ' ' : '') + text
+      } else {
+        nextInterim += (nextInterim ? ' ' : '') + text
+      }
+    }
+    if (finals) {
+      buffer = `${buffer} ${finals}`.trim()
+    }
+    interim = nextInterim
+    const live = `${buffer} ${interim}`.trim()
+    if (live && isCancelPhrase(live)) {
+      emit()
+      return
+    }
+    if (buffer || interim) {
+      options.onActivity?.()
+      arm()
+    }
+  }
+
+  recognition.onerror = (event) => {
+    if (stopped || event.error === 'aborted' || event.error === 'no-speech') {
+      return
+    }
+    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+      stopped = true
+      options.onError?.('Permita o microfone para falar com o Ian.')
+      return
+    }
+    stopped = true
+    options.onError?.('Não foi possível usar o microfone.')
+  }
+
+  recognition.onend = () => {
+    if (stopped || paused) {
+      return
+    }
+    const pending = `${buffer} ${interim}`.trim()
+    if (pending) {
+      buffer = pending
+      interim = ''
+      emit()
+      return
+    }
+    try {
+      recognition.start()
+    } catch {
+      /* browser still restarting */
+    }
+  }
+
+  try {
+    recognition.start()
+  } catch {
+    stopped = true
+    options.onError?.('Não foi possível iniciar o ditado.')
+  }
+
+  return {
+    pause: () => {
+      paused = true
+      clearTimer()
+      try {
+        recognition.abort()
+      } catch {
+        /* already stopped */
+      }
+    },
+    resume: () => {
+      if (stopped || !paused) {
+        return
+      }
+      paused = false
+      buffer = ''
+      interim = ''
+      window.setTimeout(() => {
+        if (stopped || paused) {
+          return
+        }
+        try {
+          recognition.start()
+        } catch {
+          /* start races with onend */
+        }
+      }, 80)
+    },
+    cancel: () => {
+      stopped = true
+      paused = true
+      clearTimer()
+      try {
+        recognition.abort()
+      } catch {
+        /* ignore */
+      }
+    },
   }
 }
 
