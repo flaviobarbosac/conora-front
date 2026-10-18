@@ -41,7 +41,8 @@ import {
 } from '../lib/format'
 import { isNativeApp } from '../lib/platform'
 import { readSharingView } from '../lib/sharingView'
-import { takeVoiceDraft } from '../lib/voiceDraft'
+import { takeVoiceDraft, subscribeVoiceFill } from '../lib/voiceDraft'
+import { matchByName, resolveSpokenDate } from '../lib/voiceEntry'
 import { peekPendingShare, takePendingShare } from '../share/pendingShare'
 import {
   peekPendingIntakeId,
@@ -108,6 +109,7 @@ export function EntriesPage() {
   const [receiptIntake, setReceiptIntake] = useState<ReceiptIntake | null>(null)
   const [receiptPrefill, setReceiptPrefill] = useState<ReceiptPrefill | null>(null)
   const [receiptIntakeId, setReceiptIntakeId] = useState<string | null>(null)
+  const [savedEntryId, setSavedEntryId] = useState<string | null>(null)
 
   useRegisterDirty('entries-form', showForm && formDirty)
 
@@ -341,6 +343,44 @@ export function EntriesPage() {
   const rowAction = useAction()
 
   useEffect(() => {
+    return subscribeVoiceFill(() => {
+      setEditing(null)
+      setShowForm(true)
+    })
+  }, [])
+
+  useEffect(() => {
+    function openForm() {
+      setEditing(null)
+      setShowForm(true)
+    }
+    function onSaved(event: Event) {
+      const id = (event as CustomEvent<{ id?: string }>).detail?.id ?? ''
+      setFormDirty(false)
+      setEditing(null)
+      setShowForm(false)
+      if (id) {
+        setSavedEntryId(id)
+      }
+      entries.reload()
+    }
+    window.addEventListener('conora:voice-open-form', openForm)
+    window.addEventListener('conora:voice-saved', onSaved)
+    return () => {
+      window.removeEventListener('conora:voice-open-form', openForm)
+      window.removeEventListener('conora:voice-saved', onSaved)
+    }
+  }, [entries])
+
+  useEffect(() => {
+    if (!savedEntryId || !entries.data?.items.some((item) => item.id === savedEntryId)) {
+      return
+    }
+    document.getElementById(`entry-${savedEntryId}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    setSavedEntryId(null)
+  }, [entries.data, savedEntryId])
+
+  useEffect(() => {
     if (isNativeApp()) {
       return
     }
@@ -508,7 +548,7 @@ export function EntriesPage() {
             {entries.data.items.map((entry) => {
               const editable = isEditableType(entry.type) && !monthClosed && entry.canEdit !== false
               return (
-                <li key={entry.id} className={styles.row}>
+                <li key={entry.id} id={`entry-${entry.id}`} className={styles.row} style={{ scrollMarginTop: 96 }}>
                   <button
                     type="button"
                     className={styles.rowMain}
@@ -604,6 +644,37 @@ function EntryForm({
   )
   const amountInputRef = useRef<HTMLInputElement | null>(null)
   const action = useAction()
+
+  useEffect(() => {
+    if (initial) {
+      return
+    }
+    return subscribeVoiceFill((fill) => {
+      const nextType: FormType = fill.type === 'Income' ? 'Income' : 'Expense'
+      if (fill.type) {
+        setType(nextType)
+      }
+      if (fill.amount != null) {
+        setAmount(formatMoneyInput(fill.amount))
+      }
+      if (fill.date) {
+        setDate(resolveSpokenDate(fill.date))
+      }
+      if (fill.description) {
+        setDescription(fill.description)
+      }
+      const pool = categories.filter((category) => matchesEntryType(category.section, fill.type ? nextType : type))
+      const category = matchByName(fill.categoryName, pool)
+      if (category) {
+        setCategoryId(category.id)
+      }
+      const account = matchByName(fill.accountName, accounts)
+      if (account) {
+        setAccountId(account.id)
+      }
+      onDirtyChange?.(true)
+    })
+  }, [accounts, categories, initial, onDirtyChange, type])
 
   function focusAmount() {
     window.requestAnimationFrame(() => {

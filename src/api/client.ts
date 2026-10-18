@@ -195,6 +195,27 @@ export async function apiFormData<T>(path: string, form: FormData, method = 'POS
   return (await response.json()) as T
 }
 
+export async function apiPostBlob(path: string, body: unknown): Promise<Blob | null> {
+  const send = async (): Promise<Response> => {
+    const headers = new Headers()
+    headers.set('Content-Type', 'application/json')
+    const token = getAccessToken()
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+    return fetch(`${apiBase()}${path}`, { method: 'POST', headers, body: JSON.stringify(body) })
+  }
+
+  let response = await send()
+  if (response.status === 401 && (await refreshAccessToken())) {
+    response = await send()
+  }
+  if (response.status === 204 || !response.ok) {
+    return null
+  }
+  return response.blob()
+}
+
 export async function apiBlob(path: string): Promise<{ blob: Blob; fileName: string }> {
   const send = () => {
     const headers = new Headers()

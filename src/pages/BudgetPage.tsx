@@ -16,13 +16,13 @@ import {
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { SharingViewToggle } from '../components/SharingViewToggle'
-import { ProgressToneLegend } from '../components/ProgressToneLegend'
 import { Button } from '../components/ui/Button'
 import { Icon } from '../components/ui/Icon'
 import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
 import { IntegerField } from '../components/ui/IntegerField'
+
 import { Select } from '../components/ui/Select'
 import { TextArea } from '../components/ui/TextArea'
 import { useAction } from '../hooks/useAction'
@@ -31,7 +31,7 @@ import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import { categoryLabel } from '../lib/categoryLabel'
-import { CASH_FLOW_SECTIONS, compareCategorySiblings } from '../lib/categoryOrder'
+import { CASH_FLOW_SECTIONS, EXPENSE_SECTIONS, compareCategorySiblings } from '../lib/categoryOrder'
 import {
   competencesFrom,
   currentCompetence,
@@ -42,30 +42,9 @@ import {
   monthsInclusive,
   parseMoney,
 } from '../lib/format'
-import {
-  buildAmountMaps,
-  groupAccountsByParent,
-  progressPercent,
-  progressTone,
-  sumBranch,
-  type ProgressTone,
-  type RaioXTotals,
-} from '../lib/raioX'
+import { buildAmountMaps, groupAccountsByParent } from '../lib/raioX'
 import { readSharingView } from '../lib/sharingView'
 import styles from './page.module.css'
-
-function toneClass(tone: ProgressTone): string {
-  if (tone === 'over') {
-    return styles.raioxToneOver
-  }
-  if (tone === 'unbudgeted') {
-    return styles.raioxToneUnbudgeted
-  }
-  if (tone === 'muted') {
-    return styles.raioxToneMuted
-  }
-  return styles.raioxToneOk
-}
 
 function safeReturnTo(raw: string | null): string | null {
   if (!raw || !raw.startsWith('/') || raw.startsWith('//')) {
@@ -228,6 +207,7 @@ function BudgetTreeEditor({
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [dayDrafts, setDayDrafts] = useState<Record<string, string>>({})
   const [yearAccountId, setYearAccountId] = useState<string | null>(null)
   const [createCategoryId, setCreateCategoryId] = useState<string | null>(null)
   const [focusedId, setFocusedId] = useState<string | null>(null)
@@ -303,7 +283,17 @@ function BudgetTreeEditor({
     [cashAccounts, categories],
   )
 
-  const { planned, actual } = useMemo(() => buildAmountMaps(budget.lines), [budget.lines])
+  const { planned } = useMemo(() => buildAmountMaps(budget.lines), [budget.lines])
+
+  const expenseDays = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const line of budget.lines) {
+      if (line.categoryId && line.expenseDay != null) {
+        map.set(line.categoryId, line.expenseDay)
+      }
+    }
+    return map
+  }, [budget.lines])
 
   const plannedSignature = useMemo(
     () =>
@@ -323,6 +313,23 @@ function BudgetTreeEditor({
     saveAction.setError(null)
   }, [ym, plannedSignature])
 
+  const daySignature = useMemo(
+    () =>
+      [...expenseDays.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([id, day]) => `${id}=${day}`)
+        .join('|'),
+    [expenseDays],
+  )
+
+  useEffect(() => {
+    const initial: Record<string, string> = {}
+    for (const [id, day] of expenseDays) {
+      initial[id] = String(day)
+    }
+    setDayDrafts(initial)
+  }, [ym, daySignature])
+
   const dirtyIds = useMemo(() => {
     const dirty = new Set<string>()
     for (const [id, text] of Object.entries(drafts)) {
@@ -338,7 +345,21 @@ function BudgetTreeEditor({
     return dirty
   }, [drafts, planned])
 
-  useRegisterDirty('budget-tree', dirtyIds.size > 0)
+  const dirtyDayIds = useMemo(() => {
+    const dirty = new Set<string>()
+    const ids = new Set([...Object.keys(dayDrafts), ...expenseDays.keys()])
+    for (const id of ids) {
+      const text = (dayDrafts[id] ?? '').trim()
+      const server = expenseDays.get(id) ?? null
+      const parsed = text === '' ? null : Number(text)
+      if (parsed !== server) {
+        dirty.add(id)
+      }
+    }
+    return dirty
+  }, [dayDrafts, expenseDays])
+
+  useRegisterDirty('budget-tree', dirtyIds.size > 0 || dirtyDayIds.size > 0)
 
   const needle = query.trim().toLowerCase()
   const matches = needle
@@ -367,19 +388,35 @@ function BudgetTreeEditor({
       initial[id] = formatMoneyInput(amount)
     }
     setDrafts(initial)
+    const days: Record<string, string> = {}
+    for (const [id, day] of expenseDays) {
+      days[id] = String(day)
+    }
+    setDayDrafts(days)
     saveAction.setError(null)
   }
 
   async function saveAll() {
-    const lines: { categoryId: string; plannedAmount: number }[] = []
-    for (const accountId of dirtyIds) {
+    const lines: { categoryId: string; plannedAmount: number; expenseDay: number | null }[] = []
+    const ids = new Set([...dirtyIds, ...dirtyDayIds])
+    for (const accountId of ids) {
       const text = drafts[accountId] ?? ''
-      const parsed = text.trim() ? parseMoney(text) : 0
+      const parsed = text.trim() ? parseMoney(text) : (planned.get(accountId) ?? 0)
       if (!Number.isFinite(parsed) || parsed < 0) {
         saveAction.setError('Informe um valor válido (zero ou positivo).')
         return
       }
-      lines.push({ categoryId: accountId, plannedAmount: parsed })
+      const dayText = (dayDrafts[accountId] ?? '').trim()
+      let expenseDay: number | null = null
+      if (dayText) {
+        const day = Number(dayText)
+        if (!Number.isInteger(day) || day < 1 || day > 31) {
+          saveAction.setError('Informe um dia entre 1 e 31.')
+          return
+        }
+        expenseDay = day
+      }
+      lines.push({ categoryId: accountId, plannedAmount: parsed, expenseDay })
     }
     if (lines.length === 0) {
       return
@@ -406,14 +443,14 @@ function BudgetTreeEditor({
           <Button
             type="button"
             variant="secondary"
-            disabled={!canEdit || saveAction.busy || dirtyIds.size === 0}
+            disabled={!canEdit || saveAction.busy || (dirtyIds.size === 0 && dirtyDayIds.size === 0)}
             onClick={cancelEdits}
           >
             Cancelar
           </Button>
           <Button
             type="button"
-            disabled={!canEdit || saveAction.busy || dirtyIds.size === 0}
+            disabled={!canEdit || saveAction.busy || (dirtyIds.size === 0 && dirtyDayIds.size === 0)}
             onClick={() => void saveAll()}
           >
             Salvar
@@ -438,14 +475,12 @@ function BudgetTreeEditor({
       ) : null}
       {roots.length > 0 ? (
         <div className={styles.raioxList}>
-          <ProgressToneLegend />
           <div className={`${styles.raioxRow} ${styles.budgetRow} ${styles.raioxHead}`}>
             <span />
             <span>Categoria</span>
             <span className={`${styles.raioxTotals} ${styles.budgetTotals} ${styles.budgetTotalsHead}`}>
-              <span>Previsto</span>
-              <span>Realizado</span>
-              <span aria-hidden="true" />
+              <span />
+              <span>Dia</span>
             </span>
           </div>
           {roots.map((root) => (
@@ -455,8 +490,8 @@ function BudgetTreeEditor({
               depth={0}
               byParent={byParent}
               planned={planned}
-              actual={actual}
               drafts={drafts}
+              dayDrafts={dayDrafts}
               open={open}
               matches={matches}
               busy={saveAction.busy}
@@ -476,6 +511,12 @@ function BudgetTreeEditor({
                   return
                 }
                 setDrafts((current) => ({ ...current, [id]: value }))
+              }}
+              onDayChange={(id, value) => {
+                if (lockedCategoryIds.has(id)) {
+                  return
+                }
+                setDayDrafts((current) => ({ ...current, [id]: value }))
               }}
             />
           ))}
@@ -521,30 +562,18 @@ function BudgetTreeEditor({
 }
 
 function BudgetTotalsCell({
-  totals,
   edit,
+  day,
 }: {
-  totals: RaioXTotals
   edit?: ReactNode
+  day?: ReactNode
 }) {
-  const percent = progressPercent(totals)
-  const tone = progressTone(percent, totals)
-  const shown = percent === null ? 0 : percent
   return (
     <span className={`${styles.raioxTotals} ${styles.budgetTotals}`}>
-      {edit ?? (
-        <span className={`${styles.raioxAmount} ${styles.moneyValue} ${styles.budgetAmountAlign}`}>
-          {formatMoney(totals.planned)}
-        </span>
-      )}
-      <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.actual)}</span>
-      <span className={`${styles.raioxPercent} ${toneClass(tone)}`}>{formatPercent(shown)}</span>
+      {edit ?? <span />}
+      {day ?? <span />}
     </span>
   )
-}
-
-function formatPercent(value: number): string {
-  return `${value.toFixed(1).replace('.', ',')}%`
 }
 
 function BudgetAccountBlock({
@@ -552,8 +581,8 @@ function BudgetAccountBlock({
   depth,
   byParent,
   planned,
-  actual,
   drafts,
+  dayDrafts,
   open,
   matches,
   busy,
@@ -564,13 +593,14 @@ function BudgetAccountBlock({
   onOpenYear,
   onCreateProject,
   onDraftChange,
+  onDayChange,
 }: {
   account: Category
   depth: number
   byParent: Map<string | null, Category[]>
   planned: Map<string, number>
-  actual: Map<string, number>
   drafts: Record<string, string>
+  dayDrafts: Record<string, string>
   open: Set<string>
   matches: Set<string> | null
   busy: boolean
@@ -581,13 +611,13 @@ function BudgetAccountBlock({
   onOpenYear: (id: string) => void
   onCreateProject: (id: string) => void
   onDraftChange: (id: string, value: string) => void
+  onDayChange: (id: string, value: string) => void
 }) {
   const children = byParent.get(account.id) ?? []
   const groups = children.filter((child) => child.level === 'Group')
   const leaves = children.filter((child) => child.level === 'Analytical')
   const expandable = groups.length > 0 || leaves.length > 0
   const expanded = open.has(account.id) || Boolean(matches)
-  const totals = sumBranch(account.id, byParent, planned, actual)
   const rowClass =
     account.level === 'Root'
       ? styles.raioxRoot
@@ -612,12 +642,6 @@ function BudgetAccountBlock({
     const locked = lockedCategoryIds.has(account.id)
     const needsProject = account.section === 'LifeProject' && !locked
     const draft = drafts[account.id] ?? formatMoneyInput(planned.get(account.id) ?? 0)
-    const lineTotals = {
-      planned: locked
-        ? (planned.get(account.id) ?? 0)
-        : Math.abs(parseMoney(draft) || 0) || (planned.get(account.id) ?? 0),
-      actual: actual.get(account.id) ?? 0,
-    }
     const isFocused = focusedId === account.id
     return (
       <div
@@ -640,7 +664,6 @@ function BudgetAccountBlock({
           {locked ? <span className={styles.muted}>Rateio do projeto</span> : null}
         </span>
         <BudgetTotalsCell
-          totals={{ planned: lineTotals.planned, actual: lineTotals.actual }}
           edit={
             <span className={styles.budgetPlannedCell}>
               <span className={styles.raioxBudgetField}>
@@ -665,6 +688,24 @@ function BudgetAccountBlock({
               </button>
             </span>
           }
+          day={
+            EXPENSE_SECTIONS.includes(account.section) ? (
+              <span className={styles.budgetDayField}>
+                <IntegerField
+                  compact
+                  label={`Dia de vencimento ${categoryLabel(account)}`}
+                  name={`budget-day-${account.id}`}
+                  placeholder="Dia"
+                  maxLength={2}
+                  value={dayDrafts[account.id] ?? ''}
+                  disabled={busy || !canEdit || locked || needsProject}
+                  onChange={(value) => onDayChange(account.id, value)}
+                />
+              </span>
+            ) : (
+              <span className={styles.budgetDayField} aria-hidden="true" />
+            )
+          }
         />
       </div>
     )
@@ -683,7 +724,7 @@ function BudgetAccountBlock({
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
         <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
-        <BudgetTotalsCell totals={totals} />
+        <BudgetTotalsCell />
       </button>
       {expanded
         ? visibleGroups.map((group) => (
@@ -693,8 +734,8 @@ function BudgetAccountBlock({
               depth={depth + 1}
               byParent={byParent}
               planned={planned}
-              actual={actual}
               drafts={drafts}
+              dayDrafts={dayDrafts}
               open={open}
               matches={matches}
               busy={busy}
@@ -705,6 +746,7 @@ function BudgetAccountBlock({
               onOpenYear={onOpenYear}
               onCreateProject={onCreateProject}
               onDraftChange={onDraftChange}
+              onDayChange={onDayChange}
             />
           ))
         : null}
@@ -716,8 +758,8 @@ function BudgetAccountBlock({
               depth={depth + 1}
               byParent={byParent}
               planned={planned}
-              actual={actual}
               drafts={drafts}
+              dayDrafts={dayDrafts}
               open={open}
               matches={matches}
               busy={busy}
@@ -728,6 +770,7 @@ function BudgetAccountBlock({
               onOpenYear={onOpenYear}
               onCreateProject={onCreateProject}
               onDraftChange={onDraftChange}
+              onDayChange={onDayChange}
             />
           ))
         : null}

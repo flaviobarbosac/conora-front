@@ -13,6 +13,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     base,
+    resolve: {
+      // Compiled .js siblings sit next to the source. Prefer the TypeScript module
+      // so a page and its provider share one context.
+      extensions: ['.mjs', '.mts', '.ts', '.tsx', '.jsx', '.js', '.json'],
+    },
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
     },

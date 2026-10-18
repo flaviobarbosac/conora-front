@@ -13,26 +13,6 @@
   display: none;
 }
 
-.menuBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.menuBtn:hover {
-  background: var(--nav-active-bg);
-}
-
 .sidebarBackdrop {
   position: fixed;
   inset: 0;
@@ -551,19 +531,6 @@
   z-index: 10;
 }
 
-.fabDisc {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-full);
-  background: var(--primary);
-  color: var(--primary-on);
-  box-shadow: 0 8px 20px rgba(55, 89, 132, 0.28);
-  transform: translateY(-10px);
-}
-
 .bottomLink,
 .bottomLinkActive {
   display: flex;
@@ -590,18 +557,6 @@
   font-weight: var(--weight-semibold);
 }
 
-.fab {
-  display: flex;
-  justify-self: center;
-  align-items: center;
-  justify-content: center;
-  width: auto;
-  height: auto;
-  background: transparent;
-  border: 0;
-  text-decoration: none;
-}
-
 @media (min-width: 768px) {
   .shell {
     grid-template-columns: var(--rail-w) 1fr;
@@ -610,8 +565,6 @@
   }
 
   .bottomNav,
-  .fab,
-  .menuBtn,
   .sidebarBackdrop {
     display: none;
   }
@@ -906,8 +859,7 @@
   .sidebar,
   .sidebarBackdrop,
   .bottomNav,
-  .appHeader,
-  .menuBtn {
+  .appHeader {
     display: none !important;
   }
 

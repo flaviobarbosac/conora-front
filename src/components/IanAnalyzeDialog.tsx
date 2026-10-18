@@ -36,7 +36,10 @@ export function IanAnalyzeDialog({ open, onClose, initial }: Props) {
   const navigate = useNavigate()
   const titleId = useId()
   const action = useAction()
-  const categories = useLoad(() => categoriesApi.list(undefined, false, true), [])
+  const categories = useLoad(
+    () => (open ? categoriesApi.list(undefined, false, true) : Promise.resolve([] as Category[])),
+    [open],
+  )
   const defaults = defaultAnalyzeRange()
   const seed = initial ?? loadIanAnalyzeSelection()
 

@@ -127,6 +127,7 @@ export function HomeLaunchO({ listening = false, onScan, onVoice, onManual }: Pr
         >
           <Icon name="pen" size={24} />
         </span>
+        <div id="conora-voice-center" className={styles.homeLaunchOCenter} />
       </div>
     </div>
   )
