@@ -20,7 +20,6 @@ const ROUTES = new Set([
   '/ajuda',
   '/plano',
   '/whatsapp',
-  '/ia',
 ])
 
 export function isVoiceRoute(route: string | null | undefined): route is string {

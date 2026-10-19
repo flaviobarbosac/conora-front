@@ -3,12 +3,13 @@ import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { aiApi, type VoiceTurn } from '../api/finance'
 import { errorMessage, currentCompetence } from '../lib/format'
-import { ianReportHref } from '../lib/ianReport'
 import { IAN_VOICES, getIanVoice, setIanVoice, speakPt, stopSpeaking, type IanVoiceId } from '../lib/speakPt'
-import { commitVoiceEntry, prefetchVoiceCatalog, unknownCategoryMessage } from '../lib/voiceEntry'
+import { commitVoiceEntry, fillAporteCategory, prefetchVoiceCatalog, unknownCategoryMessage, unknownProjectMessage } from '../lib/voiceEntry'
 import {
   absorb,
+  emptyBudget,
   emptyEntry,
+  looksLikeBudget,
   fromDraft,
   looksLikeEntry,
   looksLikeNavigation,
@@ -43,6 +44,38 @@ function isNoPhrase(text: string): boolean {
   return ['nao', 'negativo', 'outra', 'outro', 'errei', 'errado', 'volta', 'nenhuma', 'nenhum'].includes(spoken)
 }
 
+function isDonePhrase(text: string): boolean {
+  const spoken = foldPhrase(text)
+  return [
+    'nao',
+    'nada',
+    'nada mais',
+    'nao precisa',
+    'nao obrigado',
+    'nao obrigada',
+    'obrigado',
+    'obrigada',
+    'valeu',
+    'era so',
+    'era so isso',
+    'so isso',
+    'somente isso',
+    'pode parar',
+    'pode encerrar',
+    'podemos encerrar',
+    'podemos encerrar por aqui',
+    'encerrar por aqui',
+    'encerra',
+    'encerrar',
+    'fecha',
+    'pode fechar',
+    'tchau',
+    'dispenso',
+    'por enquanto nao',
+    'pronto',
+  ].includes(spoken)
+}
+
 function matchCategoryOption(spoken: string, names: string[]): string | null {
   const needle = foldPhrase(spoken)
   if (!needle) {
@@ -74,7 +107,8 @@ export function IanFloatingChat() {
   const [modStatus, setModStatus] = useState<'Lendo dados' | 'registrando' | 'aguarde' | null>(null)
   const [categoryOptions, setCategoryOptions] = useState<string[]>([])
   const [categoryChoice, setCategoryChoice] = useState<string | null>(null)
-  const [categoryBox, setCategoryBox] = useState<{ left: number; bottom: number } | null>(null)
+  const [categoryBox, setCategoryBox] = useState<{ left: number; top: number } | null>(null)
+  const categoryPopRef = useRef<HTMLDivElement>(null)
   const categoryOptionsRef = useRef<string[]>([])
   const categoryChoiceRef = useRef<string | null>(null)
   const setModStatusRef = useRef(setModStatus)
@@ -83,6 +117,11 @@ export function IanFloatingChat() {
   const sessionRef = useRef<VoiceSessionHandle | null>(null)
   const stopVisualizer = useRef<(() => void) | null>(null)
   const pendingRef = useRef<SpokenEntry | null>(null)
+  const followUpRef = useRef(false)
+  const idleTimer = useRef<number | null>(null)
+  const idleAsked = useRef(false)
+  const optionSlotRef = useRef<'categoryName' | 'projectName'>('categoryName')
+  const [optionTitle, setOptionTitle] = useState('Encontrei essas categorias')
   const historyRef = useRef<VoiceTurn[]>([])
   const turnGen = useRef(0)
   const entryEpoch = useRef(0)
@@ -90,9 +129,27 @@ export function IanFloatingChat() {
   const micOnRef = useRef(false)
   const openListeningRef = useRef<() => void>(() => undefined)
   const speechOk = speechRecognitionAvailable()
+  const spokenNameRef = useRef('')
 
   useEffect(() => {
-    setAnchor(document.getElementById('conora-voice-center'))
+    void aiApi.voiceUser()
+      .then((user) => {
+        spokenNameRef.current = user.firstName?.trim() || ''
+      })
+      .catch(() => undefined)
+  }, [])
+
+  function withName(text: string): string {
+    const name = spokenNameRef.current
+    const line = text.trim()
+    if (!name || !line || line.toLowerCase().includes(name.toLowerCase())) {
+      return line
+    }
+    return `${name}, ${line}`
+  }
+
+  useEffect(() => {
+    setAnchor(document.getElementById('conora-voice-center') ?? document.getElementById('conora-voice-header'))
   }, [pathname])
 
   useEffect(() => {
@@ -102,15 +159,26 @@ export function IanFloatingChat() {
     }
     const place = () => {
       const rect = anchor.getBoundingClientRect()
-      setCategoryBox({
-        left: rect.left + rect.width / 2,
-        bottom: window.innerHeight - rect.top + 10,
-      })
+      const pop = categoryPopRef.current
+      const halfW = (pop?.offsetWidth ?? 288) / 2
+      const halfH = (pop?.offsetHeight ?? 240) / 2
+      const margin = 8
+      const rawLeft = rect.left + rect.width / 2
+      const rawTop = rect.top + rect.height / 2
+      const left = Math.min(window.innerWidth - halfW - margin, Math.max(halfW + margin, rawLeft))
+      const top = Math.min(window.innerHeight - halfH - margin, Math.max(halfH + margin, rawTop))
+      setCategoryBox((current) =>
+        current && Math.abs(current.left - left) < 1 && Math.abs(current.top - top) < 1
+          ? current
+          : { left, top },
+      )
     }
     place()
+    const frame = window.requestAnimationFrame(place)
     window.addEventListener('resize', place)
     window.addEventListener('scroll', place, true)
     return () => {
+      window.cancelAnimationFrame(frame)
       window.removeEventListener('resize', place)
       window.removeEventListener('scroll', place, true)
     }
@@ -124,6 +192,9 @@ export function IanFloatingChat() {
 
   useEffect(() => {
     return () => {
+      if (idleTimer.current) {
+        window.clearTimeout(idleTimer.current)
+      }
       activeRef.current = false
       sessionRef.current?.cancel()
       stopVisualizer.current?.()
@@ -136,10 +207,53 @@ export function IanFloatingChat() {
     stopVisualizer.current = null
   }
 
-  function showCategoryOptions(names: string[]) {
+  function clearIdle() {
+    if (idleTimer.current) {
+      window.clearTimeout(idleTimer.current)
+      idleTimer.current = null
+    }
+  }
+
+  function armIdle() {
+    clearIdle()
+    if (!activeRef.current || !micOnRef.current) {
+      return
+    }
+    idleTimer.current = window.setTimeout(() => {
+      void onIdle()
+    }, 10_000)
+  }
+
+  async function onIdle() {
+    if (!activeRef.current || !micOnRef.current) {
+      return
+    }
+    if (idleAsked.current) {
+      stopSession()
+      return
+    }
+    idleAsked.current = true
+    followUpRef.current = true
+    clearCategoryPick()
+    const turn = ++turnGen.current
+    sessionRef.current?.pause()
+    try {
+      await say('Deseja mais alguma coisa ou podemos encerrar por aqui?')
+    } finally {
+      if (turn === turnGen.current && activeRef.current && micOnRef.current) {
+        setModStatusRef.current(null)
+        sessionRef.current?.resume()
+        armIdle()
+      }
+    }
+  }
+
+  function showCategoryOptions(names: string[], slot: 'categoryName' | 'projectName' = 'categoryName') {
     const next = names.slice(0, 4)
+    optionSlotRef.current = slot
     categoryOptionsRef.current = next
     categoryChoiceRef.current = null
+    setOptionTitle(slot === 'projectName' ? 'Encontrei esses projetos' : 'Encontrei essas categorias')
     setCategoryOptions(next)
     setCategoryChoice(null)
   }
@@ -158,6 +272,9 @@ export function IanFloatingChat() {
     setChoosing(false)
     clearCategoryPick()
     pendingRef.current = null
+    followUpRef.current = false
+    idleAsked.current = false
+    clearIdle()
     historyRef.current = []
     turnGen.current += 1
     sessionRef.current?.cancel()
@@ -172,13 +289,18 @@ export function IanFloatingChat() {
       return
     }
     sessionRef.current = beginVoiceSession({
-      onActivity: () => setModStatusRef.current('Lendo dados'),
+      onActivity: () => {
+        setModStatusRef.current('Lendo dados')
+        armIdle()
+      },
       onBarge: () => {
         turnGen.current += 1
         stopSpeaking()
         setModStatusRef.current('Lendo dados')
       },
       onPhrase: (phrase) => {
+        clearIdle()
+        idleAsked.current = false
         const turn = ++turnGen.current
         sessionRef.current?.pause()
         void (async () => {
@@ -190,6 +312,7 @@ export function IanFloatingChat() {
             if (turn === turnGen.current && activeRef.current && micOnRef.current) {
               setModStatusRef.current(null)
               sessionRef.current?.resume()
+              armIdle()
             }
           }
         })()
@@ -214,6 +337,7 @@ export function IanFloatingChat() {
     })
     ensureSession()
     sessionRef.current?.resume()
+    armIdle()
   }
 
   function remember(role: VoiceTurn['role'], text: string) {
@@ -225,14 +349,16 @@ export function IanFloatingChat() {
   }
 
   async function say(text: string) {
+    clearIdle()
     if (!activeRef.current || !text.trim()) {
       return
     }
     const turn = turnGen.current
-    remember('assistant', text)
+    const voiced = withName(text)
+    remember('assistant', voiced)
     setModStatusRef.current('aguarde')
-    sessionRef.current?.armBarge(text)
-    await speakPt(text)
+    sessionRef.current?.armBarge(voiced)
+    await speakPt(voiced)
     if (turn !== turnGen.current) {
       return
     }
@@ -262,15 +388,19 @@ export function IanFloatingChat() {
   }
 
   async function acceptCategory(name: string) {
+    const slot = optionSlotRef.current
     clearCategoryPick()
     const entry = pendingRef.current ?? emptyEntry()
-    entry.categoryName = name
+    entry[slot] = name
     entry.asked = null
     pendingRef.current = entry
     await finishEntry(entry)
   }
 
   function reveal(entry: SpokenEntry) {
+    if (entry.type === 'ProjectContribution') {
+      return
+    }
     publishVoiceFill({
       type: entry.type,
       amount: entry.amount,
@@ -282,6 +412,23 @@ export function IanFloatingChat() {
   }
 
   async function finishEntry(entry: SpokenEntry) {
+    await fillAporteCategory(entry)
+    if (entry.type === 'ProjectContribution' && entry.projectName) {
+      const project = await unknownProjectMessage(entry.projectName)
+      if (project) {
+        entry.projectName = null
+        entry.asked = 'projectName'
+        pendingRef.current = entry
+        if (project.names.length > 0) {
+          showCategoryOptions(project.names, 'projectName')
+        } else {
+          clearCategoryPick()
+        }
+        reveal(entry)
+        await say(project.message)
+        return
+      }
+    }
     if (entry.categoryName) {
       const suggestion = await unknownCategoryMessage(toDraft(entry))
       if (suggestion) {
@@ -331,9 +478,13 @@ export function IanFloatingChat() {
       return
     }
     if (result.status === 'saved') {
-      clearVoiceFill()
+    clearVoiceFill()
       window.dispatchEvent(new CustomEvent('conora:voice-saved', { detail: { id: result.id } }))
-      await say('Gravei.')
+      if (entry.type === 'ProjectContribution') {
+        await offerMore('Aporte registrado.', 'Deseja mais alguma coisa?')
+      } else {
+        await offerMore('Gravei.')
+      }
       return
     }
     if (result.status === 'needs-form') {
@@ -344,6 +495,13 @@ export function IanFloatingChat() {
     await say(result.message)
   }
 
+  async function offerMore(done: string, question = 'Precisa de mais alguma coisa?') {
+    followUpRef.current = true
+    idleAsked.current = false
+    const text = done.trim()
+    await say(text ? `${text} ${question}` : question)
+  }
+
   async function handleUtterance(text: string) {
     const spoken = text.trim()
     if (!spoken || !activeRef.current) {
@@ -352,6 +510,21 @@ export function IanFloatingChat() {
     setModStatusRef.current('Lendo dados')
     const prior = historyRef.current.slice()
     remember('user', spoken)
+
+    if (followUpRef.current) {
+      followUpRef.current = false
+      idleAsked.current = false
+      if (isDonePhrase(spoken)) {
+        await say('Certo.')
+        stopSession()
+        return
+      }
+      if (isYesPhrase(spoken)) {
+        await say('Pode falar.')
+        return
+      }
+      dropEntry()
+    }
 
     if (categoryOptionsRef.current.length > 0) {
       if (categoryChoiceRef.current && isYesPhrase(spoken)) {
@@ -382,6 +555,10 @@ export function IanFloatingChat() {
       await finishEntry(next)
       return
     }
+    if (!looksLikeNavigation(spoken) && looksLikeBudget(spoken)) {
+      await finishEntry(absorb(emptyBudget(), spoken))
+      return
+    }
     if (!looksLikeNavigation(spoken) && looksLikeEntry(spoken)) {
       await finishEntry(absorb(emptyEntry(), spoken))
       return
@@ -394,7 +571,13 @@ export function IanFloatingChat() {
     }
     if (command.intent === 'navigate' && isVoiceRoute(command.route)) {
       navigate(command.route)
-      await say(command.reply || 'Abrindo a tela.')
+      await offerMore(command.reply || 'Abrindo a tela.')
+      return
+    }
+    if (command.intent === 'action' && command.action === 'create-budget' && command.entry) {
+      const next = absorb(fromDraft({ ...command.entry, kind: 'budget' }), spoken)
+      next.kind = 'budget'
+      await finishEntry(next)
       return
     }
     if (command.intent === 'action' && command.action === 'create-entry' && command.entry) {
@@ -402,16 +585,14 @@ export function IanFloatingChat() {
       await finishEntry(next)
       return
     }
-    if (command.intent === 'report' && command.report) {
-      navigate(ianReportHref(command.report))
-    }
-    await say(command.reply || 'Não consegui responder agora.')
+    await offerMore(command.reply || 'Posso abrir uma tela, lançar uma despesa, uma receita ou um aporte, ou registrar um orçamento.')
   }
 
   function greetAndListen(next: IanVoiceId) {
     const label = IAN_VOICES.find((voice) => voice.id === next)?.label ?? 'Ian'
     const turn = turnGen.current
-    void say(`Olá, eu sou ${label}.`).finally(() => {
+    const name = spokenNameRef.current
+    void say(name ? `Olá, ${name}. Eu sou o ${label}.` : `Olá, eu sou o ${label}.`).finally(() => {
       if (turn === turnGen.current && activeRef.current && micOnRef.current) {
         setModStatusRef.current(null)
         sessionRef.current?.resume()
@@ -443,17 +624,20 @@ export function IanFloatingChat() {
       greetAndListen(next)
       return
     }
-    void speakPt(`Olá, eu sou ${label}.`, next)
+    const name = spokenNameRef.current
+    void speakPt(name ? `Olá, ${name}. Eu sou o ${label}.` : `Olá, eu sou o ${label}.`, next)
   }
 
   if (!anchor) {
     return null
   }
 
+  const compact = anchor.id === 'conora-voice-header'
+
   return (
     <>
     {createPortal(
-    <div className={active ? styles.dockOpen : styles.dock}>
+    <div className={`${active ? styles.dockOpen : styles.dock}${compact ? ` ${styles.dockCompact}` : ''}`}>
       <button
         type="button"
         className={styles.voiceChoose}
@@ -511,12 +695,13 @@ export function IanFloatingChat() {
     {categoryOptions.length > 0 && categoryBox
       ? createPortal(
         <div
+          ref={categoryPopRef}
           className={styles.categoryPop}
-          style={{ left: categoryBox.left, bottom: categoryBox.bottom }}
+          style={{ left: categoryBox.left, top: categoryBox.top }}
           role="dialog"
-          aria-label="Encontrei essas categorias"
+          aria-label={optionTitle}
         >
-          <p className={styles.categoryPopTitle}>Encontrei essas categorias</p>
+          <p className={styles.categoryPopTitle}>{optionTitle}</p>
           <div className={styles.categoryPopList}>
             {categoryOptions.map((name) => (
               <button

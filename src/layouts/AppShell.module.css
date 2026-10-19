@@ -104,6 +104,14 @@
   min-width: 0;
 }
 
+.appHeaderVoice {
+  position: relative;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  margin-right: auto;
+}
+
 .appHeaderUser {
   position: relative;
   display: flex;

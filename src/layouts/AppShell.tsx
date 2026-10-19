@@ -288,6 +288,9 @@ export function AppShell() {
 
       <div className={styles.content}>
         <header className={styles.appHeader}>
+          {pathname !== '/' ? (
+            <div id="conora-voice-header" className={styles.appHeaderVoice} />
+          ) : null}
           <div className={styles.appHeaderUser} ref={profileMenuRef}>
             <AlertsBell peerOpen={profileMenuOpen} onOpen={() => setProfileMenuOpen(false)} />
             <button

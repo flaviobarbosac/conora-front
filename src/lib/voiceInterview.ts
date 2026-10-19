@@ -1,33 +1,37 @@
 import type { VoiceEntryDraft } from '../api/finance'
 
-export type EntrySlot = 'type' | 'amount' | 'date' | 'description' | 'categoryName' | 'accountName'
+export type EntrySlot = 'type' | 'amount' | 'date' | 'description' | 'categoryName' | 'accountName' | 'projectName'
 
 export type SpokenEntry = {
-  type: 'Expense' | 'Income' | null
+  kind: 'entry' | 'budget'
+  type: 'Expense' | 'Income' | 'ProjectContribution' | null
   amount: number | null
   date: string | null
   description: string | null
   categoryName: string | null
   accountName: string | null
+  projectName: string | null
   asked: EntrySlot | null
 }
 
 const QUESTIONS: Record<EntrySlot, string> = {
-  type: 'É despesa ou receita?',
+  type: 'É despesa, receita ou aporte?',
   amount: 'Qual é o valor?',
   date: 'Qual é a data?',
   description: 'A que se refere?',
   categoryName: 'Qual é a categoria?',
   accountName: 'Qual é a conta bancária?',
+  projectName: 'Qual é o projeto?',
 }
 
 const MISSING_LABEL: Record<EntrySlot, string> = {
-  type: 'se é despesa ou receita',
+  type: 'se é despesa, receita ou aporte',
   amount: 'o valor',
   date: 'a data',
   description: 'a descrição',
   categoryName: 'a categoria',
   accountName: 'a conta bancária',
+  projectName: 'o projeto',
 }
 
 const NUMBER_WORDS: Record<string, number> = {
@@ -73,14 +77,27 @@ const NUMBER_WORDS: Record<string, number> = {
   uma: 1,
 }
 
+export function emptyBudget(): SpokenEntry {
+  return { ...emptyEntry(), kind: 'budget' }
+}
+
+export function looksLikeBudget(text: string): boolean {
+  const folded = fold(text)
+  return folded.includes('orcamento')
+    && !folded.includes('como esta')
+    && (/\blanca|\bregistro\b|\bcategoria\b|\d/.test(folded))
+}
+
 export function emptyEntry(): SpokenEntry {
   return {
+    kind: 'entry',
     type: null,
     amount: null,
     date: null,
     description: null,
     categoryName: null,
     accountName: null,
+    projectName: null,
     asked: null,
   }
 }
@@ -90,12 +107,14 @@ export function fromDraft(draft: VoiceEntryDraft | null | undefined): SpokenEntr
   if (!draft) {
     return entry
   }
-  entry.type = draft.type === 'Income' || draft.type === 'Expense' ? draft.type : null
+  entry.kind = draft.kind === 'budget' ? 'budget' : 'entry'
+  entry.type = draft.type === 'Income' || draft.type === 'Expense' || draft.type === 'ProjectContribution' ? draft.type : null
   entry.amount = draft.amount ?? null
   entry.date = draft.date ?? null
   entry.description = draft.description
   entry.categoryName = draft.categoryName
   entry.accountName = draft.accountName
+  entry.projectName = draft.projectName ?? null
   return entry
 }
 
@@ -148,7 +167,12 @@ export function parseUtterance(text: string): Partial<SpokenEntry> {
   const spoken = text.trim()
   const folded = fold(spoken)
   const parsed: Partial<SpokenEntry> = {}
-  if (/\breceita\b|\brenda\b|\ba receber\b/.test(folded)) {
+  if (folded.includes('orcamento') && !folded.includes('como esta')) {
+    parsed.kind = 'budget'
+  }
+  if (/\baporte\b|\baportar\b|\baportando\b/.test(folded)) {
+    parsed.type = 'ProjectContribution'
+  } else if (/\breceita\b|\brenda\b|\ba receber\b/.test(folded)) {
     parsed.type = 'Income'
   } else if (/\bdespesa\b|\ba pagar\b|\bpaguei\b|\bpaga\b|\bconta de\b/.test(folded)) {
     parsed.type = 'Expense'
@@ -185,13 +209,22 @@ export function parseUtterance(text: string): Partial<SpokenEntry> {
   if (category) {
     parsed.categoryName = cleanLabel(category)
   }
+  const project = chunk(spoken, /(?:no projeto|do projeto|projeto)\s+(.+)/i)
+  if (project && !/^de vida\b/i.test(project)) {
+    const name = project.split(/\s+(?:pela|pelo|na conta|no valor|categoria|conta banc)/i)[0]?.trim() ?? ''
+    if (name) {
+      parsed.projectName = name.replace(/[.,]+$/, '')
+    }
+  }
   return parsed
 }
 
 function putSlot(entry: SpokenEntry, slot: EntrySlot, text: string): void {
   const folded = fold(text)
   if (slot === 'type') {
-    if (/\breceita\b|\brenda\b|\ba receber\b/.test(folded)) {
+    if (/\baporte\b|\baportar\b/.test(folded)) {
+      entry.type = 'ProjectContribution'
+    } else if (/\breceita\b|\brenda\b|\ba receber\b/.test(folded)) {
       entry.type = 'Income'
     } else if (/\bdespesa\b|\ba pagar\b|\bpagar\b/.test(folded)) {
       entry.type = 'Expense'
@@ -224,6 +257,9 @@ function putSlot(entry: SpokenEntry, slot: EntrySlot, text: string): void {
 export function absorb(entry: SpokenEntry, text: string): SpokenEntry {
   const next: SpokenEntry = { ...entry }
   const parsed = parseUtterance(text)
+  if (parsed.kind) {
+    next.kind = parsed.kind
+  }
   if (parsed.type) {
     next.type = parsed.type
   }
@@ -242,6 +278,9 @@ export function absorb(entry: SpokenEntry, text: string): SpokenEntry {
   if (parsed.accountName) {
     next.accountName = parsed.accountName
   }
+  if (parsed.projectName) {
+    next.projectName = parsed.projectName
+  }
   const slot = next.asked
   if (slot && next[slot] == null) {
     putSlot(next, slot, text)
@@ -251,6 +290,15 @@ export function absorb(entry: SpokenEntry, text: string): SpokenEntry {
 
 export function missingSlots(entry: SpokenEntry): EntrySlot[] {
   const slots: EntrySlot[] = []
+  if (entry.kind === 'budget') {
+    if (entry.amount == null) {
+      slots.push('amount')
+    }
+    if (!entry.categoryName) {
+      slots.push('categoryName')
+    }
+    return slots
+  }
   if (!entry.type) {
     slots.push('type')
   }
@@ -262,6 +310,9 @@ export function missingSlots(entry: SpokenEntry): EntrySlot[] {
   }
   if (!entry.description) {
     slots.push('description')
+  }
+  if (entry.type === 'ProjectContribution' && !entry.projectName) {
+    slots.push('projectName')
   }
   if (!entry.categoryName) {
     slots.push('categoryName')
@@ -301,7 +352,9 @@ export function looksLikeEntry(text: string): boolean {
 
 export function toDraft(entry: SpokenEntry): VoiceEntryDraft {
   return {
-    type: entry.type === 'Income' ? 'Income' : 'Expense',
+    kind: entry.kind,
+    type: entry.type === 'Income' ? 'Income' : entry.type === 'ProjectContribution' ? 'ProjectContribution' : 'Expense',
+    projectName: entry.projectName,
     amount: entry.amount,
     date: entry.date,
     description: entry.description,
