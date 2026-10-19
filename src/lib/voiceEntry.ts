@@ -1,12 +1,13 @@
-import { accountsApi, aiApi, categoriesApi, entriesApi, type Account, type Category, type CategorySection, type VoiceEntryDraft } from '../api/finance'
+import { accountsApi, aiApi, budgetsApi, categoriesApi, entriesApi, projectsApi, type Account, type Category, type CategorySection, type VoiceEntryDraft } from '../api/finance'
+import type { SpokenEntry } from './voiceInterview'
 import { CASH_FLOW_SECTIONS, EXPENSE_SECTIONS } from './categoryOrder'
-import { dateToApi, todayInput } from './format'
+import { currentCompetence, dateToApi, todayInput } from './format'
 
 export type VoiceCommit =
   | { status: 'saved'; id: string }
   | { status: 'needs-form'; description: string; amount: string }
   | { status: 'incomplete'; message: string }
-  | { status: 'rejected'; message: string; clear: Array<'categoryName' | 'accountName'> }
+  | { status: 'rejected'; message: string; clear: Array<'categoryName' | 'accountName' | 'projectName'> }
 
 type Catalog = { accounts: Account[]; categories: Category[] }
 
@@ -137,8 +138,14 @@ export function categorySuggestion(spoken: string, names: string[]): string {
   return `Não achei ${spoken}, mas tenho ${joinSpoken(options)}. Qual você escolhe?`
 }
 
-function postingCategories(categories: Category[], type: VoiceEntryDraft['type']): Category[] {
-  const sections: CategorySection[] = type === 'Income' ? ['Income'] : [...EXPENSE_SECTIONS]
+function postingCategories(categories: Category[], entry: VoiceEntryDraft): Category[] {
+  const sections: CategorySection[] = entry.kind === 'budget'
+    ? [...CASH_FLOW_SECTIONS]
+    : entry.type === 'Income'
+      ? ['Income']
+      : entry.type === 'ProjectContribution'
+        ? ['LifeProject']
+        : [...EXPENSE_SECTIONS]
   return categories.filter(
     (category) => category.level === 'Analytical'
       && category.isActive
@@ -156,13 +163,20 @@ export async function unknownCategoryMessage(entry: VoiceEntryDraft): Promise<Ca
     return null
   }
   const { categories } = await catalog()
-  const posting = postingCategories(categories, entry.type)
+  const posting = postingCategories(categories, entry)
   if (exactByName(spoken, posting)) {
     return null
   }
   let names: string[] = []
   try {
-    const result = await aiApi.suggestCategories(spoken, entry.type === 'Income' ? 'Income' : 'Expense')
+    const suggestType = entry.kind === 'budget'
+      ? 'Budget'
+      : entry.type === 'Income'
+        ? 'Income'
+        : entry.type === 'ProjectContribution'
+          ? 'ProjectContribution'
+          : 'Expense'
+    const result = await aiApi.suggestCategories(spoken, suggestType)
     names = (result.names ?? []).map((name) => name.trim()).filter(Boolean).slice(0, 4)
   } catch {
     names = []
@@ -170,18 +184,60 @@ export async function unknownCategoryMessage(entry: VoiceEntryDraft): Promise<Ca
   return { message: categorySuggestion(spoken, names), names }
 }
 
+export async function fillAporteCategory(entry: SpokenEntry): Promise<void> {
+  if (entry.type !== 'ProjectContribution' || entry.categoryName || !entry.projectName?.trim()) {
+    return
+  }
+  const project = exactByName(entry.projectName, await projectsApi.list())
+  if (project?.categoryName) {
+    entry.categoryName = project.categoryName
+  }
+}
+
+export async function unknownProjectMessage(spoken: string): Promise<CategorySuggestion | null> {
+  const name = spoken.trim()
+  if (!name) {
+    return null
+  }
+  const projects = await projectsApi.list()
+  if (exactByName(name, projects)) {
+    return null
+  }
+  const names = similarNames(name, projects)
+  if (names.length === 0) {
+    return { message: `Não achei o projeto ${name}.`, names: [] }
+  }
+  return { message: `Não achei o projeto ${name}, mas tenho ${joinSpoken(names)}. Qual você escolhe?`, names }
+}
+
+function similarNames(spoken: string, items: Array<{ name: string }>): string[] {
+  const needle = fold(spoken)
+  const partial = items.filter((item) => {
+    const name = fold(item.name)
+    return name.includes(needle) || needle.includes(name)
+  })
+  const source = partial.length > 0 ? partial : items
+  return source.map((item) => item.name.trim()).filter(Boolean).slice(0, 4)
+}
+
 /** Saves a spoken entry. Rejects a category or account that is not on file. */
 export async function commitVoiceEntry(
   entry: VoiceEntryDraft,
   onSaving?: () => void,
 ): Promise<VoiceCommit> {
+  if (entry.kind === 'budget') {
+    return commitBudget(entry, onSaving)
+  }
+  if (entry.type === 'ProjectContribution') {
+    return commitAporte(entry, onSaving)
+  }
   if (entry.amount == null || entry.amount <= 0 || !entry.description?.trim() || !entry.accountName?.trim() || !entry.categoryName?.trim()) {
     return { status: 'incomplete', message: 'Ainda falta algum dado do lançamento.' }
   }
 
   const { accounts, categories } = await catalog()
   const openAccounts = accounts.filter((account) => !account.isArchived)
-  const posting = postingCategories(categories, entry.type)
+  const posting = postingCategories(categories, entry)
 
   const category = exactByName(entry.categoryName, posting)
   const accountHit = lookupByName(entry.accountName, openAccounts)
@@ -211,4 +267,83 @@ export async function commitVoiceEntry(
     categoryId: category!.id,
   })
   return { status: 'saved', id: created[0]?.id ?? '' }
+}
+
+async function commitBudget(
+  entry: VoiceEntryDraft,
+  onSaving?: () => void,
+): Promise<VoiceCommit> {
+  if (entry.amount == null || entry.amount <= 0 || !entry.categoryName?.trim()) {
+    return { status: 'incomplete', message: 'Ainda falta o valor ou a categoria do orçamento.' }
+  }
+  const { categories } = await catalog()
+  const posting = postingCategories(categories, entry)
+  const category = exactByName(entry.categoryName, posting)
+  if (!category) {
+    const suggestion = await unknownCategoryMessage(entry)
+    return {
+      status: 'rejected',
+      message: suggestion?.message ?? categorySuggestion(entry.categoryName.trim(), []),
+      clear: ['categoryName'],
+    }
+  }
+  onSaving?.()
+  await budgetsApi.upsert(currentCompetence(), 'Detailed', [
+    { categoryId: category.id, plannedAmount: entry.amount },
+  ])
+  return { status: 'saved', id: category.id }
+}
+
+async function commitAporte(entry: VoiceEntryDraft, onSaving?: () => void): Promise<VoiceCommit> {
+  if (
+    entry.amount == null || entry.amount <= 0
+    || !entry.description?.trim()
+    || !entry.accountName?.trim()
+    || !entry.categoryName?.trim()
+    || !entry.projectName?.trim()
+  ) {
+    return { status: 'incomplete', message: 'Ainda falta algum dado do aporte.' }
+  }
+
+  const projects = await projectsApi.list()
+  const project = exactByName(entry.projectName, projects)
+  if (!project) {
+    const suggestion = await unknownProjectMessage(entry.projectName)
+    return {
+      status: 'rejected',
+      message: suggestion?.message ?? `Não achei o projeto ${entry.projectName.trim()}.`,
+      clear: ['projectName'],
+    }
+  }
+
+  const { accounts, categories } = await catalog()
+  const posting = postingCategories(categories, entry)
+  const spokenCategory = entry.categoryName.trim()
+  const sameAsProject = project.categoryName != null && fold(spokenCategory) === fold(project.categoryName)
+  const category = sameAsProject ? null : exactByName(spokenCategory, posting)
+  const categoryId = category?.id ?? (sameAsProject ? project.categoryId : null)
+  const accountHit = lookupByName(entry.accountName, accounts.filter((account) => !account.isArchived))
+  const clear: Array<'categoryName' | 'accountName' | 'projectName'> = []
+  const problems: string[] = []
+  if (!categoryId) {
+    clear.push('categoryName')
+    problems.push((await unknownCategoryMessage(entry))?.message ?? categorySuggestion(spokenCategory, []))
+  }
+  if (!accountHit.match) {
+    clear.push('accountName')
+    problems.push(nameProblem('conta', entry.accountName.trim(), accountHit.ambiguous))
+  }
+  if (clear.length > 0 || !categoryId || !accountHit.match) {
+    return { status: 'rejected', message: problems.join(' '), clear }
+  }
+
+  onSaving?.()
+  await projectsApi.contribute(project.id, {
+    amount: entry.amount,
+    occurredAt: dateToApi(resolveDate(entry.date)),
+    accountId: accountHit.match.id,
+    categoryId,
+    description: entry.description.trim(),
+  })
+  return { status: 'saved', id: project.id }
 }
