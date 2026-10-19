@@ -1,4 +1,4 @@
-import { accountsApi, categoriesApi, entriesApi, type Account, type Category, type CategorySection, type VoiceEntryDraft } from '../api/finance'
+import { accountsApi, aiApi, categoriesApi, entriesApi, type Account, type Category, type CategorySection, type VoiceEntryDraft } from '../api/finance'
 import { CASH_FLOW_SECTIONS, EXPENSE_SECTIONS } from './categoryOrder'
 import { dateToApi, todayInput } from './format'
 
@@ -68,6 +68,8 @@ function fold(value: string): string {
   return value
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
     .toLowerCase()
     .trim()
 }
@@ -111,6 +113,63 @@ function nameProblem(kind: 'categoria' | 'conta', spoken: string, ambiguous: boo
   return `A ${kind} ${spoken} não existe. Diz outra.`
 }
 
+function exactByName<T extends { name: string }>(spoken: string | null, items: T[]): T | null {
+  if (!spoken?.trim()) {
+    return null
+  }
+  const needle = fold(spoken)
+  const exact = items.filter((item) => fold(item.name) === needle)
+  return exact.length === 1 ? exact[0] : null
+}
+
+function joinSpoken(names: string[]): string {
+  if (names.length <= 1) {
+    return names[0] ?? ''
+  }
+  return `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`
+}
+
+export function categorySuggestion(spoken: string, names: string[]): string {
+  const options = names.map((name) => name.trim()).filter(Boolean).slice(0, 4)
+  if (options.length === 0) {
+    return `Não achei ${spoken}. Diz outra categoria.`
+  }
+  return `Não achei ${spoken}, mas tenho ${joinSpoken(options)}. Qual você escolhe?`
+}
+
+function postingCategories(categories: Category[], type: VoiceEntryDraft['type']): Category[] {
+  const sections: CategorySection[] = type === 'Income' ? ['Income'] : [...EXPENSE_SECTIONS]
+  return categories.filter(
+    (category) => category.level === 'Analytical'
+      && category.isActive
+      && CASH_FLOW_SECTIONS.includes(category.section)
+      && sections.includes(category.section),
+  )
+}
+
+export type CategorySuggestion = { message: string; names: string[] }
+
+/** Null when the spoken category is already on file. Otherwise the line and the options. */
+export async function unknownCategoryMessage(entry: VoiceEntryDraft): Promise<CategorySuggestion | null> {
+  const spoken = entry.categoryName?.trim()
+  if (!spoken) {
+    return null
+  }
+  const { categories } = await catalog()
+  const posting = postingCategories(categories, entry.type)
+  if (exactByName(spoken, posting)) {
+    return null
+  }
+  let names: string[] = []
+  try {
+    const result = await aiApi.suggestCategories(spoken, entry.type === 'Income' ? 'Income' : 'Expense')
+    names = (result.names ?? []).map((name) => name.trim()).filter(Boolean).slice(0, 4)
+  } catch {
+    names = []
+  }
+  return { message: categorySuggestion(spoken, names), names }
+}
+
 /** Saves a spoken entry. Rejects a category or account that is not on file. */
 export async function commitVoiceEntry(
   entry: VoiceEntryDraft,
@@ -122,21 +181,15 @@ export async function commitVoiceEntry(
 
   const { accounts, categories } = await catalog()
   const openAccounts = accounts.filter((account) => !account.isArchived)
-  const sections: CategorySection[] = entry.type === 'Income' ? ['Income'] : [...EXPENSE_SECTIONS]
-  const posting = categories.filter(
-    (category) => category.level === 'Analytical'
-      && category.isActive
-      && CASH_FLOW_SECTIONS.includes(category.section)
-      && sections.includes(category.section),
-  )
+  const posting = postingCategories(categories, entry.type)
 
-  const categoryHit = lookupByName(entry.categoryName, posting)
+  const category = exactByName(entry.categoryName, posting)
   const accountHit = lookupByName(entry.accountName, openAccounts)
   const clear: Array<'categoryName' | 'accountName'> = []
   const problems: string[] = []
-  if (!categoryHit.match) {
+  if (!category) {
     clear.push('categoryName')
-    problems.push(nameProblem('categoria', entry.categoryName.trim(), categoryHit.ambiguous))
+    problems.push((await unknownCategoryMessage(entry))?.message ?? categorySuggestion(entry.categoryName.trim(), []))
   }
   if (!accountHit.match) {
     clear.push('accountName')
@@ -155,7 +208,7 @@ export async function commitVoiceEntry(
     occurredAt: dateToApi(resolveDate(entry.date)),
     description: entry.description.trim(),
     accountId: account.id,
-    categoryId: categoryHit.match!.id,
+    categoryId: category!.id,
   })
   return { status: 'saved', id: created[0]?.id ?? '' }
 }

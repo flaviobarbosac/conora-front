@@ -78,6 +78,52 @@ export function buildAmountMaps(lines: BudgetLine[]): {
   return { planned: plannedMap, actual: actualMap }
 }
 
+/**
+ * Active categories stay, with their parents.
+ * When keepInactiveWithAmount is true (orçamento), an inactive category also stays if it still has a value.
+ * When false (Raio-X), an inactive category with a value drops out if nothing active sits under it.
+ */
+export function chartWithAmounts(
+  accounts: Category[],
+  amountIds: Iterable<string>,
+  keepInactiveWithAmount = true,
+): Category[] {
+  const byId = new Map(accounts.map((account) => [account.id, account]))
+  const keep = new Set<string>()
+  for (const account of accounts) {
+    if (!account.isActive) {
+      continue
+    }
+    let current: Category | undefined = account
+    while (current) {
+      keep.add(current.id)
+      current = current.parentId ? byId.get(current.parentId) : undefined
+    }
+  }
+  if (keepInactiveWithAmount) {
+    for (const id of amountIds) {
+      let current = byId.get(id)
+      while (current) {
+        keep.add(current.id)
+        current = current.parentId ? byId.get(current.parentId) : undefined
+      }
+    }
+  }
+  return accounts.filter((account) => keep.has(account.id))
+}
+
+export function idsWithAmount(maps: Map<string, number>[]): string[] {
+  const ids: string[] = []
+  for (const map of maps) {
+    for (const [id, amount] of map) {
+      if (Math.abs(amount) > 0.001) {
+        ids.push(id)
+      }
+    }
+  }
+  return ids
+}
+
 export function groupAccountsByParent(accounts: Category[]): Map<string | null, Category[]> {
   const map = new Map<string | null, Category[]>()
   for (const account of accounts) {

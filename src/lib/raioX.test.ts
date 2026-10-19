@@ -6,7 +6,9 @@ import {
   patrimonyStockMap,
   sectionHead,
   sectionRealized,
+  chartWithAmounts,
   groupAccountsByParent,
+  idsWithAmount,
   monthsEndingAt,
   progressPercent,
   progressTone,
@@ -102,6 +104,58 @@ describe('buildAmountMaps', () => {
     const maps = buildAmountMaps([line('a', 100, 10), line('a', 50, 5)])
     expect(maps.planned.get('a')).toBe(150)
     expect(maps.actual.get('a')).toBe(15)
+  })
+})
+
+describe('chartWithAmounts', () => {
+  it('keeps an inactive leaf that still has money, and its parents', () => {
+    const root = account({ id: 'root', parentId: null, name: 'Essencial', level: 'Root' })
+    const leaf = account({
+      id: 'rent',
+      parentId: 'root',
+      name: 'Aluguel',
+      level: 'Analytical',
+      isActive: false,
+    })
+    const idle = account({
+      id: 'old',
+      parentId: 'root',
+      name: 'Antiga',
+      level: 'Analytical',
+      isActive: false,
+    })
+    const kept = chartWithAmounts(
+      [root, leaf, idle],
+      idsWithAmount([new Map([['rent', 800]])]),
+    )
+    expect(kept.map((item) => item.id).sort()).toEqual(['rent', 'root'])
+  })
+
+  it('drops an inactive leaf from the Raio-X chart when nothing active is under it', () => {
+    const root = account({ id: 'root', parentId: null, name: 'Essencial', level: 'Root' })
+    const leaf = account({
+      id: 'rent',
+      parentId: 'root',
+      name: 'Aluguel',
+      level: 'Analytical',
+      isActive: false,
+    })
+    const kept = chartWithAmounts([root, leaf], ['rent'], false)
+    expect(kept.map((item) => item.id)).toEqual(['root'])
+  })
+
+  it('keeps an inactive parent of an active account', () => {
+    const root = account({ id: 'root', parentId: null, name: 'Essencial', level: 'Root', isActive: false })
+    const live = account({ id: 'rent', parentId: 'root', name: 'Aluguel', level: 'Analytical' })
+    const idle = account({
+      id: 'old',
+      parentId: 'root',
+      name: 'Antiga',
+      level: 'Analytical',
+      isActive: false,
+    })
+    const kept = chartWithAmounts([root, live, idle], [])
+    expect(kept.map((item) => item.id).sort()).toEqual(['rent', 'root'])
   })
 })
 

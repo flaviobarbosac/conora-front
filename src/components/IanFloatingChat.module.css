@@ -114,6 +114,52 @@
   pointer-events: none;
 }
 
+.categoryPop {
+  position: fixed;
+  z-index: 40;
+  transform: translateX(-50%);
+  width: min(18rem, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border: 1px solid rgb(61 186 134 / 55%);
+  border-radius: 1rem;
+  background: #fff;
+  color: #0b3a4a;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
+}
+
+.categoryPopTitle {
+  margin: 0;
+  text-align: center;
+  font: 700 0.95rem/1.2 system-ui, sans-serif;
+}
+
+.categoryPopList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.categoryPopItem,
+.categoryPopOn {
+  min-height: 2.75rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgb(11 58 74 / 16%);
+  border-radius: 0.7rem;
+  background: #f4fbf7;
+  color: #0b3a4a;
+  font: 600 0.9rem/1.2 system-ui, sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.categoryPopOn {
+  border-color: #3dba86;
+  background: #e7f8ef;
+}
+
 .modStatus {
   position: absolute;
   top: 10%;

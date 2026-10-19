@@ -2253,6 +2253,35 @@ button.compact {
   min-height: min(78vh, 720px);
 }
 
+@media (min-width: 768px) {
+  .homePage {
+    max-width: none;
+    width: 100%;
+    min-height: calc(100dvh - 8.5rem);
+    align-items: center;
+  }
+
+  .homePage .header,
+  .homeUrgent {
+    align-self: stretch;
+  }
+
+  .homeLaunch {
+    width: min(100%, 640px);
+    flex: 1;
+    justify-content: center;
+  }
+
+  .homeLaunchO {
+    width: min(100%, 560px);
+  }
+
+  .homeLaunchOMark {
+    position: absolute;
+    inset: 0;
+  }
+}
+
 .homeLaunch {
   display: flex;
   flex-direction: column;

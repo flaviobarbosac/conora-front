@@ -527,7 +527,7 @@ export function EntriesPage() {
             ))}
           </Select>
           <CategorySelect
-            label="Conta"
+            label="Categoria"
             name="categoryFilter"
             value={categoryFilter}
             onChange={setCategoryFilter}
@@ -854,7 +854,7 @@ function EntryForm({
         />
         <Field label="Data" name="date" type="date" required value={date} onChange={(event) => setDate(event.target.value)} />
         <CategorySelect
-          label="Conta"
+          label="Categoria"
           name="categoryId"
           value={categoryId}
           onChange={setCategoryId}

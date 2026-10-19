@@ -42,7 +42,7 @@ import {
   monthsInclusive,
   parseMoney,
 } from '../lib/format'
-import { buildAmountMaps, groupAccountsByParent } from '../lib/raioX'
+import { buildAmountMaps, chartWithAmounts, groupAccountsByParent, idsWithAmount, sumBranch } from '../lib/raioX'
 import { readSharingView } from '../lib/sharingView'
 import styles from './page.module.css'
 
@@ -70,7 +70,7 @@ export function BudgetPage() {
   const budget = useLoad(() => budgetsApi.get(ym, scope), [ym, scope])
   const year = useMemo(() => Number(ym.slice(0, 4)), [ym])
   const yearData = useLoad(() => budgetsApi.getYear(year, scope), [year, scope])
-  const categories = useLoad(() => categoriesApi.list(undefined, false, false), [])
+  const categories = useLoad(() => categoriesApi.list(undefined, true, false), [])
   const projects = useLoad(() => projectsApi.list(), [])
   const monthStatus = useLoad(() => monthsApi.get(ym), [ym])
   const copy = useAction()
@@ -255,11 +255,12 @@ function BudgetTreeEditor({
     return () => window.clearTimeout(timer)
   }, [focusCategoryId, categories])
 
-  const cashAccounts = useMemo(
-    () =>
-      categories.filter((account) => CASH_FLOW_SECTIONS.includes(account.section) && account.isActive),
-    [categories],
-  )
+  const { planned, actual } = useMemo(() => buildAmountMaps(budget.lines), [budget.lines])
+
+  const cashAccounts = useMemo(() => {
+    const cash = categories.filter((account) => CASH_FLOW_SECTIONS.includes(account.section))
+    return chartWithAmounts(cash, idsWithAmount([planned, actual]))
+  }, [categories, planned, actual])
 
   const byParent = useMemo(() => {
     const map = groupAccountsByParent(cashAccounts)
@@ -283,8 +284,6 @@ function BudgetTreeEditor({
     [cashAccounts, categories],
   )
 
-  const { planned } = useMemo(() => buildAmountMaps(budget.lines), [budget.lines])
-
   const expenseDays = useMemo(() => {
     const map = new Map<string, number>()
     for (const line of budget.lines) {
@@ -294,6 +293,20 @@ function BudgetTreeEditor({
     }
     return map
   }, [budget.lines])
+
+  const shownPlanned = useMemo(() => {
+    const map = new Map(planned)
+    for (const [id, text] of Object.entries(drafts)) {
+      if (!text.trim()) {
+        continue
+      }
+      const parsed = parseMoney(text)
+      if (Number.isFinite(parsed)) {
+        map.set(id, parsed)
+      }
+    }
+    return map
+  }, [planned, drafts])
 
   const plannedSignature = useMemo(
     () =>
@@ -490,6 +503,7 @@ function BudgetTreeEditor({
               depth={0}
               byParent={byParent}
               planned={planned}
+              shownPlanned={shownPlanned}
               drafts={drafts}
               dayDrafts={dayDrafts}
               open={open}
@@ -576,11 +590,14 @@ function BudgetTotalsCell({
   )
 }
 
+const noActual = new Map<string, number>()
+
 function BudgetAccountBlock({
   account,
   depth,
   byParent,
   planned,
+  shownPlanned,
   drafts,
   dayDrafts,
   open,
@@ -599,6 +616,7 @@ function BudgetAccountBlock({
   depth: number
   byParent: Map<string | null, Category[]>
   planned: Map<string, number>
+  shownPlanned: Map<string, number>
   drafts: Record<string, string>
   dayDrafts: Record<string, string>
   open: Set<string>
@@ -651,7 +669,10 @@ function BudgetAccountBlock({
       >
         <span />
         <span className={styles.budgetAccountCell}>
-          <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
+          <strong className={styles.raioxAccountName}>
+            {categoryLabel(account)}
+            {!account.isActive ? <span className={styles.rowSub}> · Inativa</span> : null}
+          </strong>
           {needsProject && canEdit ? (
             <button
               type="button"
@@ -723,8 +744,19 @@ function BudgetAccountBlock({
         <span className={styles.raioxToggle} aria-hidden>
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
-        <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
-        <BudgetTotalsCell />
+        <strong className={styles.raioxAccountName}>
+          {categoryLabel(account)}
+          {!account.isActive ? <span className={styles.rowSub}> · Inativa</span> : null}
+        </strong>
+        <BudgetTotalsCell
+          edit={
+            <span className={styles.budgetPlannedCell}>
+              <strong className={styles.moneyValue}>
+                {formatMoney(sumBranch(account.id, byParent, shownPlanned, noActual).planned)}
+              </strong>
+            </span>
+          }
+        />
       </button>
       {expanded
         ? visibleGroups.map((group) => (
@@ -734,6 +766,7 @@ function BudgetAccountBlock({
               depth={depth + 1}
               byParent={byParent}
               planned={planned}
+              shownPlanned={shownPlanned}
               drafts={drafts}
               dayDrafts={dayDrafts}
               open={open}
@@ -758,6 +791,7 @@ function BudgetAccountBlock({
               depth={depth + 1}
               byParent={byParent}
               planned={planned}
+              shownPlanned={shownPlanned}
               drafts={drafts}
               dayDrafts={dayDrafts}
               open={open}
