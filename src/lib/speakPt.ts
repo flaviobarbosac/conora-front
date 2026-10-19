@@ -56,18 +56,26 @@ function voiceFor(synth: SpeechSynthesis, id: IanVoiceId): SpeechSynthesisVoice 
 }
 
 let clip: HTMLAudioElement | null = null
+let releaseClip: (() => void) | null = null
+let speakAbort: AbortController | null = null
+let speakGen = 0
 
 function stopClip() {
-  if (!clip) {
-    return
-  }
-  clip.pause()
-  const url = clip.src
-  clip.src = ''
-  if (url.startsWith('blob:')) {
-    URL.revokeObjectURL(url)
-  }
+  const release = releaseClip
+  releaseClip = null
+  const audio = clip
   clip = null
+  if (audio) {
+    audio.onended = null
+    audio.onerror = null
+    audio.pause()
+    const url = audio.src
+    audio.src = ''
+    if (url.startsWith('blob:')) {
+      URL.revokeObjectURL(url)
+    }
+  }
+  release?.()
 }
 
 function playClip(blob: Blob): Promise<void> {
@@ -76,28 +84,40 @@ function playClip(blob: Blob): Promise<void> {
   const audio = new Audio(url)
   clip = audio
   return new Promise((resolve) => {
+    let settled = false
     const done = () => {
+      if (settled) {
+        return
+      }
+      settled = true
+      if (releaseClip === done) {
+        releaseClip = null
+      }
       if (clip === audio) {
-        stopClip()
+        clip = null
+        audio.pause()
+        audio.src = ''
+        URL.revokeObjectURL(url)
       }
       resolve()
     }
+    releaseClip = done
     audio.onended = done
     audio.onerror = done
     void audio.play().catch(done)
   })
 }
 
-async function speakHuman(text: string, voiceId: IanVoiceId): Promise<boolean> {
-  const blob = await apiPostBlob('/ai/speak', { text, voice: voiceId })
-  if (!blob || blob.size < 64) {
+async function speakHuman(text: string, voiceId: IanVoiceId, signal: AbortSignal): Promise<boolean> {
+  const blob = await apiPostBlob('/ai/speak', { text, voice: voiceId }, signal)
+  if (signal.aborted || !blob || blob.size < 64) {
     return false
   }
   await playClip(blob)
   return true
 }
 
-function speakBrowser(text: string, voiceId: IanVoiceId): Promise<void> {
+function speakBrowser(text: string, voiceId: IanVoiceId, gen: number): Promise<void> {
   if (typeof window.speechSynthesis === 'undefined') {
     return Promise.resolve()
   }
@@ -112,6 +132,10 @@ function speakBrowser(text: string, voiceId: IanVoiceId): Promise<void> {
       started = true
       synth.cancel()
       window.setTimeout(() => {
+        if (gen !== speakGen) {
+          resolve()
+          return
+        }
         const utter = new SpeechSynthesisUtterance(text)
         const voice = voiceFor(synth, voiceId)
         utter.lang = voice?.lang || 'pt-BR'
@@ -152,18 +176,30 @@ export async function speakPt(text: string, voiceId?: IanVoiceId): Promise<void>
   }
 
   const profile = IAN_VOICES.find((voice) => voice.id === voiceId) ?? getIanVoice()
-  stopSpeaking()
+  const gen = ++speakGen
+  speakAbort?.abort()
+  const abort = new AbortController()
+  speakAbort = abort
+  stopClip()
+  window.speechSynthesis?.cancel()
   try {
-    if (await speakHuman(spoken, profile.id)) {
+    if (await speakHuman(spoken, profile.id, abort.signal)) {
       return
     }
   } catch {
-    /* browser voice below */
+    /* browser voice below, unless this turn was cut off */
   }
-  await speakBrowser(spoken, profile.id)
+  if (gen !== speakGen || abort.signal.aborted) {
+    return
+  }
+  await speakBrowser(spoken, profile.id, gen)
 }
 
+/** Stops the current reply at once, including a chunk that is still playing. */
 export function stopSpeaking(): void {
+  speakGen += 1
+  speakAbort?.abort()
+  speakAbort = null
   stopClip()
   window.speechSynthesis?.cancel()
 }

@@ -287,16 +287,55 @@ export function beginVoiceListen(options?: {
 export type VoiceSessionHandle = {
   pause: () => void
   resume: () => void
+  /** Keeps the mic open over playback so the user can cut the reply off. */
+  armBarge: (echo: string) => void
   cancel: () => void
+}
+
+/** Silence that ends a user turn. Short, but long enough for a breath mid-sentence. */
+export const END_OF_SPEECH_MS = 1300
+
+function foldSpeech(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function isEcho(live: string, spoken: string): boolean {
+  const heard = foldSpeech(live)
+  const reply = foldSpeech(spoken)
+  if (!heard || !reply) {
+    return true
+  }
+  if (reply.includes(heard) || heard.includes(reply)) {
+    return true
+  }
+  const replyWords = new Set(reply.split(' ').filter((word) => word.length > 1))
+  const novel = heard.split(' ').filter((word) => word.length > 1 && !replyWords.has(word))
+  return novel.length === 0
+}
+
+function withoutEcho(live: string, spoken: string): string {
+  const replyWords = new Set(foldSpeech(spoken).split(' ').filter(Boolean))
+  return live
+    .split(/\s+/)
+    .filter((word) => !replyWords.has(foldSpeech(word)))
+    .join(' ')
+    .trim()
 }
 
 /**
  * Keeps the mic open and emits each finished phrase. Home dictation stays on beginVoiceListen.
- * pause() while a phrase is handled so the speaker is not transcribed.
+ * pause() while a phrase is handled. armBarge() listens over the reply and cuts it off.
  */
 export function beginVoiceSession(options: {
   onPhrase: (text: string) => void
   onActivity?: () => void
+  onBarge?: () => void
   onError?: (message: string) => void
   gapMs?: number
 }): VoiceSessionHandle {
@@ -304,15 +343,18 @@ export function beginVoiceSession(options: {
   const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition
   if (!Ctor) {
     options.onError?.('Este navegador não liberou o microfone para ditado.')
-    return { pause: () => undefined, resume: () => undefined, cancel: () => undefined }
+    return { pause: () => undefined, resume: () => undefined, armBarge: () => undefined, cancel: () => undefined }
   }
 
   let stopped = false
   let paused = false
+  let listening = false
+  let echo = ''
+  let barged = false
   let buffer = ''
   let interim = ''
   let timer: ReturnType<typeof setTimeout> | null = null
-  const gapMs = options.gapMs ?? 1000
+  const gapMs = options.gapMs ?? END_OF_SPEECH_MS
   const recognition = new Ctor()
   recognition.lang = 'pt-BR'
   recognition.continuous = true
@@ -342,8 +384,19 @@ export function beginVoiceSession(options: {
     timer = setTimeout(emit, gapMs)
   }
 
+  function startRecognition() {
+    if (stopped) {
+      return
+    }
+    try {
+      recognition.start()
+    } catch {
+      /* start races with onend */
+    }
+  }
+
   recognition.onresult = (event) => {
-    if (stopped || paused) {
+    if (stopped || !listening || (paused && !echo)) {
       return
     }
     let finals = ''
@@ -365,6 +418,27 @@ export function beginVoiceSession(options: {
     }
     interim = nextInterim
     const live = `${buffer} ${interim}`.trim()
+    if (echo) {
+      if (!live || isEcho(live, echo)) {
+        buffer = ''
+        interim = ''
+        clearTimer()
+        return
+      }
+      if (!barged) {
+        barged = true
+        options.onBarge?.()
+      }
+      buffer = withoutEcho(live, echo)
+      interim = ''
+      if (!buffer) {
+        clearTimer()
+        return
+      }
+      options.onActivity?.()
+      arm()
+      return
+    }
     if (live && isCancelPhrase(live)) {
       emit()
       return
@@ -389,7 +463,7 @@ export function beginVoiceSession(options: {
   }
 
   recognition.onend = () => {
-    if (stopped || paused) {
+    if (stopped || (paused && !echo)) {
       return
     }
     const pending = `${buffer} ${interim}`.trim()
@@ -399,23 +473,24 @@ export function beginVoiceSession(options: {
       emit()
       return
     }
-    try {
-      recognition.start()
-    } catch {
-      /* browser still restarting */
-    }
+    startRecognition()
   }
 
+  listening = true
   try {
     recognition.start()
   } catch {
     stopped = true
+    listening = false
     options.onError?.('Não foi possível iniciar o ditado.')
   }
 
   return {
     pause: () => {
       paused = true
+      listening = false
+      echo = ''
+      barged = false
       clearTimer()
       try {
         recognition.abort()
@@ -428,18 +503,30 @@ export function beginVoiceSession(options: {
         return
       }
       paused = false
+      listening = true
+      echo = ''
+      barged = false
       buffer = ''
       interim = ''
       window.setTimeout(() => {
         if (stopped || paused) {
           return
         }
-        try {
-          recognition.start()
-        } catch {
-          /* start races with onend */
-        }
+        startRecognition()
       }, 80)
+    },
+    armBarge: (spoken: string) => {
+      if (stopped) {
+        return
+      }
+      echo = spoken
+      barged = false
+      paused = false
+      listening = true
+      buffer = ''
+      interim = ''
+      clearTimer()
+      startRecognition()
     },
     cancel: () => {
       stopped = true
