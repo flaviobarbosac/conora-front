@@ -569,6 +569,12 @@ export function IanFloatingChat() {
     if (!activeRef.current) {
       return
     }
+    const reply = command.reply?.trim() ?? ''
+    if (/limite de chamadas foi consumido/i.test(reply)) {
+      await say(reply)
+      stopSession()
+      return
+    }
     if (command.intent === 'navigate' && isVoiceRoute(command.route)) {
       navigate(command.route)
       await offerMore(command.reply || 'Abrindo a tela.')
@@ -585,7 +591,13 @@ export function IanFloatingChat() {
       await finishEntry(next)
       return
     }
-    await offerMore(command.reply || 'Posso abrir uma tela, lançar uma despesa, uma receita ou um aporte, ou registrar um orçamento.')
+    if (/em que posso ajudar/i.test(reply)) {
+      followUpRef.current = true
+      idleAsked.current = false
+      await say(reply)
+      return
+    }
+    await offerMore(reply || 'Bom dia! Em que posso ajudar?')
   }
 
   function greetAndListen(next: IanVoiceId) {
