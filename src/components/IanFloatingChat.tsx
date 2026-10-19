@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { aiApi } from '../api/finance'
+import { aiApi, type VoiceTurn } from '../api/finance'
 import { errorMessage, currentCompetence } from '../lib/format'
 import { ianReportHref } from '../lib/ianReport'
 import { IAN_VOICES, getIanVoice, setIanVoice, speakPt, stopSpeaking, type IanVoiceId } from '../lib/speakPt'
@@ -42,6 +42,8 @@ export function IanFloatingChat() {
   const sessionRef = useRef<VoiceSessionHandle | null>(null)
   const stopVisualizer = useRef<(() => void) | null>(null)
   const pendingRef = useRef<SpokenEntry | null>(null)
+  const historyRef = useRef<VoiceTurn[]>([])
+  const turnGen = useRef(0)
   const entryEpoch = useRef(0)
   const activeRef = useRef(false)
   const micOnRef = useRef(false)
@@ -78,6 +80,8 @@ export function IanFloatingChat() {
     setActive(false)
     setChoosing(false)
     pendingRef.current = null
+    historyRef.current = []
+    turnGen.current += 1
     sessionRef.current?.cancel()
     sessionRef.current = null
     setModStatusRef.current(null)
@@ -91,7 +95,13 @@ export function IanFloatingChat() {
     }
     sessionRef.current = beginVoiceSession({
       onActivity: () => setModStatusRef.current('Lendo dados'),
+      onBarge: () => {
+        turnGen.current += 1
+        stopSpeaking()
+        setModStatusRef.current('Lendo dados')
+      },
       onPhrase: (phrase) => {
+        const turn = ++turnGen.current
         sessionRef.current?.pause()
         void (async () => {
           try {
@@ -99,7 +109,7 @@ export function IanFloatingChat() {
           } catch (caught: unknown) {
             await say(errorMessage(caught))
           } finally {
-            if (activeRef.current && micOnRef.current) {
+            if (turn === turnGen.current && activeRef.current && micOnRef.current) {
               setModStatusRef.current(null)
               sessionRef.current?.resume()
             }
@@ -128,12 +138,27 @@ export function IanFloatingChat() {
     sessionRef.current?.resume()
   }
 
+  function remember(role: VoiceTurn['role'], text: string) {
+    const line = text.replace(/\s+/g, ' ').trim()
+    if (!line) {
+      return
+    }
+    historyRef.current = [...historyRef.current, { role, text: line }].slice(-12)
+  }
+
   async function say(text: string) {
     if (!activeRef.current || !text.trim()) {
       return
     }
+    const turn = turnGen.current
+    remember('assistant', text)
     setModStatusRef.current('aguarde')
+    sessionRef.current?.armBarge(text)
     await speakPt(text)
+    if (turn !== turnGen.current) {
+      return
+    }
+    sessionRef.current?.pause()
   }
 
   function dropEntry() {
@@ -212,6 +237,8 @@ export function IanFloatingChat() {
       return
     }
     setModStatusRef.current('Lendo dados')
+    const prior = historyRef.current.slice()
+    remember('user', spoken)
 
     if (isCancelPhrase(spoken)) {
       dropEntry()
@@ -231,7 +258,7 @@ export function IanFloatingChat() {
     }
     pendingRef.current = null
 
-    const command = await aiApi.voice(spoken, currentCompetence())
+    const command = await aiApi.voice(spoken, currentCompetence(), prior)
     if (!activeRef.current) {
       return
     }
@@ -253,11 +280,11 @@ export function IanFloatingChat() {
 
   function greetAndListen(next: IanVoiceId) {
     const label = IAN_VOICES.find((voice) => voice.id === next)?.label ?? 'Ian'
-    sessionRef.current?.pause()
-    stopSpeaking()
-    void speakPt(`Olá, eu sou ${label}.`, next).finally(() => {
-      if (activeRef.current) {
-        startMic()
+    const turn = turnGen.current
+    void say(`Olá, eu sou ${label}.`).finally(() => {
+      if (turn === turnGen.current && activeRef.current && micOnRef.current) {
+        setModStatusRef.current(null)
+        sessionRef.current?.resume()
       }
     })
   }

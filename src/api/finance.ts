@@ -906,13 +906,18 @@ export type VoiceCommand = {
   report?: IanReportQuery | null
 }
 
+export type VoiceTurn = {
+  role: 'user' | 'assistant'
+  text: string
+}
+
 export const aiApi = {
   ask: (question: string, competenceYm?: string) =>
     apiFetch<AiAnswer>('/ai/ask', json('POST', { question, competenceYm })),
   ianAsk: (question: string, competenceYm?: string) =>
     apiFetch<IanAskResponse>('/ai/ian', json('POST', { question, competenceYm })),
-  voice: (transcript: string, competenceYm?: string) =>
-    apiFetch<VoiceCommand>('/ai/voice', json('POST', { transcript, competenceYm })),
+  voice: (transcript: string, competenceYm?: string, history?: VoiceTurn[]) =>
+    apiFetch<VoiceCommand>('/ai/voice', json('POST', { transcript, competenceYm, history: history ?? [] })),
   ianAnalyze: (input: IanAnalyzeRequest) =>
     apiFetch<IanAskResponse>('/ai/ian/analyze', json('POST', input)),
   ianReport: (query: IanReportQuery) => {
