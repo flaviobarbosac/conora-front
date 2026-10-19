@@ -370,6 +370,8 @@ export type BudgetYearMonthCell = {
   competenceYm: string
   plannedAmount: number
   actualAmount: number
+  receivedIncome?: number
+  monthResult?: number
 }
 
 export type BudgetYearLine = {
@@ -918,6 +920,8 @@ export const aiApi = {
     apiFetch<IanAskResponse>('/ai/ian', json('POST', { question, competenceYm })),
   voice: (transcript: string, competenceYm?: string, history?: VoiceTurn[]) =>
     apiFetch<VoiceCommand>('/ai/voice', json('POST', { transcript, competenceYm, history: history ?? [] })),
+  suggestCategories: (term: string, type?: string) =>
+    apiFetch<{ names: string[] }>('/ai/voice/categories', json('POST', { term, type })),
   ianAnalyze: (input: IanAnalyzeRequest) =>
     apiFetch<IanAskResponse>('/ai/ian/analyze', json('POST', input)),
   ianReport: (query: IanReportQuery) => {

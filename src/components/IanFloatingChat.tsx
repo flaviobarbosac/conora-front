@@ -5,7 +5,7 @@ import { aiApi, type VoiceTurn } from '../api/finance'
 import { errorMessage, currentCompetence } from '../lib/format'
 import { ianReportHref } from '../lib/ianReport'
 import { IAN_VOICES, getIanVoice, setIanVoice, speakPt, stopSpeaking, type IanVoiceId } from '../lib/speakPt'
-import { commitVoiceEntry, prefetchVoiceCatalog } from '../lib/voiceEntry'
+import { commitVoiceEntry, prefetchVoiceCatalog, unknownCategoryMessage } from '../lib/voiceEntry'
 import {
   absorb,
   emptyEntry,
@@ -23,6 +23,42 @@ import { startVoiceVisualizer } from '../lib/voiceVisualizer'
 import { VoiceOscillator } from './VoiceOscillator'
 import styles from './IanFloatingChat.module.css'
 
+function foldPhrase(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function isYesPhrase(text: string): boolean {
+  const spoken = foldPhrase(text)
+  return ['sim', 'confirma', 'confirmo', 'confirmado', 'pode', 'isso', 'ok', 'ta', 'certo', 'pode ser', 'sim confirma', 'sim pode'].includes(spoken)
+}
+
+function isNoPhrase(text: string): boolean {
+  const spoken = foldPhrase(text)
+  return ['nao', 'negativo', 'outra', 'outro', 'errei', 'errado', 'volta', 'nenhuma', 'nenhum'].includes(spoken)
+}
+
+function matchCategoryOption(spoken: string, names: string[]): string | null {
+  const needle = foldPhrase(spoken)
+  if (!needle) {
+    return null
+  }
+  const exact = names.filter((name) => foldPhrase(name) === needle)
+  if (exact.length === 1) {
+    return exact[0]
+  }
+  const partial = names.filter((name) => {
+    const folded = foldPhrase(name)
+    return folded.includes(needle) || needle.includes(folded)
+  })
+  return partial.length === 1 ? partial[0] : null
+}
+
 function faceSrc(id: IanVoiceId): string {
   const file = id === 'clara' ? 'ian-menina.jpg' : 'ian-garoto.jpg'
   return `${import.meta.env.BASE_URL}assets/${file}`
@@ -36,6 +72,11 @@ export function IanFloatingChat() {
   const [choosing, setChoosing] = useState(false)
   const [voiceId, setVoiceId] = useState<IanVoiceId>(() => getIanVoice().id)
   const [modStatus, setModStatus] = useState<'Lendo dados' | 'registrando' | 'aguarde' | null>(null)
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([])
+  const [categoryChoice, setCategoryChoice] = useState<string | null>(null)
+  const [categoryBox, setCategoryBox] = useState<{ left: number; bottom: number } | null>(null)
+  const categoryOptionsRef = useRef<string[]>([])
+  const categoryChoiceRef = useRef<string | null>(null)
   const setModStatusRef = useRef(setModStatus)
   setModStatusRef.current = setModStatus
   const levelsRef = useRef<number[]>(Array.from({ length: 16 }, () => 0.12))
@@ -53,6 +94,27 @@ export function IanFloatingChat() {
   useEffect(() => {
     setAnchor(document.getElementById('conora-voice-center'))
   }, [pathname])
+
+  useEffect(() => {
+    if (!anchor || categoryOptions.length === 0) {
+      setCategoryBox(null)
+      return
+    }
+    const place = () => {
+      const rect = anchor.getBoundingClientRect()
+      setCategoryBox({
+        left: rect.left + rect.width / 2,
+        bottom: window.innerHeight - rect.top + 10,
+      })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [anchor, categoryOptions])
 
   useEffect(() => {
     const open = () => openListeningRef.current()
@@ -74,11 +136,27 @@ export function IanFloatingChat() {
     stopVisualizer.current = null
   }
 
+  function showCategoryOptions(names: string[]) {
+    const next = names.slice(0, 4)
+    categoryOptionsRef.current = next
+    categoryChoiceRef.current = null
+    setCategoryOptions(next)
+    setCategoryChoice(null)
+  }
+
+  function clearCategoryPick() {
+    categoryOptionsRef.current = []
+    categoryChoiceRef.current = null
+    setCategoryOptions([])
+    setCategoryChoice(null)
+  }
+
   function stopSession() {
     activeRef.current = false
     micOnRef.current = false
     setActive(false)
     setChoosing(false)
+    clearCategoryPick()
     pendingRef.current = null
     historyRef.current = []
     turnGen.current += 1
@@ -164,8 +242,32 @@ export function IanFloatingChat() {
   function dropEntry() {
     entryEpoch.current += 1
     pendingRef.current = null
+    clearCategoryPick()
     clearVoiceDraft()
     clearVoiceFill()
+  }
+
+  function pickCategory(name: string) {
+    turnGen.current += 1
+    const turn = turnGen.current
+    categoryChoiceRef.current = name
+    setCategoryChoice(name)
+    stopSpeaking()
+    void say(`Você escolheu a categoria ${name}. Confirma?`).finally(() => {
+      if (turn === turnGen.current && activeRef.current && micOnRef.current) {
+        setModStatusRef.current(null)
+        sessionRef.current?.resume()
+      }
+    })
+  }
+
+  async function acceptCategory(name: string) {
+    clearCategoryPick()
+    const entry = pendingRef.current ?? emptyEntry()
+    entry.categoryName = name
+    entry.asked = null
+    pendingRef.current = entry
+    await finishEntry(entry)
   }
 
   function reveal(entry: SpokenEntry) {
@@ -177,14 +279,26 @@ export function IanFloatingChat() {
       categoryName: entry.categoryName,
       accountName: entry.accountName,
     })
-    if (!window.location.pathname.includes('/lancamentos')) {
-      navigate('/lancamentos?novo=1')
-      return
-    }
-    window.dispatchEvent(new Event('conora:voice-open-form'))
   }
 
   async function finishEntry(entry: SpokenEntry) {
+    if (entry.categoryName) {
+      const suggestion = await unknownCategoryMessage(toDraft(entry))
+      if (suggestion) {
+        entry.categoryName = null
+        entry.asked = 'categoryName'
+        pendingRef.current = entry
+        if (suggestion.names.length > 0) {
+          showCategoryOptions(suggestion.names)
+        } else {
+          clearCategoryPick()
+        }
+        reveal(entry)
+        await say(suggestion.message)
+        return
+      }
+    }
+    clearCategoryPick()
     const slots = missingSlots(entry)
     if (slots.length > 0) {
       entry.asked = slots[0]
@@ -225,7 +339,6 @@ export function IanFloatingChat() {
     if (result.status === 'needs-form') {
       setVoiceDraft({ description: result.description, amount: result.amount })
       await say('Falta a conta bancária. Revise o lançamento e salve.')
-      navigate('/lancamentos?novo=1&voz=1')
       return
     }
     await say(result.message)
@@ -240,6 +353,23 @@ export function IanFloatingChat() {
     const prior = historyRef.current.slice()
     remember('user', spoken)
 
+    if (categoryOptionsRef.current.length > 0) {
+      if (categoryChoiceRef.current && isYesPhrase(spoken)) {
+        await acceptCategory(categoryChoiceRef.current)
+        return
+      }
+      if (categoryChoiceRef.current && isNoPhrase(spoken)) {
+        categoryChoiceRef.current = null
+        setCategoryChoice(null)
+        await say('Qual categoria você escolhe?')
+        return
+      }
+      const hit = matchCategoryOption(spoken, categoryOptionsRef.current)
+      if (hit) {
+        pickCategory(hit)
+        return
+      }
+    }
     if (isCancelPhrase(spoken)) {
       dropEntry()
       await say('Lançamento cancelado.')
@@ -320,7 +450,9 @@ export function IanFloatingChat() {
     return null
   }
 
-  return createPortal(
+  return (
+    <>
+    {createPortal(
     <div className={active ? styles.dockOpen : styles.dock}>
       <button
         type="button"
@@ -375,5 +507,33 @@ export function IanFloatingChat() {
       </button>
     </div>,
     anchor,
+    )}
+    {categoryOptions.length > 0 && categoryBox
+      ? createPortal(
+        <div
+          className={styles.categoryPop}
+          style={{ left: categoryBox.left, bottom: categoryBox.bottom }}
+          role="dialog"
+          aria-label="Encontrei essas categorias"
+        >
+          <p className={styles.categoryPopTitle}>Encontrei essas categorias</p>
+          <div className={styles.categoryPopList}>
+            {categoryOptions.map((name) => (
+              <button
+                key={name}
+                type="button"
+                className={categoryChoice === name ? styles.categoryPopOn : styles.categoryPopItem}
+                aria-pressed={categoryChoice === name}
+                onClick={() => pickCategory(name)}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body,
+      )
+      : null}
+    </>
   )
 }

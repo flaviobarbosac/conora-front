@@ -5,7 +5,6 @@ import {
   budgetsApi,
   categoriesApi,
   entriesApi,
-  familyApi,
   patrimonyApi,
   projectsApi,
   type Budget,
@@ -32,16 +31,17 @@ import { currentCompetence, formatCompetence, formatMoney, formatPercent, shiftC
 import {
   aggregateYearMonths,
   buildAmountMaps,
+  chartWithAmounts,
   focusSections,
   groupAccountsByParent,
-  monthBalanceActual,
+  idsWithAmount,
   monthsEndingAt,
   patrimonyRootAmounts,
   patrimonyStockMap,
   progressPercent,
   progressTone,
   sectionHead,
-  sectionRealized,
+  sectionPlannedActual,
   sumBranch,
   yearsNeededForMonths,
   type ProgressTone,
@@ -158,6 +158,43 @@ function isStockSection(section: CategorySection): boolean {
   return section === 'Patrimony' || isPatrimonySection(section)
 }
 
+function sumYearField(
+  years: BudgetYear[],
+  monthList: string[],
+  field: 'receivedIncome' | 'monthResult',
+): number {
+  const wanted = new Set(monthList)
+  let sum = 0
+  for (const year of years) {
+    for (const cell of year.totals) {
+      if (!wanted.has(cell.competenceYm)) {
+        continue
+      }
+      sum += cell[field] ?? 0
+    }
+  }
+  return sum
+}
+
+function sumYearSection(years: BudgetYear[], monthList: string[], section: CategorySection): number {
+  const wanted = new Set(monthList)
+  let sum = 0
+  for (const year of years) {
+    for (const line of year.lines) {
+      if (line.section !== section) {
+        continue
+      }
+      for (const cell of line.months) {
+        if (!wanted.has(cell.competenceYm)) {
+          continue
+        }
+        sum += Math.abs(cell.actualAmount)
+      }
+    }
+  }
+  return sum
+}
+
 function ancestorIds(accountId: string, list: Category[]): string[] {
   const byId = new Map(list.map((account) => [account.id, account]))
   const path: string[] = []
@@ -181,8 +218,6 @@ export function RaioXPage() {
   const [focus, setFocus] = useState<RaioXFocus>(null)
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [scope, setScope] = useState<SharingScope>(readSharingView)
-  const group = useLoad(() => familyApi.group(), [])
-
   const monthList = useMemo(() => monthsEndingAt(ym, months), [ym, months])
   const yearNums = useMemo(() => yearsNeededForMonths(monthList), [monthList])
   const yearKey = yearNums.join(',')
@@ -197,7 +232,7 @@ export function RaioXPage() {
     [months, yearKey, scope],
   )
   const previousCash = useLoad(() => accountsApi.cashBalanceAtEndOfMonth(previousYm), [previousYm])
-  const accounts = useLoad(() => categoriesApi.list(undefined, false, false), [])
+  const accounts = useLoad(() => categoriesApi.list(undefined, true, false), [])
   const patrimony = useLoad(() => patrimonyApi.get(), [])
   const projects = useLoad(() => projectsApi.list(), [])
   const entries = useLoad(
@@ -207,22 +242,6 @@ export function RaioXPage() {
         : Promise.resolve({ items: [], skip: 0, take: 0, totalCount: 0 }),
     [ym, months, scope],
   )
-
-  const list = useMemo(() => {
-    const all = accounts.data ?? []
-    if (!group.data?.groupId) {
-      return all
-    }
-    // Shared chart: every analytical line is the same for the group. Scope only changes totals.
-    return all
-  }, [accounts.data])
-  const byParent = useMemo(() => {
-    const map = groupAccountsByParent(list)
-    for (const bucket of map.values()) {
-      bucket.sort(compareCategorySiblings)
-    }
-    return map
-  }, [list])
 
   const patAmounts = useMemo(
     () => patrimonyStockMap(patrimony.data?.items ?? []),
@@ -236,6 +255,18 @@ export function RaioXPage() {
     }
     return aggregateYearMonths(yearsBudget.data ?? [], monthList)
   }, [months, budget.data, yearsBudget.data, monthList])
+
+  const list = useMemo(
+    () => chartWithAmounts(accounts.data ?? [], idsWithAmount([planned, actual, patAmounts]), false),
+    [accounts.data, planned, actual, patAmounts],
+  )
+  const byParent = useMemo(() => {
+    const map = groupAccountsByParent(list)
+    for (const bucket of map.values()) {
+      bucket.sort(compareCategorySiblings)
+    }
+    return map
+  }, [list])
 
   const incomeHead = useMemo(() => sectionHead(list, 'Income'), [list])
   const expenseHead = useMemo(
@@ -437,18 +468,18 @@ export function RaioXPage() {
   const data = budget.data
   const highlighted = focusSections(focus)
   const loadingRange = months > 1 && yearsBudget.loading && !yearsBudget.data
-  const incomeActual = sectionRealized(byParent, actual, 'Income', list)
-  const discountActual = sectionRealized(byParent, actual, 'Discount', list)
-  const lifeActual = sectionRealized(byParent, actual, 'LifeProject', list)
-  const essentialActual = sectionRealized(byParent, actual, 'Essential', list)
-  const socialActual = sectionRealized(byParent, actual, 'Social', list)
-  const monthBalance = monthBalanceActual(
-    incomeActual,
-    discountActual,
-    lifeActual,
-    essentialActual,
-    socialActual,
-  )
+  const rangeIncome = sumYearField(yearsBudget.data ?? [], monthList, 'receivedIncome')
+  const rangeBalance = sumYearField(yearsBudget.data ?? [], monthList, 'monthResult')
+  const incomeActual = months === 1 ? Math.abs(data?.receivedIncome ?? 0) : rangeIncome
+  const discountActual =
+    months === 1 && data
+      ? sectionPlannedActual(data, 'Discount').actual
+      : sumYearSection(yearsBudget.data ?? [], monthList, 'Discount')
+  const lifeActual =
+    months === 1 && data
+      ? sectionPlannedActual(data, 'LifeProject').actual
+      : sumYearSection(yearsBudget.data ?? [], monthList, 'LifeProject')
+  const monthBalance = months === 1 ? (data?.monthResult ?? 0) : rangeBalance
 
   return (
     <div className={styles.page} onClick={clearFocus}>
@@ -715,7 +746,10 @@ function RaioXAccountBlock({
         <span className={styles.raioxToggle} aria-hidden>
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
-        <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
+        <strong className={styles.raioxAccountName}>
+          {categoryLabel(account)}
+          {!account.isActive ? <span className={styles.rowSub}> · Inativa</span> : null}
+        </strong>
         <TotalsCell
           totals={totals}
           stock={stock}
