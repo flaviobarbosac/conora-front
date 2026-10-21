@@ -13,7 +13,7 @@ import {
   type ReceiptIntake,
 } from '../api/finance'
 import { ReceiptClassifyDialog } from '../components/ReceiptClassifyDialog'
-import { CASH_FLOW_SECTIONS, isCashFlowSection } from '../lib/categoryOrder'
+import { CASH_FLOW_SECTIONS, isPatrimonySection } from '../lib/categoryOrder'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -319,14 +319,21 @@ export function EntriesPage() {
         account.level !== 'Analytical' &&
         (account.section === 'Budget' ||
           account.section === 'Expense' ||
-          CASH_FLOW_SECTIONS.includes(account.section)),
+          account.section === 'Patrimony' ||
+          CASH_FLOW_SECTIONS.includes(account.section) ||
+          isPatrimonySection(account.section)),
+    )
+    const posting = tree.filter(
+      (account) =>
+        account.level === 'Analytical' &&
+        (CASH_FLOW_SECTIONS.includes(account.section) || isPatrimonySection(account.section)),
     )
     const byId = new Map<string, Category>()
-    for (const account of [...heads, ...lookups.cashFlowAccounts]) {
+    for (const account of [...heads, ...posting]) {
       byId.set(account.id, account)
     }
     return [...byId.values()]
-  }, [lookups.categories, lookups.cashFlowAccounts])
+  }, [lookups.categories])
   const sharingScope = readSharingView()
   const entries = useLoad(
     () =>
@@ -424,13 +431,11 @@ export function EntriesPage() {
   }
 
   function describe(entry: Entry): string {
-    const parts = [formatDate(entry.occurredAt), lookups.accountName(entry.accountId)]
-    if (entry.type === 'Transfer') {
-      parts.push(`→ ${lookups.accountName(entry.contraAccountId)}`)
-    } else if (entry.categoryId) {
-      parts.push(lookups.categoryName(entry.categoryId))
-    }
-    return parts.join(' · ')
+    const account = entry.type === 'Transfer'
+      ? `${lookups.accountName(entry.accountId)} → ${lookups.accountName(entry.contraAccountId)}`
+      : lookups.accountName(entry.accountId)
+    const category = entry.categoryId ? lookups.categoryName(entry.categoryId) : null
+    return [category, account, formatDate(entry.occurredAt)].filter(Boolean).join(' · ')
   }
 
   return (
@@ -479,7 +484,7 @@ export function EntriesPage() {
           receiptPrefill={editing ? null : receiptPrefill}
           receiptIntakeId={editing ? null : receiptIntakeId}
           accounts={lookups.accounts.map((account) => ({ id: account.id, name: account.name }))}
-          categories={lookups.cashFlowAccounts}
+          categories={filterAccountOptions.filter((account) => account.level === 'Analytical' && account.isActive)}
           tree={lookups.categories}
           onDirtyChange={setFormDirty}
           onCancel={() => void closeForm()}
@@ -557,10 +562,10 @@ export function EntriesPage() {
                     style={editable ? undefined : { cursor: 'default', textAlign: 'left' }}
                   >
                     <strong>
-                      {entryDisplayDescription(entry)}
+                      {describe(entry)}
                       {entry.installmentCount ? ` (${entry.installmentNumber}/${entry.installmentCount})` : ''}
                     </strong>
-                    <span className={styles.rowSub}>{describe(entry)}</span>
+                    <span className={styles.rowSub}>{entryDisplayDescription(entry)}</span>
                   </button>
                   <span className={styles.rowEnd}>
                     <Badge>{TYPE_LABEL[entry.type]}</Badge>
@@ -602,9 +607,9 @@ type FormProps = {
 
 function matchesEntryType(section: string, type: FormType): boolean {
   if (type === 'Income') {
-    return section === 'Income'
+    return section === 'Income' || section === 'LifeProject' || section === 'Asset' || section === 'Liability'
   }
-  return isCashFlowSection(section as Category['section']) && section !== 'Income'
+  return section === 'Discount' || section === 'Essential' || section === 'Social' || section === 'Asset' || section === 'Liability'
 }
 
 function EntryForm({

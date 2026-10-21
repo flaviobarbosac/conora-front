@@ -312,11 +312,11 @@ function ProjectForm({
       return
     }
     if (startYm < currentYm) {
-      action.setError('O início do aporte não pode ser antes do mês atual.')
+      action.setError('O início do rateio não pode ser antes do mês atual.')
       return
     }
     if (startYm > dueYm) {
-      action.setError('O início do aporte não pode ser depois do prazo.')
+      action.setError('O início do rateio não pode ser depois do prazo.')
       return
     }
     const projectScope = scope === 'Group' && hasFamilyGroup ? 'Group' : 'Personal'
@@ -389,7 +389,7 @@ function ProjectForm({
           onChange={(event) => setDueYm(event.target.value)}
         />
         <Field
-          label="Início do aporte"
+          label="Início do rateio"
           name="projectStart"
           type="month"
           required

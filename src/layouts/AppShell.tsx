@@ -96,6 +96,7 @@ export function AppShell() {
         reserveTargetMonths: current.reserveTargetMonths,
         monthCloseDay: current.monthCloseDay,
         includeAbsoluteValuesInRetrospective: current.includeAbsoluteValuesInRetrospective,
+        voiceEntryConfirm: current.voiceEntryConfirm !== false,
       })
       profile.reload()
       window.dispatchEvent(new Event('conora:profile-changed'))

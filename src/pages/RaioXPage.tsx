@@ -27,7 +27,7 @@ import { useLoad } from '../hooks/useLoad'
 import { categoryLabel } from '../lib/categoryLabel'
 import { compareCategorySiblings, isCashFlowSection, isPatrimonySection } from '../lib/categoryOrder'
 import { buildBudgetMacroBars } from '../lib/homeInsights'
-import { currentCompetence, formatCompetence, formatMoney, formatPercent, shiftCompetence } from '../lib/format'
+import { currentCompetence, formatCompetence, formatDate, formatMoney, formatPercent, shiftCompetence } from '../lib/format'
 import {
   aggregateYearMonths,
   buildAmountMaps,
@@ -242,6 +242,18 @@ export function RaioXPage() {
         : Promise.resolve({ items: [], skip: 0, take: 0, totalCount: 0 }),
     [ym, months, scope],
   )
+  const bankAccounts = useLoad(() => accountsApi.list(), [])
+
+  useEffect(() => {
+    function onVoiceSaved() {
+      entries.reload()
+      budget.reload()
+      patrimony.reload()
+      projects.reload()
+    }
+    window.addEventListener('conora:voice-saved', onVoiceSaved)
+    return () => window.removeEventListener('conora:voice-saved', onVoiceSaved)
+  }, [entries.reload, budget.reload, patrimony.reload, projects.reload])
 
   const patAmounts = useMemo(
     () => patrimonyStockMap(patrimony.data?.items ?? []),
@@ -292,13 +304,25 @@ export function RaioXPage() {
     [incomeHead, expenseHead, patrimonyHead],
   )
 
+  const categoryNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const account of accounts.data ?? []) {
+      map.set(account.id, categoryLabel(account))
+    }
+    return map
+  }, [accounts.data])
+  const bankNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const account of bankAccounts.data ?? []) {
+      map.set(account.id, account.name)
+    }
+    return map
+  }, [bankAccounts.data])
+
   const entriesByAccount = useMemo(() => {
     const map = new Map<string, Entry[]>()
     for (const entry of entries.data?.items ?? []) {
       if (!entry.categoryId) {
-        continue
-      }
-      if (entry.type === 'ProjectContribution' || entry.type === 'Contribution') {
         continue
       }
       const bucket = map.get(entry.categoryId) ?? []
@@ -600,6 +624,8 @@ export function RaioXPage() {
               open={open}
               highlighted={highlighted}
               entriesByAccount={entriesByAccount}
+              categoryNameById={categoryNameById}
+              bankNameById={bankNameById}
               patItemsByAccount={patItemsByAccount}
               projectsByAccount={projectsByAccount}
               onToggle={toggle}
@@ -618,13 +644,18 @@ export function RaioXPage() {
 function EntrySubRow({
   entry,
   depth,
+  categoryName,
+  accountName,
   onOpen,
 }: {
   entry: Entry
   depth: number
+  categoryName: string | null
+  accountName: string | null
   onOpen: (entry: Entry) => void
 }) {
   const editable = entry.canEdit !== false
+  const headline = [categoryName, accountName, formatDate(entry.occurredAt)].filter(Boolean).join(' · ')
   return (
     <button
       type="button"
@@ -642,8 +673,8 @@ function EntrySubRow({
     >
       <span />
       <span className={styles.rowMain}>
-        <strong>{entryDisplayDescription(entry)}</strong>
-        <span className={styles.rowSub}>{entry.competenceYm}</span>
+        <strong>{headline}</strong>
+        <span className={styles.rowSub}>{entryDisplayDescription(entry)}</span>
       </span>
       <span className={styles.raioxTotals}>
         <span className={styles.raioxAmount} />
@@ -667,6 +698,8 @@ function RaioXAccountBlock({
   open,
   highlighted,
   entriesByAccount,
+  categoryNameById,
+  bankNameById,
   patItemsByAccount,
   projectsByAccount,
   onToggle,
@@ -685,6 +718,8 @@ function RaioXAccountBlock({
   open: Set<string>
   highlighted: CategorySection[]
   entriesByAccount: Map<string, Entry[]>
+  categoryNameById: Map<string, string>
+  bankNameById: Map<string, string>
   patItemsByAccount: Map<string, PatrimonyItem[]>
   projectsByAccount: Map<string, LifeProject[]>
   onToggle: (id: string) => void
@@ -696,13 +731,9 @@ function RaioXAccountBlock({
   const children = byParent.get(account.id) ?? []
   const stock = isStockSection(account.section)
   const launchEntries =
-    account.level === 'Analytical' && !stock && account.section !== 'LifeProject'
-      ? (entriesByAccount.get(account.id) ?? [])
-      : []
-  const launchPatItems =
-    account.level === 'Analytical' && isPatrimonySection(account.section)
-      ? (patItemsByAccount.get(account.id) ?? [])
-      : []
+    account.level === 'Analytical' ? (entriesByAccount.get(account.id) ?? []) : []
+  // Patrimony stock rows stay on the category total. The item lines themselves are not listed.
+  const launchPatItems: PatrimonyItem[] = patItemsByAccount.size < 0 ? (patItemsByAccount.get(account.id) ?? []) : []
   const launchProjects =
     account.level === 'Analytical' && account.section === 'LifeProject'
       ? (projectsByAccount.get(account.id) ?? [])
@@ -774,6 +805,8 @@ function RaioXAccountBlock({
               open={open}
               highlighted={highlighted}
               entriesByAccount={entriesByAccount}
+              categoryNameById={categoryNameById}
+              bankNameById={bankNameById}
               patItemsByAccount={patItemsByAccount}
               projectsByAccount={projectsByAccount}
               onToggle={onToggle}
@@ -786,7 +819,14 @@ function RaioXAccountBlock({
         : null}
       {expanded
         ? launchEntries.map((entry) => (
-            <EntrySubRow key={entry.id} entry={entry} depth={depth} onOpen={onOpenEntry} />
+            <EntrySubRow
+              key={entry.id}
+              entry={entry}
+              depth={depth}
+              categoryName={entry.categoryId ? (categoryNameById.get(entry.categoryId) ?? null) : null}
+              accountName={entry.accountId ? (bankNameById.get(entry.accountId) ?? null) : null}
+              onOpen={onOpenEntry}
+            />
           ))
         : null}
       {expanded

@@ -702,6 +702,7 @@ export type FamilyProfile = {
   reserveTargetMonths: number
   monthCloseDay: number
   includeAbsoluteValuesInRetrospective: boolean
+  voiceEntryConfirm: boolean
 }
 
 export type UserPreferencesInput = {
@@ -711,6 +712,7 @@ export type UserPreferencesInput = {
   reserveTargetMonths: number
   monthCloseDay: number
   includeAbsoluteValuesInRetrospective: boolean
+  voiceEntryConfirm?: boolean
 }
 
 export type FamilyMemberUser = {

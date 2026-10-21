@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { familyApi, projectsApi, type LifeProject, type LifeProjectScope } from '../api/finance'
-import { CategorySelect } from '../components/CategorySelect'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
@@ -12,20 +11,16 @@ import { Select } from '../components/ui/Select'
 import { TextArea } from '../components/ui/TextArea'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
-import { useLookups } from '../hooks/useLookups'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import {
-  dateToApi,
   formatCompetence,
   formatDate,
   formatMoney,
   formatMoneyInput,
   formatPercent,
   monthsInclusive,
-  parseMoney,
-  todayInput,
 } from '../lib/format'
 import {
   horizonBadgeClass,
@@ -93,9 +88,8 @@ export function ProjectDetailPage() {
                   ) : null}
                 </strong>
                 <span className={styles.rowSub}>
-                  {formatMoney(data.accumulatedAmount)} de {formatMoney(data.goalAmount)}
+                  {`Valor original ${formatMoney(data.goalAmount)} · Valor atualizado ${formatMoney(Math.max(0, data.goalAmount - data.accumulatedAmount))}`}
                   {` · prazo ${formatDate(data.dueDate)}`}
-                  {` · aporte desde ${formatCompetence(data.contributionStartYm)}`}
                   {data.categoryName ? ` · ${data.categoryName}` : ''}
                 </span>
               </span>
@@ -112,7 +106,6 @@ export function ProjectDetailPage() {
           {data.isOwner ? (
             <>
               <ProjectEditForm key={`${data.id}-${data.categoryId}`} data={data} onSaved={() => project.reload()} />
-              <ContributeForm key={`contrib-${data.id}`} data={data} onSaved={() => project.reload()} />
             </>
           ) : (
             <section className={styles.section}>
@@ -205,7 +198,7 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
         <MoneyField label="Meta (R$)" name="projectGoal" value={formatMoneyInput(data.goalAmount)} disabled onChange={() => undefined} />
         <Field label="Prazo" name="projectDue" type="month" value={ymFromIso(data.dueDate)} disabled readOnly />
         <Field
-          label="Início do aporte"
+          label="Início do rateio"
           name="projectStart"
           type="month"
           value={data.contributionStartYm}
@@ -225,109 +218,6 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
         <div className={styles.formActions}>
           <Button type="submit" disabled={save.busy || !isDirty}>
             Salvar projeto
-          </Button>
-        </div>
-      </form>
-    </section>
-  )
-}
-
-function ContributeForm({ data, onSaved }: { data: LifeProject; onSaved: () => void }) {
-  const lookups = useLookups()
-  const contribute = useAction()
-  const lifeAccounts = lookups.cashFlowAccounts.filter((account) => account.section === 'LifeProject')
-  const bankAccounts = lookups.accounts.filter((account) => !account.isArchived)
-  const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(todayInput)
-  const [accountId, setAccountId] = useState('')
-  const [categoryId, setCategoryId] = useState(data.categoryId ?? '')
-  const initialDate = useState(todayInput)[0]
-  const isDirty = useMemo(
-    () => amount.trim() !== '' || date !== initialDate || accountId !== '',
-    [amount, date, initialDate, accountId],
-  )
-  useRegisterDirty(`project-contribute:${data.id}`, isDirty)
-
-  useEffect(() => {
-    setCategoryId(data.categoryId ?? '')
-  }, [data.categoryId])
-
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    const value = parseMoney(amount)
-    if (!Number.isFinite(value) || value <= 0) {
-      contribute.setError('Informe um valor maior que zero.')
-      return
-    }
-    if (!accountId) {
-      contribute.setError('Escolha a conta bancária de origem.')
-      return
-    }
-    if (!categoryId) {
-      contribute.setError('Escolha a categoria.')
-      return
-    }
-    if (
-      await contribute.run(() =>
-        projectsApi.contribute(data.id, {
-          amount: value,
-          occurredAt: dateToApi(date),
-          accountId,
-          categoryId,
-        }),
-      )
-    ) {
-      setAmount('')
-      showSaveToast('Aporte registrado com sucesso.')
-      onSaved()
-      lookups.reloadAccounts()
-    }
-  }
-
-  return (
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Aportar</h2>
-      <form className={styles.form} onSubmit={(event) => void submit(event)}>
-        <MoneyField label="Valor (R$)" name="contribAmount" required value={amount} onChange={setAmount} />
-        <Field
-          label="Data"
-          name="contribDate"
-          type="date"
-          required
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-        />
-        <Select
-          label="Conta bancária"
-          name="contribBankAccount"
-          required
-          value={accountId}
-          onChange={(event) => setAccountId(event.target.value)}
-        >
-          <option value="">Selecione</option>
-          {bankAccounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name}
-              {account.bankName ? ` · ${account.bankName}` : ''}
-            </option>
-          ))}
-        </Select>
-        <CategorySelect
-          label="Categoria"
-          name="contribCategory"
-          required
-          disabled
-          value={categoryId}
-          onChange={setCategoryId}
-          options={lifeAccounts}
-          tree={lookups.categories}
-        />
-        <div className={styles.formWide}>
-          <ErrorText message={contribute.error} />
-        </div>
-        <div className={styles.formActions}>
-          <Button type="submit" disabled={contribute.busy}>
-            Registrar aporte
           </Button>
         </div>
       </form>

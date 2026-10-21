@@ -15,7 +15,7 @@ export type SpokenEntry = {
 }
 
 const QUESTIONS: Record<EntrySlot, string> = {
-  type: 'É despesa, receita ou aporte?',
+  type: 'É despesa ou receita?',
   amount: 'Qual é o valor?',
   date: 'Qual é a data?',
   description: 'A que se refere?',
@@ -25,7 +25,7 @@ const QUESTIONS: Record<EntrySlot, string> = {
 }
 
 const MISSING_LABEL: Record<EntrySlot, string> = {
-  type: 'se é despesa, receita ou aporte',
+  type: 'se é despesa ou receita',
   amount: 'o valor',
   date: 'a data',
   description: 'a descrição',
@@ -170,9 +170,7 @@ export function parseUtterance(text: string): Partial<SpokenEntry> {
   if (folded.includes('orcamento') && !folded.includes('como esta')) {
     parsed.kind = 'budget'
   }
-  if (/\baporte\b|\baportar\b|\baportando\b/.test(folded)) {
-    parsed.type = 'ProjectContribution'
-  } else if (/\breceita\b|\brenda\b|\ba receber\b/.test(folded)) {
+  if (/\baporte\b|\baportar\b|\baportando\b/.test(folded) || /\breceita\b|\brenda\b|\ba receber\b/.test(folded)) {
     parsed.type = 'Income'
   } else if (/\bdespesa\b|\ba pagar\b|\bpaguei\b|\bpaga\b|\bconta de\b/.test(folded)) {
     parsed.type = 'Expense'
@@ -222,9 +220,7 @@ export function parseUtterance(text: string): Partial<SpokenEntry> {
 function putSlot(entry: SpokenEntry, slot: EntrySlot, text: string): void {
   const folded = fold(text)
   if (slot === 'type') {
-    if (/\baporte\b|\baportar\b/.test(folded)) {
-      entry.type = 'ProjectContribution'
-    } else if (/\breceita\b|\brenda\b|\ba receber\b/.test(folded)) {
+    if (/\baporte\b|\baportar\b/.test(folded) || /\breceita\b|\brenda\b|\ba receber\b/.test(folded)) {
       entry.type = 'Income'
     } else if (/\bdespesa\b|\ba pagar\b|\bpagar\b/.test(folded)) {
       entry.type = 'Expense'
