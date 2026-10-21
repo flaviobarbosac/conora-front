@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { aiApi, type VoiceTurn } from '../api/finance'
-import { errorMessage, currentCompetence } from '../lib/format'
+import { aiApi, familyApi, type VoiceTurn } from '../api/finance'
+import { errorMessage, currentCompetence, dateToApi, formatDate, formatMoney } from '../lib/format'
 import { IAN_VOICES, getIanVoice, setIanVoice, speakPt, stopSpeaking, type IanVoiceId } from '../lib/speakPt'
-import { commitVoiceEntry, fillAporteCategory, prefetchVoiceCatalog, unknownCategoryMessage, unknownProjectMessage } from '../lib/voiceEntry'
+import { commitVoiceEntry, fillAporteCategory, prefetchVoiceCatalog, resolveSpokenDate, unknownCategoryMessage, unknownProjectMessage } from '../lib/voiceEntry'
 import {
   absorb,
   emptyBudget,
@@ -37,6 +37,18 @@ function foldPhrase(text: string): string {
 function isYesPhrase(text: string): boolean {
   const spoken = foldPhrase(text)
   return ['sim', 'confirma', 'confirmo', 'confirmado', 'pode', 'isso', 'ok', 'ta', 'certo', 'pode ser', 'sim confirma', 'sim pode'].includes(spoken)
+}
+
+function isApprovePhrase(text: string): boolean {
+  const spoken = foldPhrase(text)
+  return isYesPhrase(text) || spoken === 'aprovo' || spoken === 'aprovado' || spoken === 'pode lancar' || spoken === 'pode gravar'
+}
+
+function reviewSpeech(entry: SpokenEntry): string {
+  const kind = entry.type === 'Income' ? 'receita' : 'despesa'
+  const when = formatDate(dateToApi(resolveSpokenDate(entry.date)))
+  const value = entry.amount == null ? '' : formatMoney(entry.amount)
+  return `O que você me pediu para lançar é isto: ${kind}, ${value}, ${entry.description}, categoria ${entry.categoryName}, conta ${entry.accountName}, data ${when}. Você aprova o lançamento?`
 }
 
 function isNoPhrase(text: string): boolean {
@@ -117,6 +129,9 @@ export function IanFloatingChat() {
   const sessionRef = useRef<VoiceSessionHandle | null>(null)
   const stopVisualizer = useRef<(() => void) | null>(null)
   const pendingRef = useRef<SpokenEntry | null>(null)
+  const reviewRef = useRef<SpokenEntry | null>(null)
+  const confirmRef = useRef(true)
+  const [review, setReview] = useState<SpokenEntry | null>(null)
   const followUpRef = useRef(false)
   const idleTimer = useRef<number | null>(null)
   const idleAsked = useRef(false)
@@ -135,6 +150,11 @@ export function IanFloatingChat() {
     void aiApi.voiceUser()
       .then((user) => {
         spokenNameRef.current = user.firstName?.trim() || ''
+      })
+      .catch(() => undefined)
+    void familyApi.profile()
+      .then((profile) => {
+        confirmRef.current = profile.voiceEntryConfirm !== false
       })
       .catch(() => undefined)
   }, [])
@@ -225,7 +245,7 @@ export function IanFloatingChat() {
   }
 
   async function onIdle() {
-    if (!activeRef.current || !micOnRef.current) {
+    if (!activeRef.current || !micOnRef.current || reviewRef.current) {
       return
     }
     if (idleAsked.current) {
@@ -272,6 +292,8 @@ export function IanFloatingChat() {
     setChoosing(false)
     clearCategoryPick()
     pendingRef.current = null
+    reviewRef.current = null
+    setReview(null)
     followUpRef.current = false
     idleAsked.current = false
     clearIdle()
@@ -411,9 +433,39 @@ export function IanFloatingChat() {
     })
   }
 
+  async function setVoiceConfirm(enabled: boolean) {
+    const profile = await familyApi.profile()
+    await familyApi.updatePreferences({
+      themeId: profile.themeId,
+      quietMode: profile.quietMode,
+      emailsEnabled: profile.emailsEnabled,
+      reserveTargetMonths: profile.reserveTargetMonths,
+      monthCloseDay: profile.monthCloseDay,
+      includeAbsoluteValuesInRetrospective: profile.includeAbsoluteValuesInRetrospective,
+      voiceEntryConfirm: enabled,
+    })
+    confirmRef.current = enabled
+    await say(enabled
+      ? 'Confirmação do lançamento por voz ligada.'
+      : 'Confirmação do lançamento por voz desligada. O lançamento entra direto.')
+  }
+
+  async function approveReview() {
+    const entry = reviewRef.current
+    if (!entry) {
+      return
+    }
+    reviewRef.current = null
+    setReview(null)
+    await commitPending(entry)
+  }
+
   async function finishEntry(entry: SpokenEntry) {
+    if (entry.type === 'ProjectContribution') {
+      entry.type = 'Income'
+    }
     await fillAporteCategory(entry)
-    if (entry.type === 'ProjectContribution' && entry.projectName) {
+    if (entry.projectName && !entry.categoryName) {
       const project = await unknownProjectMessage(entry.projectName)
       if (project) {
         entry.projectName = null
@@ -457,6 +509,12 @@ export function IanFloatingChat() {
     entry.asked = null
     pendingRef.current = entry
     reveal(entry)
+    if (confirmRef.current) {
+      reviewRef.current = entry
+      setReview({ ...entry })
+      await say(reviewSpeech(entry))
+      return
+    }
     await commitPending(entry)
   }
 
@@ -480,11 +538,7 @@ export function IanFloatingChat() {
     if (result.status === 'saved') {
     clearVoiceFill()
       window.dispatchEvent(new CustomEvent('conora:voice-saved', { detail: { id: result.id } }))
-      if (entry.type === 'ProjectContribution') {
-        await offerMore('Aporte registrado.', 'Deseja mais alguma coisa?')
-      } else {
-        await offerMore('Gravei.')
-      }
+      await offerMore('Gravei.')
       return
     }
     if (result.status === 'needs-form') {
@@ -510,6 +564,39 @@ export function IanFloatingChat() {
     setModStatusRef.current('Lendo dados')
     const prior = historyRef.current.slice()
     remember('user', spoken)
+    const folded = foldPhrase(spoken)
+
+    if (/\b(desabilitar|desligar|desativar)\b/.test(folded) && /\bconfirmac/.test(folded)) {
+      await setVoiceConfirm(false)
+      return
+    }
+    if (/\b(habilitar|ligar|ativar)\b/.test(folded) && /\bconfirmac/.test(folded)) {
+      await setVoiceConfirm(true)
+      return
+    }
+    if (reviewRef.current) {
+      if (isCancelPhrase(spoken)) {
+        reviewRef.current = null
+        setReview(null)
+        dropEntry()
+        await say('Lançamento cancelado.')
+        stopSession()
+        return
+      }
+      if (/^corrig/.test(folded)) {
+        await say('Pode corrigir.')
+        return
+      }
+      if (isApprovePhrase(spoken)) {
+        await approveReview()
+        return
+      }
+      const next = absorb(reviewRef.current, spoken)
+      reviewRef.current = null
+      setReview(null)
+      await finishEntry(next)
+      return
+    }
 
     if (followUpRef.current) {
       followUpRef.current = false
@@ -727,6 +814,28 @@ export function IanFloatingChat() {
               </button>
             ))}
           </div>
+        </div>,
+        document.body,
+      )
+      : null}
+    {review
+      ? createPortal(
+        <div className={styles.categoryPop} style={{ left: '50%', top: '42%' }} role="dialog" aria-label="Confirmar lançamento">
+          <p className={styles.categoryPopTitle}>Confirmar lançamento</p>
+          <div className={styles.categoryPopList}>
+            <p className={styles.categoryPopItem}>{review.type === 'Income' ? 'Receita' : 'Despesa'}</p>
+            <p className={styles.categoryPopItem}>{review.amount == null ? '' : formatMoney(review.amount)}</p>
+            <p className={styles.categoryPopItem}>{review.description}</p>
+            <p className={styles.categoryPopItem}>{review.categoryName}</p>
+            <p className={styles.categoryPopItem}>{review.accountName}</p>
+            <p className={styles.categoryPopItem}>{formatDate(dateToApi(resolveSpokenDate(review.date)))}</p>
+          </div>
+          <button type="button" className={styles.categoryPopOn} onClick={() => void approveReview()}>
+            Aprovar
+          </button>
+          <button type="button" className={styles.categoryPopItem} onClick={() => void say('Pode corrigir.')}>
+            Corrigir
+          </button>
         </div>,
         document.body,
       )

@@ -30,6 +30,7 @@ function fromProfile(
   reserveTargetMonths: number,
   monthCloseDay: number,
   includeAbsoluteValuesInRetrospective: boolean,
+  voiceEntryConfirm: boolean,
 ): PrefDraft {
   return {
     quietMode,
@@ -37,6 +38,7 @@ function fromProfile(
     reserveTargetMonths,
     monthCloseDay,
     includeAbsoluteValuesInRetrospective,
+    voiceEntryConfirm,
   }
 }
 
@@ -61,6 +63,7 @@ export function SettingsPage() {
       profile.data.reserveTargetMonths,
       profile.data.monthCloseDay,
       profile.data.includeAbsoluteValuesInRetrospective,
+      profile.data.voiceEntryConfirm !== false,
     )
     setDraft(next)
     setSaved(next)
@@ -87,6 +90,7 @@ export function SettingsPage() {
         reserveTargetMonths: draft.reserveTargetMonths,
         monthCloseDay: draft.monthCloseDay,
         includeAbsoluteValuesInRetrospective: draft.includeAbsoluteValuesInRetrospective,
+        voiceEntryConfirm: draft.voiceEntryConfirm,
       }),
     )
     if (!ok) return
@@ -193,6 +197,19 @@ export function SettingsPage() {
             >
               <option value="off">Não — só percentuais e marcos</option>
               <option value="on">Sim — mostrar valores</option>
+            </Select>
+          </section>
+
+          <section className={styles.section} id="voz">
+            <h2 className={styles.sectionTitle}>Voz</h2>
+            <Select
+              label="Confirmar lançamento por voz"
+              name="voiceEntryConfirm"
+              value={draft.voiceEntryConfirm ? 'on' : 'off'}
+              onChange={(event) => patch({ voiceEntryConfirm: event.target.value === 'on' })}
+            >
+              <option value="on">Ligado — o Ian mostra o lançamento e espera a aprovação</option>
+              <option value="off">Desligado — o lançamento entra direto</option>
             </Select>
           </section>
 
