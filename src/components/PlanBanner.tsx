@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { formatDate } from '../lib/format'
-import { isAndroidApp } from '../lib/platform'
+import { isNativeApp } from '../lib/platform'
 import { usePlanAccess } from '../hooks/usePlanAccess'
 import styles from './PlanBanner.module.css'
 
@@ -11,7 +11,7 @@ const TRIAL_WARNING_DAYS = 15
 export function PlanBanner() {
   const { plan } = usePlanAccess()
   const { pathname } = useLocation()
-  const hideCheckout = isAndroidApp()
+  const hideCheckout = isNativeApp()
   if (!plan || pathname === '/plano') {
     return null
   }
