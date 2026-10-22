@@ -703,6 +703,13 @@ export type FamilyProfile = {
   monthCloseDay: number
   includeAbsoluteValuesInRetrospective: boolean
   voiceEntryConfirm: boolean
+  hasAppleLogin?: boolean
+}
+
+export type DeleteAccountInput = {
+  appleAuthorizationCode?: string
+  appleClient?: 'ios' | 'web'
+  appleRedirectUri?: string
 }
 
 export type UserPreferencesInput = {
@@ -1019,7 +1026,7 @@ export const monthsApi = {
 
 export const lgpdApi = {
   exportData: () => apiFetch<unknown>('/me/data'),
-  deleteAccount: () => apiFetch<void>('/me/delete', json('POST')),
+  deleteAccount: (body?: DeleteAccountInput) => apiFetch<void>('/me/delete', json('POST', body ?? {})),
 }
 
 export type AuditEvent = {

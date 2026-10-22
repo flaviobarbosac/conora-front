@@ -4,8 +4,10 @@ import {
   familyApi,
   lgpdApi,
   planApi,
+  type DeleteAccountInput,
   type UserPreferencesInput,
 } from '../api/finance'
+import { appleSignInAvailable, requestAppleRevocationGrant } from '../auth/apple'
 import { useAuth } from '../auth/AuthProvider'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -112,8 +114,20 @@ export function SettingsPage() {
       'Excluir sua conta remove o acesso ao app. Registros com obrigação fiscal podem ser retidos por até 5 anos. Continuar?',
       { title: 'Excluir conta' },
     )
-    if (confirmed && (await privacy.run(() => lgpdApi.deleteAccount()))) {
+    if (!confirmed) return
+    const body = await appleRevocationBody()
+    if (await privacy.run(() => lgpdApi.deleteAccount(body))) {
       await logout()
+    }
+  }
+
+  // Accounts linked to Apple confirm with Apple once more so the backend can revoke the grant.
+  async function appleRevocationBody(): Promise<DeleteAccountInput | undefined> {
+    if (!profile.data?.hasAppleLogin || !appleSignInAvailable()) return undefined
+    try {
+      return await requestAppleRevocationGrant()
+    } catch {
+      return undefined
     }
   }
 

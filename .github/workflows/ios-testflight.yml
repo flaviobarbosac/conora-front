@@ -1,0 +1,173 @@
+name: iOS TestFlight
+
+# Publication only. Does not run on push to main or develop.
+on:
+  workflow_dispatch:
+    inputs:
+      submit_for_review:
+        description: Submit the build for App Store review
+        required: false
+        type: boolean
+        default: true
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: conora-ios-testflight
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  testflight:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Marketing version stays on package.json unless this run is a v* tag.
+      # Build number uses the same formula as Android (year * 100000 + minor * 1000 + patch)
+      # plus the workflow run number, so every publication is a new build.
+      # package.json is not rewritten and the bump is not committed.
+      - name: Set version for this publication
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            MARKETING_VERSION="${GITHUB_REF_NAME#v}"
+          else
+            MARKETING_VERSION="$(node -p "require('./package.json').version")"
+          fi
+          IFS='.' read -r YEAR MINOR PATCH <<< "$MARKETING_VERSION"
+          BASE=$((YEAR * 100000 + MINOR * 1000 + PATCH))
+          BUILD_NUMBER=$((BASE + GITHUB_RUN_NUMBER))
+          echo "MARKETING_VERSION=$MARKETING_VERSION" >> "$GITHUB_ENV"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          echo "Conora ${MARKETING_VERSION} (${BUILD_NUMBER})"
+
+      - name: Build web assets
+        env:
+          VITE_API_URL: https://api.conora.com.br
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_GOOGLE_IOS_CLIENT_ID: ${{ secrets.VITE_GOOGLE_IOS_CLIENT_ID }}
+          VITE_APPLE_CLIENT_ID: br.com.conora.app
+          VITE_APPLE_SERVICES_ID: br.com.conora.web
+        run: |
+          npx tsc -b
+          npx vite build --mode ios
+          node scripts/sync-ios-google-auth.mjs
+          npx cap sync ios
+
+      - name: Apply version to the share extension
+        run: |
+          PLIST="mobile/ios/ShareExtension/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $MARKETING_VERSION" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$PLIST"
+
+      - name: Install certificate and provisioning profile
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+          IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+        run: |
+          # distribution.p12 has an empty password. IOS_CERTIFICATE_PASSWORD may be unset.
+          if [ -z "$IOS_CERTIFICATE_BASE64" ] || [ -z "$IOS_PROVISION_PROFILE_BASE64" ] || [ -z "$IOS_KEYCHAIN_PASSWORD" ]; then
+            echo "Missing iOS signing secrets."
+            exit 1
+          fi
+          CERT_PATH="$RUNNER_TEMP/build_certificate.p12"
+          PP_PATH="$RUNNER_TEMP/profile.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          echo -n "$IOS_CERTIFICATE_BASE64" | base64 --decode -o "$CERT_PATH"
+          echo -n "$IOS_PROVISION_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
+          security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$IOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$IOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security cms -D -i "$PP_PATH" -o "$RUNNER_TEMP/profile.plist"
+          UUID="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$RUNNER_TEMP/profile.plist")"
+          PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$RUNNER_TEMP/profile.plist")"
+          TEAM_ID="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$RUNNER_TEMP/profile.plist")"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision"
+          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+          echo "TEAM_ID=$TEAM_ID" >> "$GITHUB_ENV"
+
+      - name: Archive and export IPA
+        working-directory: mobile/ios/App
+        run: |
+          SCHEME_DIR="App.xcodeproj/xcshareddata/xcschemes"
+          mkdir -p "$SCHEME_DIR"
+          if [ ! -f "$SCHEME_DIR/App.xcscheme" ]; then
+            python3 -c 'open("App.xcodeproj/xcshareddata/xcschemes/App.xcscheme","w").write("""<?xml version="1.0" encoding="UTF-8"?>
+          <Scheme LastUpgradeVersion="1500" version="1.7">
+            <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES">
+              <BuildActionEntries>
+                <BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">
+                  <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="504EC3031FED79650016851F" BuildableName="App.app" BlueprintName="App" ReferencedContainer="container:App.xcodeproj"/>
+                </BuildActionEntry>
+              </BuildActionEntries>
+            </BuildAction>
+            <ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/>
+          </Scheme>
+          """)'
+          fi
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/Conora.xcarchive" \
+            MARKETING_VERSION="$MARKETING_VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            archive
+          python3 -c 'open("'"$RUNNER_TEMP"'/ExportOptions.plist","w").write("""<?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>'"$TEAM_ID"'</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict><key>br.com.conora.app</key><string>'"$PROFILE_NAME"'</string></dict>
+          </dict></plist>
+          """)'
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Conora.xcarchive" \
+            -exportPath "$RUNNER_TEMP/ipa" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Upload to TestFlight
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          mkdir -p "$HOME/.private_keys"
+          echo -n "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode -o "$HOME/.private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          IPA="$(find "$RUNNER_TEMP/ipa" -name '*.ipa' | head -n 1)"
+          xcrun altool --upload-app --type ios --file "$IPA" \
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+          echo "APP_STORE_CONNECT_API_KEY_PATH=$HOME/.private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8" >> "$GITHUB_ENV"
+
+      # API key role must be App Manager or Admin. No Apple ID password is used.
+      - name: Submit for App Store review
+        if: github.event_name == 'push' || inputs.submit_for_review
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          MARKETING_VERSION: ${{ env.MARKETING_VERSION }}
+          BUILD_NUMBER: ${{ env.BUILD_NUMBER }}
+        run: node scripts/submit-app-store-review.mjs

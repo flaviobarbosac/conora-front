@@ -16,7 +16,7 @@ import {
   tierOfKind,
   TRIAL_DAYS,
 } from '../lib/planAccess'
-import { isAndroidApp } from '../lib/platform'
+import { isNativeApp } from '../lib/platform'
 import { showSaveToast } from '../lib/saveToast'
 import styles from './PlanPage.module.css'
 
@@ -72,8 +72,8 @@ export function PlanPage() {
   const subscribe = useAction()
   const exporter = useAction()
   const data = plan.data
-  // Digital plans are sold outside the store. Android must not show prices or a subscribe action.
-  const hideCheckout = isAndroidApp()
+  // Digital plans are sold outside the store. Native apps (Android and iOS) must not show prices or a subscribe action.
+  const hideCheckout = isNativeApp()
   const [cycleChoice, setYearly] = useState<boolean | null>(null)
   // Default to yearly (best value); subscribers start on their current cycle.
   const yearly = cycleChoice ?? (data?.phase === 'Subscribed' && data.plan ? data.yearly : true)

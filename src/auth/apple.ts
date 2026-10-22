@@ -144,6 +144,48 @@ async function authorizeViaNativeIos(): Promise<AppleSignInResult> {
   }
 }
 
+export type AppleRevocationGrant = {
+  appleAuthorizationCode: string
+  appleClient: 'ios' | 'web'
+  appleRedirectUri?: string
+}
+
+/**
+ * Asks Apple for a fresh authorization code so the backend can revoke the
+ * Sign in with Apple grant when the account is deleted (App Store guideline 5.1.1(v)).
+ */
+export async function requestAppleRevocationGrant(): Promise<AppleRevocationGrant> {
+  if (!appleSignInAvailable()) {
+    throw new Error('Entrar com Apple ainda não está configurado neste ambiente.')
+  }
+
+  if (isIosApp()) {
+    const result = await SignInWithApple.authorize({
+      clientId: bundleId()!,
+      redirectURI: appleRedirectUri(),
+      scopes: '',
+    })
+    const code = result.response.authorizationCode
+    if (!code) {
+      throw new Error('Código Apple ausente.')
+    }
+    return { appleAuthorizationCode: code, appleClient: 'ios' }
+  }
+
+  await loadAppleJs()
+  if (!window.AppleID?.auth) {
+    throw new Error('Apple Sign In indisponível neste navegador.')
+  }
+  const redirectURI = appleRedirectUri()
+  window.AppleID.auth.init({ clientId: servicesId(), redirectURI, scope: '', usePopup: true })
+  const result = await window.AppleID.auth.signIn()
+  const code = result.authorization?.code
+  if (!code) {
+    throw new Error('Código Apple ausente.')
+  }
+  return { appleAuthorizationCode: code, appleClient: 'web', appleRedirectUri: redirectURI }
+}
+
 export async function requestAppleIdentityToken(): Promise<AppleSignInResult> {
   if (!appleSignInAvailable()) {
     throw new Error('Entrar com Apple ainda não está configurado neste ambiente.')
