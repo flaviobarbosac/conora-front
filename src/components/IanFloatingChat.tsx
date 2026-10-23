@@ -3,7 +3,16 @@ import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { aiApi, familyApi, type VoiceTurn } from '../api/finance'
 import { errorMessage, currentCompetence, dateToApi, formatDate, formatMoney } from '../lib/format'
-import { IAN_VOICES, getIanVoice, setIanVoice, speakPt, stopSpeaking, type IanVoiceId } from '../lib/speakPt'
+import {
+  IAN_MATURITY_CHANGED,
+  IAN_VOICES,
+  getIanVoice,
+  ianPortrait,
+  setIanVoice,
+  speakPt,
+  stopSpeaking,
+  type IanVoiceId,
+} from '../lib/speakPt'
 import { commitVoiceEntry, fillAporteCategory, prefetchVoiceCatalog, resolveSpokenDate, unknownCategoryMessage, unknownProjectMessage } from '../lib/voiceEntry'
 import {
   absorb,
@@ -104,11 +113,6 @@ function matchCategoryOption(spoken: string, names: string[]): string | null {
   return partial.length === 1 ? partial[0] : null
 }
 
-function faceSrc(id: IanVoiceId): string {
-  const file = id === 'clara' ? 'ian-menina.jpg' : 'ian-garoto.jpg'
-  return `${import.meta.env.BASE_URL}assets/${file}`
-}
-
 export function IanFloatingChat() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -116,6 +120,7 @@ export function IanFloatingChat() {
   const [active, setActive] = useState(false)
   const [choosing, setChoosing] = useState(false)
   const [voiceId, setVoiceId] = useState<IanVoiceId>(() => getIanVoice().id)
+  const [, setMaturityTick] = useState(0)
   const [modStatus, setModStatus] = useState<'Lendo dados' | 'registrando' | 'aguarde' | null>(null)
   const [categoryOptions, setCategoryOptions] = useState<string[]>([])
   const [categoryChoice, setCategoryChoice] = useState<string | null>(null)
@@ -157,6 +162,12 @@ export function IanFloatingChat() {
         confirmRef.current = profile.voiceEntryConfirm !== false
       })
       .catch(() => undefined)
+  }, [])
+
+  useEffect(() => {
+    const refresh = () => setMaturityTick((tick) => tick + 1)
+    window.addEventListener(IAN_MATURITY_CHANGED, refresh)
+    return () => window.removeEventListener(IAN_MATURITY_CHANGED, refresh)
   }, [])
 
   function withName(text: string): string {
@@ -755,7 +766,7 @@ export function IanFloatingChat() {
             aria-pressed={voiceId === 'ian'}
             onClick={() => selectVoice('ian')}
           >
-            <img className={styles.agentFace} src={faceSrc('ian')} alt="" />
+            <img className={styles.agentFace} src={ianPortrait('ian')} alt="" />
           </button>
           <button
             type="button"
@@ -764,7 +775,7 @@ export function IanFloatingChat() {
             aria-pressed={voiceId === 'clara'}
             onClick={() => selectVoice('clara')}
           >
-            <img className={styles.agentFace} src={faceSrc('clara')} alt="" />
+            <img className={styles.agentFace} src={ianPortrait('clara')} alt="" />
           </button>
         </div>
       ) : null}
@@ -780,7 +791,7 @@ export function IanFloatingChat() {
         aria-pressed={active}
         onClick={openListening}
       >
-        <img className={styles.agentFace} src={faceSrc(voiceId)} alt="" />
+        <img className={styles.agentFace} src={ianPortrait(voiceId)} alt="" />
         {active ? (
           <span className={styles.agentMod}>
             {modStatus ? <span className={styles.modStatus}>{modStatus}</span> : null}

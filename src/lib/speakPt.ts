@@ -16,7 +16,60 @@ export const IAN_VOICES: readonly IanVoice[] = [
   { id: 'clara', label: 'Clara', pitch: 1, rate: 1 },
 ]
 
-const FEMALE_HINT = /maria|francisca|luciana|heloisa|leticia|female|feminina|vitoria|vitória/
+/** Portrait ages of the maturity journey, in order. 0 is the baby. */
+export const IAN_AGES = [0, 5, 8, 10, 12, 15, 18, 22, 30] as const
+
+export type IanAge = (typeof IAN_AGES)[number]
+
+/** Voice bands: the voice changes less often than the portrait. */
+export type IanVoiceBand = 'child' | 'preteen' | 'teen' | 'adult'
+
+export const IAN_MATURITY_CHANGED = 'conora.ianMaturity'
+
+const BAND_PITCH: Record<IanVoiceBand, number> = { child: 1.5, preteen: 1.3, teen: 1.12, adult: 1 }
+
+let maturityAge: IanAge | null = null
+
+export function voiceBandForAge(age: IanAge | null): IanVoiceBand {
+  if (age === null) {
+    return 'adult'
+  }
+  if (age <= 5) {
+    return 'child'
+  }
+  if (age <= 12) {
+    return 'preteen'
+  }
+  return age <= 18 ? 'teen' : 'adult'
+}
+
+/**
+ * Sets the age shown by the portrait and heard in the voice.
+ * Null (journey unknown) or quiet mode keeps the adult voice and the default portrait,
+ * so quiet mode never reveals the age through the voice.
+ */
+export function setIanMaturity(age: IanAge | null, quiet = false): void {
+  const next = quiet ? null : age
+  if (next === maturityAge) {
+    return
+  }
+  maturityAge = next
+  window.dispatchEvent(new Event(IAN_MATURITY_CHANGED))
+}
+
+export function getIanAge(): IanAge | null {
+  return maturityAge
+}
+
+/** Portrait for the current maturity. Age 15 and the unknown age use the original portraits. */
+export function ianPortrait(id: IanVoiceId): string {
+  const base = id === 'clara' ? 'ian-menina' : 'ian-garoto'
+  const file =
+    maturityAge === null || maturityAge === 15 ? `${base}.jpg` : `${base}-${String(maturityAge).padStart(2, '0')}.png`
+  return `${import.meta.env.BASE_URL}assets/${file}`
+}
+
+const FEMALE_HINT =/maria|francisca|luciana|heloisa|leticia|female|feminina|vitoria|vitória/
 const MALE_HINT = /daniel|antonio|antônio|male|masculin|david|mark|guy|james/
 
 export function getIanVoice(): IanVoice {
@@ -109,7 +162,8 @@ function playClip(blob: Blob): Promise<void> {
 }
 
 async function speakHuman(text: string, voiceId: IanVoiceId, signal: AbortSignal): Promise<boolean> {
-  const blob = await apiPostBlob('/ai/speak', { text, voice: voiceId }, signal)
+  const band = voiceBandForAge(maturityAge)
+  const blob = await apiPostBlob('/ai/speak', { text, voice: voiceId, band }, signal)
   if (signal.aborted || !blob || blob.size < 64) {
     return false
   }
@@ -143,7 +197,7 @@ function speakBrowser(text: string, voiceId: IanVoiceId, gen: number): Promise<v
           utter.voice = voice
         }
         const natural = Boolean(voice && /natural|neural|online/i.test(voice.name))
-        utter.pitch = 1
+        utter.pitch = BAND_PITCH[voiceBandForAge(maturityAge)]
         utter.rate = natural ? 0.98 : 0.88
         utter.onend = () => resolve()
         utter.onerror = () => resolve()
