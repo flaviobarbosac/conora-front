@@ -454,6 +454,8 @@ export function IanFloatingChat() {
       monthCloseDay: profile.monthCloseDay,
       includeAbsoluteValuesInRetrospective: profile.includeAbsoluteValuesInRetrospective,
       voiceEntryConfirm: enabled,
+      budgetAlertPercent: profile.budgetAlertPercent ?? 70,
+      photoEvolutionEnabled: profile.photoEvolutionEnabled !== false,
     })
     confirmRef.current = enabled
     await say(enabled

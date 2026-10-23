@@ -37,11 +37,11 @@ describe('setIanMaturity', () => {
     expect(ianPortrait('clara')).toMatch(/assets\/ian-menina-05\.png$/)
   })
 
-  it('uses the baby portrait for age 0 and the original one for 15', () => {
+  it('uses the baby portrait for age 0 and the fifteen portrait for 15', () => {
     setIanMaturity(0)
     expect(ianPortrait('ian')).toMatch(/ian-garoto-00\.png$/)
     setIanMaturity(15)
-    expect(ianPortrait('clara')).toMatch(/ian-menina\.jpg$/)
+    expect(ianPortrait('clara')).toMatch(/ian-menina-15\.png$/)
   })
 
   it('hides the age in quiet mode', () => {

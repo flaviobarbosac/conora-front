@@ -63,7 +63,7 @@ export function RegisterPage() {
       subtitle={
         emailLocked
           ? `Convite para ${invitedEmail}. Complete o cadastro com este e-mail.`
-          : 'Cadastre a família com nome, CPF, e-mail e senha. Depois você já entra no painel.'
+          : 'Cadastre com nome, CPF, e-mail e senha. Enviamos um e-mail de validação; o acesso abre depois do clique no link.'
       }
       footer={
         <>

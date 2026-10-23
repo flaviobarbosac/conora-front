@@ -33,6 +33,8 @@ import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { VerifyEmailPage } from './pages/VerifyEmailPage'
+import { WelcomePage } from './pages/WelcomePage'
 import { RetrospectivePage } from './pages/RetrospectivePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ShareTargetPage } from './pages/ShareTargetPage'
@@ -130,6 +132,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/recuperar-senha" element={<ForgotPasswordPage />} />
         <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
+        <Route path="/validar-email" element={<VerifyEmailPage />} />
+        <Route path="/bem-vindo" element={<WelcomePage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/apresentacao" element={<ApresentacaoPage />} />
         <Route path="/apresentacao/:variante" element={<ApresentacaoVariantesPage />} />

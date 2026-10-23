@@ -285,4 +285,10 @@ export const authApi = {
       auth: false,
       body: { token, password },
     }),
+  verifyEmail: (token: string) =>
+    apiFetch<AuthResponse>('/auth/verify-email', {
+      method: 'POST',
+      auth: false,
+      body: { token },
+    }),
 }

@@ -61,12 +61,60 @@ export function getIanAge(): IanAge | null {
   return maturityAge
 }
 
-/** Portrait for the current maturity. Age 15 and the unknown age use the original portraits. */
+/** Portrait for the current maturity. Unknown age uses the original jpg; every milestone age has its own png. */
 export function ianPortrait(id: IanVoiceId): string {
   const base = id === 'clara' ? 'ian-menina' : 'ian-garoto'
   const file =
-    maturityAge === null || maturityAge === 15 ? `${base}.jpg` : `${base}-${String(maturityAge).padStart(2, '0')}.png`
+    maturityAge === null ? `${base}.jpg` : `${base}-${String(maturityAge).padStart(2, '0')}.png`
   return `${import.meta.env.BASE_URL}assets/${file}`
+}
+
+/**
+ * Applies the settings toggle and the milestone age to portrait and voice.
+ * Evolution off always pins age 30 (adult voice). Quiet mode still hides age.
+ */
+export function applyIanMaturity(age: IanAge | null, options?: { quiet?: boolean; photoEvolutionEnabled?: boolean }): void {
+  const evolutionOn = options?.photoEvolutionEnabled !== false
+  const quiet = options?.quiet === true
+  if (quiet) {
+    setIanMaturity(null, true)
+    return
+  }
+  if (!evolutionOn) {
+    setIanMaturity(30)
+    return
+  }
+  setIanMaturity(age)
+}
+
+/** Highest earned milestone age in order (no skip). Baby (0) when none earned yet. */
+export function maturityAgeFromAchievements(
+  items: ReadonlyArray<{ key: string; earned: boolean }>,
+): IanAge {
+  const earned = new Set(items.filter((item) => item.earned).map((item) => item.key))
+  const order: ReadonlyArray<{ key: string; age: IanAge }> = [
+    { key: 'budget-half-filled', age: 8 },
+    { key: 'first-budget', age: 8 },
+    { key: 'first-month-closed', age: 10 },
+    { key: 'three-months-in-budget', age: 12 },
+    { key: 'payment-on-time', age: 15 },
+    { key: 'budget-on-time', age: 15 },
+    { key: 'reserve-started', age: 18 },
+    { key: 'has-reserve', age: 18 },
+    { key: 'reserve-complete', age: 22 },
+    { key: 'project-progress', age: 30 },
+  ]
+  const ages = [8, 10, 12, 15, 18, 22, 30] as const
+  const hasAge = (age: number) =>
+    order.some((item) => item.age === age && earned.has(item.key))
+  let current: IanAge = 0
+  for (const age of ages) {
+    if (!hasAge(age)) {
+      break
+    }
+    current = age
+  }
+  return current
 }
 
 const FEMALE_HINT =/maria|francisca|luciana|heloisa|leticia|female|feminina|vitoria|vitória/
@@ -161,9 +209,18 @@ function playClip(blob: Blob): Promise<void> {
   })
 }
 
+/** At age 30 the spoken line stays short and drops tutorial padding. */
+function speakTextForMaturity(text: string): string {
+  if (maturityAge !== 30) {
+    return text
+  }
+  const first = text.split(/(?<=[.!?…])\s+/)[0]?.trim() || text.trim()
+  return first.length > 160 ? `${first.slice(0, 157)}…` : first
+}
+
 async function speakHuman(text: string, voiceId: IanVoiceId, signal: AbortSignal): Promise<boolean> {
   const band = voiceBandForAge(maturityAge)
-  const blob = await apiPostBlob('/ai/speak', { text, voice: voiceId, band }, signal)
+  const blob = await apiPostBlob('/ai/speak', { text: speakTextForMaturity(text), voice: voiceId, band }, signal)
   if (signal.aborted || !blob || blob.size < 64) {
     return false
   }

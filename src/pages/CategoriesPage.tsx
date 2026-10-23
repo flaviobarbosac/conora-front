@@ -17,6 +17,7 @@ import { groupAccountsByParent } from '../lib/raioX'
 import styles from './page.module.css'
 
 export function CategoriesPage() {
+  // Management screen keeps inactive rows so the owner can reactivate them.
   const accounts = useLoad(() => categoriesApi.list(undefined, true, false, true), [])
   const group = useLoad(() => familyApi.group(), [])
   const action = useAction()
@@ -95,6 +96,17 @@ export function CategoriesPage() {
     if (await action.run(() => categoriesApi.update(account.id, name, account.isActive))) {
       showSaveToast('Categoria salva.')
       setRenameId(null)
+      accounts.reload()
+    }
+  }
+
+  async function setActive(account: Category, isActive: boolean) {
+    if (
+      await action.run(() =>
+        categoriesApi.update(account.id, account.name, isActive),
+      )
+    ) {
+      showSaveToast(isActive ? 'Categoria reativada.' : 'Categoria desativada.')
       accounts.reload()
     }
   }
@@ -189,6 +201,7 @@ export function CategoriesPage() {
               onCancelRename={() => setRenameId(null)}
               onSaveRename={(item) => void saveRename(item)}
               onRemove={(item) => void removeAccount(item)}
+              onSetActive={(item, active) => void setActive(item, active)}
               onApprove={(item) => void approveAccount(item)}
               onReject={(item) => void rejectAccount(item)}
             />
@@ -222,6 +235,7 @@ function CategoryTreeRow({
   onCancelRename,
   onSaveRename,
   onRemove,
+  onSetActive,
   onApprove,
   onReject,
 }: {
@@ -247,6 +261,7 @@ function CategoryTreeRow({
   onCancelRename: () => void
   onSaveRename: (account: Category) => void
   onRemove: (account: Category) => void
+  onSetActive: (account: Category, isActive: boolean) => void
   onApprove: (account: Category) => void
   onReject: (account: Category) => void
 }) {
@@ -323,7 +338,7 @@ function CategoryTreeRow({
         ) : (
           <strong className={styles.raioxAccountName}>
             {categoryLabel(account)}
-            {!account.isActive ? <span className={styles.rowSub}> · Inativa</span> : null}
+            {!account.isActive ? <span className={styles.rowSub}> · Desativada</span> : null}
             {account.isPendingReview ? (
               <span className={styles.rowSub}>
                 {' '}
@@ -362,6 +377,15 @@ function CategoryTreeRow({
                 Renomear
               </Button>
               {account.isActive ? (
+                <Button variant="ghost" disabled={busy} onClick={() => onSetActive(account, false)}>
+                  Desativar
+                </Button>
+              ) : (
+                <Button variant="ghost" disabled={busy} onClick={() => onSetActive(account, true)}>
+                  Reativar
+                </Button>
+              )}
+              {account.isActive ? (
                 <DeleteIconButton disabled={busy} onClick={() => onRemove(account)} />
               ) : null}
             </>
@@ -394,6 +418,7 @@ function CategoryTreeRow({
               onCancelRename={onCancelRename}
               onSaveRename={onSaveRename}
               onRemove={onRemove}
+              onSetActive={onSetActive}
               onApprove={onApprove}
               onReject={onReject}
             />

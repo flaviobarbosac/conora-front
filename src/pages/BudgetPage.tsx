@@ -6,13 +6,18 @@ import {
   familyApi,
   monthsApi,
   projectsApi,
+  receiptsApi,
   type Budget,
   type BudgetYear,
   type Category,
   type LifeProject,
   type LifeProjectScope,
+  type ReceiptIntake,
   type SharingScope,
 } from '../api/finance'
+import { ReceiptClassifyDialog } from '../components/ReceiptClassifyDialog'
+import { pickReceiptMedia, pollReceipt } from '../lib/receiptFlow'
+import { scanReceipt, fileFromPending } from '../camera/scanReceipt'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { SharingViewToggle } from '../components/SharingViewToggle'
@@ -70,12 +75,77 @@ export function BudgetPage() {
   const budget = useLoad(() => budgetsApi.get(ym, scope), [ym, scope])
   const year = useMemo(() => Number(ym.slice(0, 4)), [ym])
   const yearData = useLoad(() => budgetsApi.getYear(year, scope), [year, scope])
-  const categories = useLoad(() => categoriesApi.list(undefined, true, false), [])
+  const categories = useLoad(() => categoriesApi.list(undefined, false, false), [])
   const projects = useLoad(() => projectsApi.list(), [])
   const monthStatus = useLoad(() => monthsApi.get(ym), [ym])
   const copy = useAction()
   const canEdit = budget.data?.canEdit !== false
   const monthClosed = Boolean(monthStatus.data?.isClosed)
+  const [boletoBusy, setBoletoBusy] = useState(false)
+  const [boletoError, setBoletoError] = useState<string | null>(null)
+  const [boletoIntake, setBoletoIntake] = useState<ReceiptIntake | null>(null)
+  const [boletoClassifyOpen, setBoletoClassifyOpen] = useState(false)
+
+  async function finishBoleto(intake: ReceiptIntake) {
+    if (intake.status === 'Failed') {
+      setBoletoError(intake.failureReason ?? 'Não foi possível ler o boleto.')
+      return
+    }
+    if (intake.status === 'Confirmed') {
+      const competence = intake.budgetCompetenceYm
+      showSaveToast(
+        competence
+          ? `Despesa a pagar no orçamento de ${formatCompetence(competence)}.`
+          : 'Boleto provisionado no orçamento.',
+      )
+      if (competence && competence !== ym) {
+        setYm(competence)
+      } else {
+        budget.reload()
+        yearData.reload()
+      }
+      return
+    }
+    if (intake.needsClassification || intake.status === 'NeedsClassification') {
+      setBoletoIntake(intake)
+      setBoletoClassifyOpen(true)
+      return
+    }
+    if (intake.status === 'Ready') {
+      const result = await receiptsApi.confirmBudget(intake.id)
+      showSaveToast(
+        `Despesa a pagar no orçamento de ${formatCompetence(result.competenceYm)}.` +
+          (result.expenseDay != null ? ` Vencimento dia ${result.expenseDay}.` : ''),
+      )
+      if (result.competenceYm !== ym) {
+        setYm(result.competenceYm)
+      } else {
+        budget.reload()
+        yearData.reload()
+      }
+      return
+    }
+    setBoletoError('Classifique o boleto para gravar no orçamento.')
+  }
+
+  async function runBoletoScan(source: 'camera' | 'file') {
+    if (boletoBusy || !canEdit || monthClosed) return
+    setBoletoBusy(true)
+    setBoletoError(null)
+    try {
+      const file =
+        source === 'camera'
+          ? await fileFromPending(await scanReceipt())
+          : await pickReceiptMedia()
+      const created = await receiptsApi.upload(file, file.name || 'boleto.jpg', 'App', 'BudgetBoleto')
+      const intake = await pollReceipt(created.id)
+      await finishBoleto(intake)
+    } catch (error) {
+      setBoletoError(error instanceof Error ? error.message : 'Falha ao escanear o boleto.')
+    } finally {
+      setBoletoBusy(false)
+    }
+  }
 
   async function changeYm(next: string) {
     if (next === ym) {
@@ -129,6 +199,13 @@ export function BudgetPage() {
             <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
             <Button
               variant="secondary"
+              disabled={boletoBusy || !canEdit}
+              onClick={() => void scanBoleto()}
+            >
+              {boletoBusy ? 'Lendo boleto…' : 'Escanear boleto'}
+            </Button>
+            <Button
+              variant="secondary"
               disabled={copy.busy || !canEdit}
               onClick={() => void copyPrevious()}
             >
@@ -145,7 +222,26 @@ export function BudgetPage() {
         }
       />
       <ErrorText
-        message={budget.error ?? copy.error ?? categories.error ?? yearData.error ?? projects.error ?? monthStatus.error}
+        message={
+          boletoError ??
+          budget.error ??
+          copy.error ??
+          categories.error ??
+          yearData.error ??
+          projects.error ??
+          monthStatus.error
+        }
+      />
+      <ReceiptClassifyDialog
+        open={boletoClassifyOpen}
+        intake={boletoIntake}
+        onClose={() => setBoletoClassifyOpen(false)}
+        onClassified={(intake) => {
+          setBoletoClassifyOpen(false)
+          void finishBoleto(intake).catch((error: unknown) => {
+            setBoletoError(error instanceof Error ? error.message : 'Falha ao gravar o boleto.')
+          })
+        }}
       />
       {data && !canEdit ? (
         <p className={styles.muted}>Somente o responsável pelo orçamento familiar pode editar o previsto.</p>
@@ -669,10 +765,7 @@ function BudgetAccountBlock({
       >
         <span />
         <span className={styles.budgetAccountCell}>
-          <strong className={styles.raioxAccountName}>
-            {categoryLabel(account)}
-            {!account.isActive ? <span className={styles.rowSub}> · Inativa</span> : null}
-          </strong>
+          <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
           {needsProject && canEdit ? (
             <button
               type="button"
@@ -744,10 +837,7 @@ function BudgetAccountBlock({
         <span className={styles.raioxToggle} aria-hidden>
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
-        <strong className={styles.raioxAccountName}>
-          {categoryLabel(account)}
-          {!account.isActive ? <span className={styles.rowSub}> · Inativa</span> : null}
-        </strong>
+        <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
         <BudgetTotalsCell
           edit={
             <span className={styles.budgetPlannedCell}>

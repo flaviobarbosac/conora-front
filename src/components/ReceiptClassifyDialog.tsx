@@ -55,6 +55,8 @@ export function ReceiptClassifyDialog({ open, intake, onClose, onClassified }: P
     )
   }, [categories.data, filter])
 
+  const similar = intake?.similarSuppliers ?? []
+
   if (!open || !intake) return null
 
   async function save() {
@@ -71,6 +73,18 @@ export function ReceiptClassifyDialog({ open, intake, onClose, onClassified }: P
     }
   }
 
+  async function link(supplierId: string) {
+    let updated: ReceiptIntake | null = null
+    const ok = await action.run(async () => {
+      updated = await receiptsApi.linkSupplier(intake!.id, supplierId)
+    })
+    if (ok && updated) {
+      onClassified(updated)
+    }
+  }
+
+  const isBoleto = intake.purpose === 'BudgetBoleto'
+
   return (
     <div className={styles.overlay} role="presentation" onClick={onClose}>
       <div
@@ -82,7 +96,7 @@ export function ReceiptClassifyDialog({ open, intake, onClose, onClassified }: P
       >
         <header className={styles.head}>
           <h2 id={titleId} className={styles.title}>
-            Classificar fornecedor
+            {isBoleto ? 'Classificar boleto' : 'Classificar fornecedor'}
           </h2>
           <button type="button" className={styles.close} aria-label="Fechar" onClick={onClose}>
             ×
@@ -93,6 +107,32 @@ export function ReceiptClassifyDialog({ open, intake, onClose, onClassified }: P
             ? `Fornecedor: ${intake.extractedName}${intake.extractedCnpj ? ` (CNPJ ${intake.extractedCnpj})` : ''}.`
             : 'Escolha a conta do plano. Com CNPJ, a classificação vale para todos os usuários.'}
         </p>
+        {similar.length > 0 ? (
+          <div className={styles.list} aria-label="Fornecedores parecidos">
+            <p className={styles.hint}>Encontramos cadastros parecidos. Vincule em vez de duplicar:</p>
+            <ul className={styles.accountList}>
+              {similar.map((item) => (
+                <li key={item.id}>
+                  <div className={styles.accountRow}>
+                    <span>
+                      {item.name}
+                      {item.cnpj ? ` · ${item.cnpj}` : ''}
+                      {item.matchReason === 'name' ? ' (nome)' : ' (CNPJ)'}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={action.busy}
+                      onClick={() => void link(item.id)}
+                    >
+                      Usar este
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <label className={styles.searchLabel}>
           Buscar conta
           <input

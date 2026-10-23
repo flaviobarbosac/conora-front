@@ -704,6 +704,8 @@ export type FamilyProfile = {
   includeAbsoluteValuesInRetrospective: boolean
   voiceEntryConfirm: boolean
   hasAppleLogin?: boolean
+  budgetAlertPercent?: number
+  photoEvolutionEnabled?: boolean
 }
 
 export type DeleteAccountInput = {
@@ -720,6 +722,8 @@ export type UserPreferencesInput = {
   monthCloseDay: number
   includeAbsoluteValuesInRetrospective: boolean
   voiceEntryConfirm?: boolean
+  budgetAlertPercent?: number
+  photoEvolutionEnabled?: boolean
 }
 
 export type FamilyMemberUser = {
@@ -830,7 +834,8 @@ export type Plan = {
 
 export const planApi = {
   get: () => apiFetch<Plan>('/plan'),
-  subscribe: (plan: PlanKind) => apiFetch<Plan>('/plan/subscribe', json('POST', { plan })),
+  subscribe: (plan: PlanKind, storePurchaseToken?: string) =>
+    apiFetch<Plan>('/plan/subscribe', json('POST', { plan, storePurchaseToken })),
 }
 
 export const feedbackApi = {
@@ -930,10 +935,20 @@ export type ReceiptIntakeStatus =
   | 'Failed'
 
 export type ReceiptChannel = 'App' | 'ShareTarget' | 'WhatsApp'
+export type ReceiptPurpose = 'Expense' | 'BudgetBoleto'
+
+export type SimilarSupplier = {
+  id: string
+  cnpj: string | null
+  name: string
+  defaultCategoryCode: string | null
+  matchReason: string
+}
 
 export type ReceiptIntake = {
   id: string
   channel: ReceiptChannel
+  purpose: ReceiptPurpose
   status: ReceiptIntakeStatus
   extractedCnpj: string | null
   extractedName: string | null
@@ -946,19 +961,38 @@ export type ReceiptIntake = {
   selectedBankAccountId: string | null
   failureReason: string | null
   needsClassification: boolean
+  similarSuppliers: SimilarSupplier[]
+  budgetCompetenceYm: string | null
+}
+
+export type BudgetBoletoConfirm = {
+  intakeId: string
+  competenceYm: string
+  categoryId: string
+  categoryName: string | null
+  plannedAmount: number
+  expenseDay: number | null
 }
 
 export const receiptsApi = {
-  upload: (file: Blob, fileName: string, channel: ReceiptChannel = 'App') => {
+  upload: (
+    file: Blob,
+    fileName: string,
+    channel: ReceiptChannel = 'App',
+    purpose: ReceiptPurpose = 'Expense',
+  ) => {
     const form = new FormData()
     form.append('file', file, fileName)
     form.append('channel', channel)
+    form.append('purpose', purpose)
     return apiFormData<ReceiptIntake>('/receipts', form)
   },
   get: (id: string) => apiFetch<ReceiptIntake>(`/receipts/${id}`),
   categories: () => apiFetch<Category[]>('/receipts/categories'),
   classify: (id: string, categoryCode: string) =>
     apiFetch<ReceiptIntake>(`/receipts/${id}/classify`, json('POST', { categoryCode })),
+  linkSupplier: (id: string, supplierId: string) =>
+    apiFetch<ReceiptIntake>(`/receipts/${id}/link-supplier`, json('POST', { supplierId })),
   confirm: (
     id: string,
     body: {
@@ -970,6 +1004,15 @@ export const receiptsApi = {
       confirmDuplicate?: boolean
     },
   ) => apiFetch<Entry>(`/receipts/${id}/confirm`, json('POST', body)),
+  confirmBudget: (
+    id: string,
+    body?: {
+      categoryId?: string
+      amount?: number
+      occurredAt?: string
+      description?: string
+    },
+  ) => apiFetch<BudgetBoletoConfirm>(`/receipts/${id}/confirm-budget`, json('POST', body ?? {})),
 }
 
 /* ---------- Imports ---------- */
