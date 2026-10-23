@@ -276,6 +276,9 @@ function CategoryTreeRow({
   const renaming = renameId === account.id
   const expandable = children.length > 0 || canAdd
   const canManage = canEditChart && !account.isSystem && !account.isPendingReview
+  // Active toggle belongs on every analytical leaf (including system catalog accounts).
+  const canToggleActive =
+    canEditChart && account.level === 'Analytical' && !account.isPendingReview
   const canReview =
     isBudgetOwner && account.level === 'Analytical' && Boolean(account.isPendingReview)
   const expanded = open.has(account.id) || drafting || pendingAncestorIds.has(account.id)
@@ -385,18 +388,20 @@ function CategoryTreeRow({
               </Button>
             </>
           ) : null}
+          {canToggleActive && !renaming ? (
+            <label className={styles.categoriesActiveCheck}>
+              <input
+                type="checkbox"
+                name={`active-${account.id}`}
+                checked={account.isActive}
+                disabled={busy}
+                onChange={(event) => onSetActive(account, event.target.checked)}
+              />
+              Ativa
+            </label>
+          ) : null}
           {canManage && !renaming ? (
             <>
-              <label className={styles.categoriesActiveCheck}>
-                <input
-                  type="checkbox"
-                  name={`active-${account.id}`}
-                  checked={account.isActive}
-                  disabled={busy}
-                  onChange={(event) => onSetActive(account, event.target.checked)}
-                />
-                Ativa
-              </label>
               <Button variant="ghost" disabled={busy} onClick={() => onStartRename(account)}>
                 Editar
               </Button>
