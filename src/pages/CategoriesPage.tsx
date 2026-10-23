@@ -36,7 +36,7 @@ export function CategoriesPage() {
   useRegisterDirty(
     'categories-edit',
     (draftParentId !== null && draftName.trim() !== '') ||
-      (renameId !== null && (renameName.trim() !== '' || renameIsActive !== renameSavedActive)),
+      (renameId !== null && renameIsActive !== renameSavedActive),
   )
   const pendingAncestorIds = useMemo(() => {
     const byId = new Map(list.map((account) => [account.id, account]))
@@ -91,11 +91,8 @@ export function CategoriesPage() {
   }
 
   async function saveRename(account: Category) {
-    const name = renameName.trim()
-    if (!name) {
-      return
-    }
-    if (await action.run(() => categoriesApi.update(account.id, name, renameIsActive))) {
+    // Name is read-only in the edit form; only isActive can change.
+    if (await action.run(() => categoriesApi.update(account.id, account.name, renameIsActive))) {
       showSaveToast('Categoria salva.')
       setRenameId(null)
       accounts.reload()
@@ -202,7 +199,6 @@ export function CategoriesPage() {
                 setDraftParentId(null)
                 setDraftName('')
               }}
-              onRenameName={setRenameName}
               onRenameIsActive={setRenameIsActive}
               onCancelRename={() => setRenameId(null)}
               onSaveRename={(item) => void saveRename(item)}
@@ -238,7 +234,6 @@ function CategoryTreeRow({
   onCancelDraft,
   onCreate,
   onStartRename,
-  onRenameName,
   onRenameIsActive,
   onCancelRename,
   onSaveRename,
@@ -266,7 +261,6 @@ function CategoryTreeRow({
   onCancelDraft: () => void
   onCreate: (parentId: string) => void
   onStartRename: (account: Category) => void
-  onRenameName: (value: string) => void
   onRenameIsActive: (value: boolean) => void
   onCancelRename: () => void
   onSaveRename: (account: Category) => void
@@ -330,8 +324,7 @@ function CategoryTreeRow({
               label="Nome"
               name={`rename-${account.id}`}
               value={renameName}
-              autoFocus
-              onChange={(event) => onRenameName(event.target.value)}
+              readOnly
               onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
                 if (event.key === 'Escape') {
                   onCancelRename()
@@ -344,11 +337,12 @@ function CategoryTreeRow({
                 name={`rename-active-${account.id}`}
                 checked={renameIsActive}
                 disabled={busy}
+                autoFocus
                 onChange={(event) => onRenameIsActive(event.target.checked)}
               />
               Ativa / inativa
             </label>
-            <Button type="submit" disabled={busy || !renameName.trim()}>
+            <Button type="submit" disabled={busy || renameIsActive === account.isActive}>
               Salvar
             </Button>
             <Button type="button" variant="ghost" onClick={onCancelRename}>
@@ -436,7 +430,6 @@ function CategoryTreeRow({
               onCancelDraft={onCancelDraft}
               onCreate={onCreate}
               onStartRename={onStartRename}
-              onRenameName={onRenameName}
               onRenameIsActive={onRenameIsActive}
               onCancelRename={onCancelRename}
               onSaveRename={onSaveRename}

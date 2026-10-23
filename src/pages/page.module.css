@@ -1542,6 +1542,12 @@ button.compact {
   min-width: 0;
 }
 
+.categoriesInlineForm :global(input[readonly]) {
+  color: var(--text-muted);
+  background: var(--bg-app);
+  cursor: default;
+}
+
 .categoriesActiveCheck {
   display: inline-flex;
   align-items: center;
