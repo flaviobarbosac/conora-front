@@ -100,11 +100,7 @@ export function CategoriesPage() {
   }
 
   async function setActive(account: Category, isActive: boolean) {
-    if (
-      await action.run(() =>
-        categoriesApi.update(account.id, account.name, isActive),
-      )
-    ) {
+    if (await action.run(() => categoriesApi.setActive(account.id, isActive))) {
       showSaveToast(isActive ? 'Categoria reativada.' : 'Categoria desativada.')
       accounts.reload()
     }
