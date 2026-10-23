@@ -199,8 +199,8 @@ export function BudgetPage() {
             <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
             <Button
               variant="secondary"
-              disabled={boletoBusy || !canEdit}
-              onClick={() => void scanBoleto()}
+              disabled={boletoBusy || !canEdit || monthClosed}
+              onClick={() => void runBoletoScan('file')}
             >
               {boletoBusy ? 'Lendo boleto…' : 'Escanear boleto'}
             </Button>
