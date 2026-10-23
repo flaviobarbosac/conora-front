@@ -12,6 +12,7 @@ import styles from './page.module.css'
 
 const TILES: ReadonlyArray<{ to: string; title: string; text: string }> = [
   { to: '/diagnostico', title: 'Diagnóstico', text: 'Fontes de renda e valor líquido' },
+  { to: '/jornada', title: 'Jornada Raio X', text: 'Cadastros, marcos e maturidade do Ian' },
   { to: '/marcos', title: 'Marcos', text: 'Conquistas do método' },
   { to: '/retrospectiva', title: 'Retrospectiva', text: 'Resumo do ano' },
   { to: '/plano', title: 'Plano', text: 'Assinatura e situação' },

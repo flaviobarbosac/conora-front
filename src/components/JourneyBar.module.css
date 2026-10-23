@@ -1,0 +1,131 @@
+.bar {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  margin: 0 var(--space-4) var(--space-3);
+}
+
+.ian {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.portrait {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid color-mix(in srgb, var(--accent) 40%, white);
+  flex-shrink: 0;
+}
+
+.ianCopy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kicker {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+}
+
+.ianCopy strong {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.step,
+.stepDone,
+.stepNext {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-app);
+  text-decoration: none;
+  color: inherit;
+  text-align: center;
+  min-width: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.step:hover,
+.stepNext:hover,
+.stepDone:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border-subtle));
+}
+
+.stepNext {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: var(--selected);
+}
+
+.stepDone {
+  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 35%, var(--border-subtle));
+}
+
+.dot {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  background: var(--selected);
+  color: var(--primary);
+}
+
+.stepDone .dot {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.stepLabel {
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 720px) {
+  .bar {
+    margin-left: var(--space-3);
+    margin-right: var(--space-3);
+  }
+
+  .stepLabel {
+    font-size: 10px;
+  }
+}

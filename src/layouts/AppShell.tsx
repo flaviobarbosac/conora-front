@@ -6,6 +6,7 @@ import { isConsoleOperator } from '../auth/consoleAccess'
 import { AlertsBell } from '../components/AlertsBell'
 import { BrandLockup } from '../components/BrandLockup'
 import { IanFloatingChat } from '../components/IanFloatingChat'
+import { JourneyBar } from '../components/JourneyBar'
 import { PlanBanner } from '../components/PlanBanner'
 import { Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
@@ -356,16 +357,6 @@ export function AppShell() {
                   <Icon name="user" size={20} />
                   Perfil
                 </Link>
-                {/* Temporary: onboarding shortcut for QA — remove after tests. */}
-                <Link
-                  to="/onboarding"
-                  className={styles.profileMenuItem}
-                  role="menuitem"
-                  onClick={() => setProfileMenuOpen(false)}
-                >
-                  <Icon name="goal" size={20} />
-                  Onboarding
-                </Link>
                 <div className={styles.themesItemWrap}>
                   <button
                     type="button"
@@ -437,6 +428,7 @@ export function AppShell() {
 
         <main className={styles.main} id="conteudo-principal">
           <PlanBanner />
+          <JourneyBar />
           <Suspense
             fallback={
               <div aria-busy="true" aria-live="polite">
