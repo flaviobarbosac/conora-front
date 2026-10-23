@@ -393,18 +393,19 @@ function CategoryTreeRow({
           ) : null}
           {canManage && !renaming ? (
             <>
+              <label className={styles.categoriesActiveCheck}>
+                <input
+                  type="checkbox"
+                  name={`active-${account.id}`}
+                  checked={account.isActive}
+                  disabled={busy}
+                  onChange={(event) => onSetActive(account, event.target.checked)}
+                />
+                Ativa
+              </label>
               <Button variant="ghost" disabled={busy} onClick={() => onStartRename(account)}>
                 Editar
               </Button>
-              {account.isActive ? (
-                <Button variant="ghost" disabled={busy} onClick={() => onSetActive(account, false)}>
-                  Desativar
-                </Button>
-              ) : (
-                <Button variant="ghost" disabled={busy} onClick={() => onSetActive(account, true)}>
-                  Reativar
-                </Button>
-              )}
               {account.isActive ? (
                 <DeleteIconButton disabled={busy} onClick={() => onRemove(account)} />
               ) : null}
