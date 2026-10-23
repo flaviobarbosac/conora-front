@@ -9,6 +9,8 @@ import {
   type Category,
   type InvoiceStatus,
 } from '../api/finance'
+import { AccountForm } from '../components/finance/AccountForm'
+import { CardForm } from '../components/finance/CardForm'
 import { CategorySelect } from '../components/CategorySelect'
 import { PageHeader } from '../components/PageHeader'
 import { Pager } from '../components/Pager'
@@ -22,7 +24,6 @@ import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
-import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
@@ -35,8 +36,6 @@ const KIND_LABEL: Record<AccountKind, string> = {
   Cash: 'Dinheiro',
   Other: 'Outra',
 }
-
-const ACCOUNT_KIND_OPTIONS: AccountKind[] = ['Checking', 'Savings', 'Investment']
 
 const INVOICE_LABEL: Record<InvoiceStatus, string> = {
   Open: 'Aberta',
@@ -178,190 +177,6 @@ export function AccountsPage() {
         </>
       ) : null}
     </div>
-  )
-}
-
-function AccountForm({ onSaved }: { onSaved: () => void }) {
-  const banks = useLoad(() => accountsApi.banks(), [])
-  const [name, setName] = useState('')
-  const [kind, setKind] = useState<AccountKind>('Checking')
-  const [bankCode, setBankCode] = useState('021')
-  const [agency, setAgency] = useState('')
-  const [accountNumber, setAccountNumber] = useState('')
-  const [checkDigit, setCheckDigit] = useState('')
-  const action = useAction()
-  const needsBank = kind !== 'Cash'
-  useRegisterDirty(
-    'account-form',
-    name.trim() !== '' ||
-      kind !== 'Checking' ||
-      bankCode !== '021' ||
-      agency.trim() !== '' ||
-      accountNumber.trim() !== '' ||
-      checkDigit.trim() !== '',
-  )
-
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    if (
-      await action.run(() =>
-        accountsApi.create({
-          name: name.trim(),
-          kind,
-          bankCode: needsBank ? bankCode || undefined : undefined,
-          agency: needsBank ? agency.trim() || undefined : undefined,
-          accountNumber: needsBank ? accountNumber.trim() || undefined : undefined,
-          checkDigit: needsBank ? checkDigit.trim() || undefined : undefined,
-        }),
-      )
-    ) {
-      showSaveToast('Conta criada.')
-      setName('')
-      setKind('Checking')
-      setBankCode('021')
-      setAgency('')
-      setAccountNumber('')
-      setCheckDigit('')
-      onSaved()
-    }
-  }
-
-  return (
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Nova conta</h2>
-      <form className={styles.form} onSubmit={(event) => void submit(event)}>
-        <div className={styles.formWide}>
-          <Field
-            label="Descrição"
-            name="accountName"
-            required
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            hint="Nome para identificar a conta no app."
-          />
-        </div>
-        <Select label="Tipo de conta" name="accountKind" value={kind} onChange={(event) => setKind(event.target.value as AccountKind)}>
-          {ACCOUNT_KIND_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {KIND_LABEL[option]}
-            </option>
-          ))}
-        </Select>
-        {needsBank ? (
-          <>
-            <Select
-              label="Banco"
-              name="bankCode"
-              required
-              value={bankCode}
-              onChange={(event) => setBankCode(event.target.value)}
-            >
-              <option value="">Selecione</option>
-              {(banks.data ?? []).map((bank) => (
-                <option key={bank.code} value={bank.code}>
-                  {bank.code} — {bank.name}
-                </option>
-              ))}
-            </Select>
-            <Field
-              label="Agência"
-              name="agency"
-              required
-              value={agency}
-              onChange={(event) => setAgency(event.target.value.replace(/[^\d-]/g, ''))}
-            />
-            <Field
-              label="Número da conta"
-              name="accountNumber"
-              required
-              value={accountNumber}
-              onChange={(event) => setAccountNumber(event.target.value.replace(/[^\d]/g, ''))}
-            />
-            <IntegerField
-              label="Dígito verificador"
-              name="checkDigit"
-              required
-              maxLength={2}
-              value={checkDigit}
-              onChange={setCheckDigit}
-            />
-          </>
-        ) : null}
-        <div className={styles.formWide}>
-          <ErrorText message={action.error ?? banks.error} />
-        </div>
-        <div className={styles.formActions}>
-          <Button type="submit" disabled={action.busy || (needsBank && banks.loading)}>
-            Criar conta
-          </Button>
-        </div>
-      </form>
-    </section>
-  )
-}
-
-function CardForm({ accounts, onSaved }: { accounts: Account[]; onSaved: () => void }) {
-  const [name, setName] = useState('')
-  const [limit, setLimit] = useState('')
-  const [closing, setClosing] = useState('')
-  const [due, setDue] = useState('')
-  const [paymentAccountId, setPaymentAccountId] = useState('')
-  const action = useAction()
-  useRegisterDirty(
-    'card-form',
-    name.trim() !== '' ||
-      limit.trim() !== '' ||
-      closing.trim() !== '' ||
-      due.trim() !== '' ||
-      paymentAccountId !== '',
-  )
-
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    const limitTotal = parseMoney(limit)
-    if (!Number.isFinite(limitTotal) || limitTotal < 0) {
-      action.setError('Limite inválido.')
-      return
-    }
-    const saved = await action.run(() =>
-      cardsApi.create(name.trim(), limitTotal, Number(closing), Number(due), paymentAccountId || undefined),
-    )
-    if (saved) {
-      showSaveToast('Cartão criado.')
-      setName('')
-      setLimit('')
-      setClosing('')
-      setDue('')
-      onSaved()
-    }
-  }
-
-  return (
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Novo cartão</h2>
-      <form className={styles.form} onSubmit={(event) => void submit(event)}>
-        <Field label="Nome" name="cardName" required value={name} onChange={(event) => setName(event.target.value)} />
-        <MoneyField label="Limite (R$)" name="cardLimit" required value={limit} onChange={setLimit} />
-        <IntegerField label="Dia de fechamento" name="closingDay" required maxLength={2} value={closing} onChange={setClosing} />
-        <IntegerField label="Dia de vencimento" name="dueDay" required maxLength={2} value={due} onChange={setDue} />
-        <Select label="Conta de pagamento" name="paymentAccount" value={paymentAccountId} onChange={(event) => setPaymentAccountId(event.target.value)}>
-          <option value="">Escolher ao pagar</option>
-          {accounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name}
-            </option>
-          ))}
-        </Select>
-        <div className={styles.formWide}>
-          <ErrorText message={action.error} />
-        </div>
-        <div className={styles.formActions}>
-          <Button type="submit" disabled={action.busy}>
-            Criar cartão
-          </Button>
-        </div>
-      </form>
-    </section>
   )
 }
 

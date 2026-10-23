@@ -10,6 +10,9 @@ export function alertTarget(alert: Alert, competenceYm: string): string {
   if (alert.code === 'CATEGORY_PENDING_REVIEW') {
     return '/categorias'
   }
+  if (alert.code === 'MONTH_CLOSE_PENDING') {
+    return '/mes'
+  }
   if (alert.code === 'CARD_LIMIT') {
     return '/cartoes'
   }

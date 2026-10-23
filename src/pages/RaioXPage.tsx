@@ -218,6 +218,7 @@ export function RaioXPage() {
   const [focus, setFocus] = useState<RaioXFocus>(null)
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [scope, setScope] = useState<SharingScope>(readSharingView)
+  const [leakageOnly, setLeakageOnly] = useState(false)
   const monthList = useMemo(() => monthsEndingAt(ym, months), [ym, months])
   const yearNums = useMemo(() => yearsNeededForMonths(monthList), [monthList])
   const yearKey = yearNums.join(',')
@@ -628,6 +629,7 @@ export function RaioXPage() {
               bankNameById={bankNameById}
               patItemsByAccount={patItemsByAccount}
               projectsByAccount={projectsByAccount}
+              leakageOnly={leakageOnly}
               onToggle={toggle}
               onOpenEntry={openEntry}
               onOpenPatItem={openPatItem}
@@ -635,6 +637,14 @@ export function RaioXPage() {
               onUnbudgetedClick={openBudgetForAccount}
             />
           ))}
+          <label className={styles.muted} style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12 }}>
+            <input
+              type="checkbox"
+              checked={leakageOnly}
+              onChange={(event) => setLeakageOnly(event.target.checked)}
+            />
+            Mostrar só contas acima de 100% (vazamento)
+          </label>
         </div>
       ) : null}
     </div>
@@ -687,6 +697,23 @@ function EntrySubRow({
   )
 }
 
+function branchHasLeakage(
+  accountId: string,
+  byParent: Map<string | null, Category[]>,
+  planned: Map<string, number>,
+  actual: Map<string, number>,
+): boolean {
+  const children = byParent.get(accountId) ?? []
+  if (children.length === 0) {
+    const pct = progressPercent({
+      planned: planned.get(accountId) ?? 0,
+      actual: actual.get(accountId) ?? 0,
+    })
+    return pct !== null && pct > 100
+  }
+  return children.some((child) => branchHasLeakage(child.id, byParent, planned, actual))
+}
+
 function RaioXAccountBlock({
   account,
   depth,
@@ -702,6 +729,7 @@ function RaioXAccountBlock({
   bankNameById,
   patItemsByAccount,
   projectsByAccount,
+  leakageOnly,
   onToggle,
   onOpenEntry,
   onOpenPatItem,
@@ -722,13 +750,19 @@ function RaioXAccountBlock({
   bankNameById: Map<string, string>
   patItemsByAccount: Map<string, PatrimonyItem[]>
   projectsByAccount: Map<string, LifeProject[]>
+  leakageOnly: boolean
   onToggle: (id: string) => void
   onOpenEntry: (entry: Entry) => void
   onOpenPatItem: (item: PatrimonyItem) => void
   onOpenProject: (project: LifeProject) => void
   onUnbudgetedClick: (accountId: string) => void
 }) {
-  const children = byParent.get(account.id) ?? []
+  if (leakageOnly && !branchHasLeakage(account.id, byParent, planned, actual)) {
+    return null
+  }
+  const children = (byParent.get(account.id) ?? []).filter(
+    (child) => !leakageOnly || branchHasLeakage(child.id, byParent, planned, actual),
+  )
   const stock = isStockSection(account.section)
   const launchEntries =
     account.level === 'Analytical' ? (entriesByAccount.get(account.id) ?? []) : []
@@ -806,6 +840,7 @@ function RaioXAccountBlock({
               bankNameById={bankNameById}
               patItemsByAccount={patItemsByAccount}
               projectsByAccount={projectsByAccount}
+              leakageOnly={leakageOnly}
               onToggle={onToggle}
               onOpenEntry={onOpenEntry}
               onOpenPatItem={onOpenPatItem}

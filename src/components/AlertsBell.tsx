@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { dashboardApi } from '../api/finance'
+import { dashboardApi, type Alert } from '../api/finance'
 import { useLoad } from '../hooks/useLoad'
 import { alertTarget } from '../lib/alertTarget'
 import { currentCompetence } from '../lib/format'
+import { severityLabelPt } from '../lib/severityLabel'
 import { toneFromSeverity } from '../lib/severity'
 import { Badge } from './ui/Feedback'
 import { Icon } from './ui/Icon'
@@ -20,13 +21,19 @@ export function AlertsBell({ peerOpen = false, onOpen }: Props) {
   const ym = currentCompetence()
   const alerts = useLoad(() => dashboardApi.alerts(ym), [ym, pathname])
   const [open, setOpen] = useState(false)
+  /** Optimistic overlay so the badge drops as soon as the panel opens. */
+  const [localSeen, setLocalSeen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-  const items = alerts.data ?? []
-  const count = items.length
+  const remote = alerts.data ?? []
+  const items: Alert[] = localSeen
+    ? remote.map((alert) => ({ ...alert, seen: true }))
+    : remote
+  const count = items.filter((alert) => !alert.seen).length
 
   useEffect(() => {
     setOpen(false)
-  }, [pathname])
+    setLocalSeen(false)
+  }, [pathname, ym])
 
   useEffect(() => {
     if (peerOpen) {
@@ -56,12 +63,29 @@ export function AlertsBell({ peerOpen = false, onOpen }: Props) {
     }
   }, [open])
 
+  async function markOpenSeen(snapshot: Alert[]) {
+    const unseen = snapshot.filter((alert) => !alert.seen)
+    if (unseen.length === 0) {
+      return
+    }
+    setLocalSeen(true)
+    try {
+      await dashboardApi.markAlertsSeen(
+        ym,
+        unseen.map((alert) => ({ code: alert.code, categoryId: alert.categoryId })),
+      )
+      alerts.reload()
+    } catch {
+      setLocalSeen(false)
+    }
+  }
+
   return (
     <div className={styles.root} ref={rootRef}>
       <button
         type="button"
         className={styles.bellBtn}
-        aria-label={count > 0 ? `Alertas, ${count}` : 'Alertas'}
+        aria-label={count > 0 ? `Alertas, ${count} não lidos` : 'Alertas'}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => {
@@ -69,6 +93,7 @@ export function AlertsBell({ peerOpen = false, onOpen }: Props) {
             const next = !value
             if (next) {
               onOpen?.()
+              void markOpenSeen(remote)
             }
             return next
           })
@@ -89,10 +114,10 @@ export function AlertsBell({ peerOpen = false, onOpen }: Props) {
           </div>
           {alerts.loading && !alerts.data ? <p className={styles.empty}>Carregando…</p> : null}
           {alerts.error ? <p className={styles.empty}>{alerts.error}</p> : null}
-          {!alerts.loading && !alerts.error && count === 0 ? (
+          {!alerts.loading && !alerts.error && items.length === 0 ? (
             <p className={styles.empty}>Tudo em ordem nesta competência.</p>
           ) : null}
-          {count > 0 ? (
+          {items.length > 0 ? (
             <ul className={styles.list}>
               {items.map((alert) => {
                 const tone = toneFromSeverity(alert.severity)
@@ -112,7 +137,9 @@ export function AlertsBell({ peerOpen = false, onOpen }: Props) {
                         <strong>{alert.message}</strong>
                       </span>
                       <Badge tone={tone}>
-                        {alert.percent !== null ? `${Math.round(alert.percent)}%` : alert.severity}
+                        {alert.percent !== null
+                          ? `${Math.round(alert.percent)}%`
+                          : severityLabelPt(alert.severity)}
                       </Badge>
                     </Link>
                   </li>

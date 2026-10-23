@@ -20,26 +20,65 @@ function initialsFrom(name: string, email: string): string {
   return source.slice(0, 2).toUpperCase()
 }
 
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, '')
+}
+
+function formatPhone(value: string): string {
+  const d = digitsOnly(value).slice(0, 11)
+  if (d.length <= 2) return d
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+}
+
+function formatCep(value: string): string {
+  const d = digitsOnly(value).slice(0, 8)
+  if (d.length <= 5) return d
+  return `${d.slice(0, 5)}-${d.slice(5)}`
+}
+
 export function ProfilePage() {
   const profile = useLoad(() => familyApi.profile(), [])
   const saveProfile = useAction()
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [cep, setCep] = useState('')
   const [savedName, setSavedName] = useState('')
-  const dirty = name.trim() !== savedName.trim()
+  const [savedPhone, setSavedPhone] = useState('')
+  const [savedCep, setSavedCep] = useState('')
+  const dirty =
+    name.trim() !== savedName.trim() ||
+    digitsOnly(phone) !== digitsOnly(savedPhone) ||
+    digitsOnly(cep) !== digitsOnly(savedCep)
   useRegisterDirty('profile-form', dirty)
 
   useEffect(() => {
     if (profile.data) {
       setName(profile.data.name)
       setSavedName(profile.data.name)
+      setPhone(profile.data.phone ? formatPhone(profile.data.phone) : '')
+      setSavedPhone(profile.data.phone ? formatPhone(profile.data.phone) : '')
+      setCep(profile.data.cep ? formatCep(profile.data.cep) : '')
+      setSavedCep(profile.data.cep ? formatCep(profile.data.cep) : '')
     }
   }, [profile.data])
 
   async function onSave(event: FormEvent) {
     event.preventDefault()
-    if (await saveProfile.run(() => familyApi.updateProfile(name.trim()))) {
+    if (
+      await saveProfile.run(() =>
+        familyApi.updateProfile({
+          name: name.trim(),
+          phone: digitsOnly(phone) || null,
+          cep: digitsOnly(cep) || null,
+        }),
+      )
+    ) {
       setSavedName(name.trim())
-      showSaveToast('Nome salvo.')
+      setSavedPhone(formatPhone(phone))
+      setSavedCep(formatCep(cep))
+      showSaveToast('Perfil salvo.')
       profile.reload()
       window.dispatchEvent(new Event('conora:profile-changed'))
     }
@@ -47,6 +86,8 @@ export function ProfilePage() {
 
   function onCancel() {
     setName(savedName)
+    setPhone(savedPhone)
+    setCep(savedCep)
   }
 
   const data = profile.data
@@ -65,7 +106,7 @@ export function ProfilePage() {
             </span>
             <div>
               <h2 className={styles.sectionTitle}>Conta</h2>
-              <p className={styles.muted}>Sem foto. A inicial do nome identifica você no app.</p>
+              <p className={styles.muted}>Os mesmos dados do onboard. Conta e cartão ficam em Contas / Cartões.</p>
             </div>
           </div>
 
@@ -81,6 +122,13 @@ export function ProfilePage() {
               />
             </div>
             <Field label="E-mail" name="email" value={data.email} readOnly disabled />
+            <Field
+              label="Telefone"
+              name="phone"
+              value={phone}
+              onChange={(event) => setPhone(formatPhone(event.target.value))}
+            />
+            <Field label="CEP" name="cep" value={cep} onChange={(event) => setCep(formatCep(event.target.value))} />
             <div className={styles.formActions}>
               <Button type="button" variant="secondary" disabled={!dirty || saveProfile.busy} onClick={onCancel}>
                 Cancelar

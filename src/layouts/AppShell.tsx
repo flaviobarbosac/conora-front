@@ -6,7 +6,6 @@ import { isConsoleOperator } from '../auth/consoleAccess'
 import { AlertsBell } from '../components/AlertsBell'
 import { BrandLockup } from '../components/BrandLockup'
 import { IanFloatingChat } from '../components/IanFloatingChat'
-import { JourneyBar } from '../components/JourneyBar'
 import { PlanBanner } from '../components/PlanBanner'
 import { Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
@@ -428,7 +427,6 @@ export function AppShell() {
 
         <main className={styles.main} id="conteudo-principal">
           <PlanBanner />
-          <JourneyBar />
           <Suspense
             fallback={
               <div aria-busy="true" aria-live="polite">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { lgpdApi, planApi, type Plan, type PlanOffer, type PlanTier } from '../api/finance'
+import { LegalConsentPanel } from '../components/LegalConsentPanel'
 import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useAction } from '../hooks/useAction'
@@ -49,7 +50,11 @@ const FAQ: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: 'Qual a diferença entre os planos?',
-    a: 'Todos têm todas as funcionalidades do Conora. O que muda é o grupo: o Individual é só para você, o Duo é para duas pessoas e o Family é para três ou mais, cada uma com o próprio acesso.',
+    a: 'Todos têm todas as funcionalidades do Conora. O que muda é o grupo: o Individual é só para você, o Duo é para duas pessoas e o Family é para até cinco pessoas, cada uma com o próprio acesso.',
+  },
+  {
+    q: 'Como cancelo?',
+    a: 'Cancele na loja (Google Play ou App Store). O acesso segue até o fim do período já pago. Não há multa de cancelamento.',
   },
   {
     q: 'Como funciona o plano anual?',
@@ -78,6 +83,8 @@ export function PlanPage() {
   // Digital plans are sold outside the store. Native apps (Android and iOS) must not show prices or a subscribe action.
   const hideCheckout = isNativeApp()
   const [cycleChoice, setYearly] = useState<boolean | null>(null)
+  const [acceptContract, setAcceptContract] = useState(false)
+  const [acceptLgpd, setAcceptLgpd] = useState(false)
   // Default to yearly (best value); subscribers start on their current cycle.
   const yearly = cycleChoice ?? (data?.phase === 'Subscribed' && data.plan ? data.yearly : true)
 
@@ -99,6 +106,10 @@ export function PlanPage() {
       subscribe.setError(
         'A assinatura só muda quando a Google Play ou a App Store confirmar a compra. Abra o plano na loja do celular.',
       )
+      return
+    }
+    if (!acceptContract || !acceptLgpd) {
+      subscribe.setError('Aceite o contrato, a política de cancelamento e a LGPD antes de assinar.')
       return
     }
     const cycle = offer.yearly ? 'ano' : 'mês'
@@ -181,6 +192,13 @@ export function PlanPage() {
             </div>
           </div>
 
+          <LegalConsentPanel
+            acceptContract={acceptContract}
+            acceptLgpd={acceptLgpd}
+            onAcceptContract={setAcceptContract}
+            onAcceptLgpd={setAcceptLgpd}
+          />
+
           <div className={styles.cards}>
             {TIERS.map((tier) => {
               const offer = offerFor(data.offers, tier, yearly)
@@ -228,7 +246,7 @@ export function PlanPage() {
                   <Button
                     className={styles.cta}
                     variant={recommended && !isCurrent ? 'primary' : 'secondary'}
-                    disabled={subscribe.busy}
+                    disabled={subscribe.busy || !acceptContract || !acceptLgpd}
                     onClick={() => void choose(offer)}
                   >
                     {isCurrent ? 'Renovar plano atual' : `Assinar ${info.title}`}
