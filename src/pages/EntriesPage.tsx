@@ -349,6 +349,7 @@ export function EntriesPage() {
     const posting = tree.filter(
       (account) =>
         account.level === 'Analytical' &&
+        account.isActive &&
         (CASH_FLOW_SECTIONS.includes(account.section) || isPatrimonySection(account.section)),
     )
     const byId = new Map<string, Category>()

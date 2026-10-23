@@ -26,16 +26,18 @@ export function CategoriesPage() {
   const [draftName, setDraftName] = useState('')
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameName, setRenameName] = useState('')
+  const [renameIsActive, setRenameIsActive] = useState(true)
+  const [renameSavedActive, setRenameSavedActive] = useState(true)
   const inGroup = Boolean(group.data?.groupId)
   const isBudgetOwner = Boolean(group.data?.isBudgetOwner)
   const canEditChart = !inGroup || isBudgetOwner
+  const list = accounts.data ?? []
 
   useRegisterDirty(
     'categories-edit',
-    (draftParentId !== null && draftName.trim() !== '') || (renameId !== null && renameName.trim() !== ''),
+    (draftParentId !== null && draftName.trim() !== '') ||
+      (renameId !== null && (renameName.trim() !== '' || renameIsActive !== renameSavedActive)),
   )
-
-  const list = accounts.data ?? []
   const pendingAncestorIds = useMemo(() => {
     const byId = new Map(list.map((account) => [account.id, account]))
     const marked = new Set<string>()
@@ -93,7 +95,7 @@ export function CategoriesPage() {
     if (!name) {
       return
     }
-    if (await action.run(() => categoriesApi.update(account.id, name, account.isActive))) {
+    if (await action.run(() => categoriesApi.update(account.id, name, renameIsActive))) {
       showSaveToast('Categoria salva.')
       setRenameId(null)
       accounts.reload()
@@ -174,6 +176,7 @@ export function CategoriesPage() {
               draftName={draftName}
               renameId={renameId}
               renameName={renameName}
+              renameIsActive={renameIsActive}
               busy={action.busy}
               canEditChart={canEditChart}
               isBudgetOwner={isBudgetOwner}
@@ -194,10 +197,13 @@ export function CategoriesPage() {
               onStartRename={(item) => {
                 setRenameId(item.id)
                 setRenameName(item.name)
+                setRenameIsActive(item.isActive)
+                setRenameSavedActive(item.isActive)
                 setDraftParentId(null)
                 setDraftName('')
               }}
               onRenameName={setRenameName}
+              onRenameIsActive={setRenameIsActive}
               onCancelRename={() => setRenameId(null)}
               onSaveRename={(item) => void saveRename(item)}
               onRemove={(item) => void removeAccount(item)}
@@ -221,6 +227,7 @@ function CategoryTreeRow({
   draftName,
   renameId,
   renameName,
+  renameIsActive,
   busy,
   canEditChart,
   isBudgetOwner,
@@ -232,6 +239,7 @@ function CategoryTreeRow({
   onCreate,
   onStartRename,
   onRenameName,
+  onRenameIsActive,
   onCancelRename,
   onSaveRename,
   onRemove,
@@ -247,6 +255,7 @@ function CategoryTreeRow({
   draftName: string
   renameId: string | null
   renameName: string
+  renameIsActive: boolean
   busy: boolean
   canEditChart: boolean
   isBudgetOwner: boolean
@@ -258,6 +267,7 @@ function CategoryTreeRow({
   onCreate: (parentId: string) => void
   onStartRename: (account: Category) => void
   onRenameName: (value: string) => void
+  onRenameIsActive: (value: boolean) => void
   onCancelRename: () => void
   onSaveRename: (account: Category) => void
   onRemove: (account: Category) => void
@@ -328,6 +338,16 @@ function CategoryTreeRow({
                 }
               }}
             />
+            <label className={styles.categoriesActiveCheck}>
+              <input
+                type="checkbox"
+                name={`rename-active-${account.id}`}
+                checked={renameIsActive}
+                disabled={busy}
+                onChange={(event) => onRenameIsActive(event.target.checked)}
+              />
+              Ativa
+            </label>
             <Button type="submit" disabled={busy || !renameName.trim()}>
               Salvar
             </Button>
@@ -404,6 +424,7 @@ function CategoryTreeRow({
               draftName={draftName}
               renameId={renameId}
               renameName={renameName}
+              renameIsActive={renameIsActive}
               busy={busy}
               canEditChart={canEditChart}
               isBudgetOwner={isBudgetOwner}
@@ -415,6 +436,7 @@ function CategoryTreeRow({
               onCreate={onCreate}
               onStartRename={onStartRename}
               onRenameName={onRenameName}
+              onRenameIsActive={onRenameIsActive}
               onCancelRename={onCancelRename}
               onSaveRename={onSaveRename}
               onRemove={onRemove}

@@ -1542,6 +1542,23 @@ button.compact {
   min-width: 0;
 }
 
+.categoriesActiveCheck {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.categoriesActiveCheck input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-accent, var(--color-primary));
+}
+
 .raioxTotals {
   display: grid;
   grid-template-columns: var(--money-display-w) var(--money-display-w) var(--money-percent-w);
