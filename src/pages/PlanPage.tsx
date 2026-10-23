@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { Product } from '@capgo/native-purchases'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { lgpdApi, planApi, type Plan, type PlanOffer, type PlanTier } from '../api/finance'
 import { LegalConsentPanel } from '../components/LegalConsentPanel'
@@ -17,8 +18,18 @@ import {
   tierOfKind,
   TRIAL_DAYS,
 } from '../lib/planAccess'
-import { isNativeApp } from '../lib/platform'
+import { isAndroidApp, isNativeApp } from '../lib/platform'
 import { showSaveToast } from '../lib/saveToast'
+import {
+  buyInStore,
+  isStoreCancel,
+  openStoreSubscriptions,
+  restoreStorePurchases,
+  STORE_PRODUCT_IDS,
+  storeCheckoutAvailable,
+  storeName,
+  storeProducts,
+} from '../lib/storeBilling'
 import styles from './PlanPage.module.css'
 
 const TIERS: ReadonlyArray<PlanTier> = ['Individual', 'Family', 'FamilyPlus']
@@ -54,7 +65,11 @@ const FAQ: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: 'Como cancelo?',
-    a: 'Cancele na loja (Google Play ou App Store). O acesso segue até o fim do período já pago. Não há multa de cancelamento.',
+    a: 'Nas assinaturas da sua conta da loja (App Store ou Google Play), até 24 horas antes da renovação. O acesso segue até o fim do período já pago. Não há multa de cancelamento.',
+  },
+  {
+    q: 'Troquei de celular. Como recupero a assinatura?',
+    a: 'Entre com o mesmo login do Conora e toque em "Restaurar compras" nesta tela, usando a mesma conta da loja em que você assinou.',
   },
   {
     q: 'Como funciona o plano anual?',
@@ -79,9 +94,14 @@ export function PlanPage() {
   const access = usePlanAccess()
   const subscribe = useAction()
   const exporter = useAction()
+  const restorer = useAction()
   const data = plan.data
-  // Digital plans are sold outside the store. Native apps (Android and iOS) must not show prices or a subscribe action.
-  const hideCheckout = isNativeApp()
+  // Native apps sell plans only through the store (App Store In-App Purchase / Google Play Billing).
+  // The web shows the plans but sends the user to the app; local development keeps a stub checkout.
+  const storeCheckout = storeCheckoutAvailable()
+  const devCheckout = !import.meta.env.PROD && !isNativeApp()
+  const canBuy = storeCheckout || devCheckout
+  const [products, setProducts] = useState<Record<string, Product>>({})
   const [cycleChoice, setYearly] = useState<boolean | null>(null)
   const [acceptContract, setAcceptContract] = useState(false)
   const [acceptLgpd, setAcceptLgpd] = useState(false)
@@ -93,6 +113,24 @@ export function PlanPage() {
   }, [data?.phase])
 
   useEffect(() => {
+    if (!storeCheckout) return
+    let active = true
+    void storeProducts().then((found) => {
+      if (active) setProducts(found)
+    })
+    return () => {
+      active = false
+    }
+  }, [storeCheckout])
+
+  function planChanged(message: string) {
+    showSaveToast(message)
+    plan.reload()
+    access.reload()
+    window.dispatchEvent(new Event(PLAN_CHANGED))
+  }
+
+  useEffect(() => {
     if (!inviteToken) return
     // After the store step, continue to the invite accept screen with the same token.
     if (data?.phase === 'Subscribed' || data?.phase === 'Trial') {
@@ -102,14 +140,30 @@ export function PlanPage() {
 
   async function choose(offer: PlanOffer) {
     const info = TIER_INFO[offer.tier]
-    if (import.meta.env.PROD || hideCheckout) {
-      subscribe.setError(
-        'A assinatura só muda quando a Google Play ou a App Store confirmar a compra. Abra o plano na loja do celular.',
-      )
+    if (!canBuy) {
+      subscribe.setError('A assinatura é feita no app Conora, pela App Store ou pelo Google Play.')
       return
     }
     if (!acceptContract || !acceptLgpd) {
       subscribe.setError('Aceite o contrato, a política de cancelamento e a LGPD antes de assinar.')
+      return
+    }
+    if (storeCheckout) {
+      // The store shows its own confirmation sheet with the final price; the API validates the purchase.
+      const productId = STORE_PRODUCT_IDS[offer.kind]
+      let cancelled = false
+      const ok = await subscribe.run(async () => {
+        try {
+          await buyInStore(offer.kind, productId ? products[productId] : undefined)
+        } catch (error) {
+          if (isStoreCancel(error)) {
+            cancelled = true
+            return
+          }
+          throw error
+        }
+      })
+      if (ok && !cancelled) planChanged(`Plano ${info.title} ativado. Obrigado por assinar o Conora!`)
       return
     }
     const cycle = offer.yearly ? 'ano' : 'mês'
@@ -118,14 +172,21 @@ export function PlanPage() {
       { title: 'Confirmar assinatura', confirmLabel: 'Assinar', danger: false },
     )
     if (!ok) return
-    // Dev stub: simulates the store purchase token the webhook will send in production.
+    // Dev stub: the API only accepts it in Development / Testing.
     const stubToken = `dev-store-${offer.kind}-${Date.now()}`
     if (await subscribe.run(() => planApi.subscribe(offer.kind, stubToken))) {
-      showSaveToast(`Plano ${info.title} ativado (loja simulada em desenvolvimento).`)
-      plan.reload()
-      access.reload()
-      window.dispatchEvent(new Event(PLAN_CHANGED))
+      planChanged(`Plano ${info.title} ativado (loja simulada em desenvolvimento).`)
     }
+  }
+
+  async function restore() {
+    let restored: Plan | null = null
+    const ok = await restorer.run(async () => {
+      restored = await restoreStorePurchases()
+    })
+    if (!ok) return
+    if (restored) planChanged('Assinatura restaurada.')
+    else restorer.setError(`Nenhuma assinatura ativa deste login foi encontrada na ${storeName()}.`)
   }
 
   async function exportData() {
@@ -144,29 +205,19 @@ export function PlanPage() {
         </p>
       ) : null}
       <header className={styles.intro}>
-        {hideCheckout ? (
-          <>
-            <span className={styles.eyebrow}>Sua conta</span>
-            <h1>Situação do plano</h1>
-            <p>O acesso contratado fora da loja continua valendo aqui. Este app não vende assinatura.</p>
-          </>
-        ) : (
-          <>
-            <span className={styles.eyebrow}>Planos Conora</span>
-            <h1>Sua vida financeira organizada, com quem você ama</h1>
-            <p>Todas as funcionalidades em todos os planos. Escolha só quantas pessoas vão usar com você.</p>
-          </>
-        )}
+        <span className={styles.eyebrow}>Planos Conora</span>
+        <h1>Sua vida financeira organizada, com quem você ama</h1>
+        <p>Todas as funcionalidades em todos os planos. Escolha só quantas pessoas vão usar com você.</p>
       </header>
 
-      <ErrorText message={plan.error ?? subscribe.error ?? exporter.error} />
+      <ErrorText message={plan.error ?? subscribe.error ?? restorer.error ?? exporter.error} />
       {plan.loading && !data ? <Loading /> : null}
 
       {data ? (
-        <StatusHero plan={data} exporting={exporter.busy} onExport={() => void exportData()} hideCheckout={hideCheckout} />
+        <StatusHero plan={data} exporting={exporter.busy} onExport={() => void exportData()} />
       ) : null}
 
-      {data && !hideCheckout ? (
+      {data ? (
         <>
           <div className={styles.cycleRow}>
             <div className={styles.cycle} role="radiogroup" aria-label="Forma de cobrança">
@@ -208,6 +259,10 @@ export function PlanPage() {
               const isCurrent = currentTier(data) === tier && data.yearly === yearly
               const recommended = tier === RECOMMENDED
               const savings = monthly.price * 12 - offer.price
+              const productId = STORE_PRODUCT_IDS[offer.kind]
+              const storePrice = productId ? products[productId]?.priceString : undefined
+              // Google Play cannot swap separate subscription products in place: cancel first, then buy the new one.
+              const androidSwitch = isAndroidApp() && currentTier(data) !== null && !isCurrent
               return (
                 <section
                   key={tier}
@@ -224,7 +279,17 @@ export function PlanPage() {
                     <span>/mês</span>
                   </div>
                   <p className={styles.priceNote}>
-                    {offer.yearly ? (
+                    {storePrice ? (
+                      <>
+                        {storePrice} por {offer.yearly ? 'ano' : 'mês'} na {storeName()}
+                        {offer.yearly ? (
+                          <>
+                            {' '}
+                            · <span className={styles.save}>economize {formatMoney(savings)}</span>
+                          </>
+                        ) : null}
+                      </>
+                    ) : offer.yearly ? (
                       <>
                         {formatMoney(offer.price)} por ano ·{' '}
                         <span className={styles.save}>economize {formatMoney(savings)}</span>
@@ -243,23 +308,68 @@ export function PlanPage() {
                     )}
                     {info.family ? <li className={styles.yes}>Cada pessoa com o próprio login</li> : null}
                   </ul>
-                  <Button
-                    className={styles.cta}
-                    variant={recommended && !isCurrent ? 'primary' : 'secondary'}
-                    disabled={subscribe.busy || !acceptContract || !acceptLgpd}
-                    onClick={() => void choose(offer)}
-                  >
-                    {isCurrent ? 'Renovar plano atual' : `Assinar ${info.title}`}
-                  </Button>
+                  {canBuy ? (
+                    <Button
+                      className={styles.cta}
+                      variant={recommended && !isCurrent ? 'primary' : 'secondary'}
+                      disabled={
+                        subscribe.busy ||
+                        !acceptContract ||
+                        !acceptLgpd ||
+                        (storeCheckout && (isCurrent || androidSwitch))
+                      }
+                      onClick={() => void choose(offer)}
+                    >
+                      {isCurrent ? (storeCheckout ? 'Plano atual' : 'Renovar plano atual') : `Assinar ${info.title}`}
+                    </Button>
+                  ) : null}
                   {isCurrent ? <p className={styles.currentNote}>Seu plano atual</p> : null}
+                  {androidSwitch ? (
+                    <p className={styles.currentNote}>
+                      Para trocar de plano, cancele o atual em “Gerenciar assinatura” e assine este depois.
+                    </p>
+                  ) : null}
                 </section>
               )
             })}
           </div>
+
+          {storeCheckout ? (
+            <section className={styles.included} aria-label="Assinatura na loja">
+              <p>
+                Assinatura com renovação automática pela {storeName()}. O valor é cobrado na sua conta da loja ao
+                confirmar a compra e renova sozinho ao fim de cada período (mensal ou anual), a menos que você cancele
+                até 24 horas antes da renovação nas assinaturas da sua conta da loja.
+              </p>
+              <p>
+                <a href="https://conora.com.br/termos" target="_blank" rel="noreferrer">
+                  Termos de Uso
+                </a>{' '}
+                ·{' '}
+                <a href="https://conora.com.br/privacidade" target="_blank" rel="noreferrer">
+                  Política de Privacidade
+                </a>
+              </p>
+              <div className={styles.heroActions}>
+                <Button variant="secondary" disabled={restorer.busy} onClick={() => void restore()}>
+                  Restaurar compras
+                </Button>
+                <Button variant="secondary" onClick={() => void openStoreSubscriptions()}>
+                  Gerenciar assinatura
+                </Button>
+              </div>
+            </section>
+          ) : null}
+
+          {!canBuy ? (
+            <p className={styles.support} role="note">
+              Para assinar, abra o app Conora no celular: a assinatura é feita pela App Store ou pelo Google Play, e
+              vale também aqui no navegador.
+            </p>
+          ) : null}
         </>
       ) : null}
 
-      {hideCheckout ? null : (
       <section className={styles.included}>
         <h2>Incluído em todos os planos</h2>
         <ul>
@@ -268,29 +378,26 @@ export function PlanPage() {
           ))}
         </ul>
       </section>
-      )}
 
-      {hideCheckout ? null : (
-        <section className={styles.faq}>
-          <h2>Dúvidas frequentes</h2>
-          {FAQ.map((item) => (
-            <details key={item.q}>
-              <summary>{item.q}</summary>
-              <p>{item.a}</p>
-            </details>
-          ))}
-          <p className={styles.support}>
-            Ainda com dúvida? <Link to="/ajuda">Fale com o suporte</Link>.
-          </p>
-        </section>
-      )}
+      <section className={styles.faq}>
+        <h2>Dúvidas frequentes</h2>
+        {FAQ.map((item) => (
+          <details key={item.q}>
+            <summary>{item.q}</summary>
+            <p>{item.a}</p>
+          </details>
+        ))}
+        <p className={styles.support}>
+          Ainda com dúvida? <Link to="/ajuda">Fale com o suporte</Link>.
+        </p>
+      </section>
     </div>
   )
 }
 
-type HeroProps = { plan: Plan; exporting: boolean; onExport: () => void; hideCheckout: boolean }
+type HeroProps = { plan: Plan; exporting: boolean; onExport: () => void }
 
-function StatusHero({ plan, exporting, onExport, hideCheckout }: HeroProps) {
+function StatusHero({ plan, exporting, onExport }: HeroProps) {
   if (plan.phase === 'Subscribed') {
     const tier = plan.plan ? tierOfKind(plan.plan) : 'Individual'
     return (
@@ -311,7 +418,7 @@ function StatusHero({ plan, exporting, onExport, hideCheckout }: HeroProps) {
         <strong>Seu plano venceu</strong>
         <span>
           O Conora está em modo somente leitura.
-          {hideCheckout ? ' Seus dados continuam guardados.' : ' Renove para voltar a lançar — seus dados continuam guardados.'}
+          {' Renove para voltar a lançar — seus dados continuam guardados.'}
         </span>
       </section>
     )
@@ -324,9 +431,7 @@ function StatusHero({ plan, exporting, onExport, hideCheckout }: HeroProps) {
         <span>
           O acesso gratuito terminou em {formatDate(plan.trialEndsAt)} e o prazo de consulta em{' '}
           {formatDate(plan.blockAt)}.
-          {hideCheckout
-            ? ' Seus dados continuam guardados.'
-            : ' Assine um plano para reativar na hora: seus dados continuam guardados.'}
+          {' Assine um plano para reativar na hora: seus dados continuam guardados.'}
         </span>
         <span>
           Precisa só dos seus dados? <Link to="/ajuda">Abra um chamado no suporte</Link>.
@@ -362,7 +467,7 @@ function StatusHero({ plan, exporting, onExport, hideCheckout }: HeroProps) {
       </strong>
       <span>
         Cortesia do treinamento financeiro do Leomar Campos, até {formatDate(plan.trialEndsAt)}.
-        {hideCheckout ? '' : ' Assine antes e continue sem nenhuma interrupção.'}
+        {' Assine antes e continue sem nenhuma interrupção.'}
       </span>
       <Timeline plan={plan} />
     </section>

@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Conora — Proposta visual · Onboard e jornada</title>
+  <style>
+    :root {
+      --bg: #f6f4ef;
+      --surface: #ffffff;
+      --ink: #1c1917;
+      --muted: #78716c;
+      --line: #e7e5e4;
+      --accent: #0f766e;
+      --accent-soft: #ccfbf1;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --ok: #15803d;
+      --radius: 14px;
+      --shadow: 0 1px 0 rgba(28, 25, 23, 0.04);
+      --phone: 390px;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 500px at 10% -10%, #d1fae5 0%, transparent 55%),
+        radial-gradient(900px 400px at 90% 0%, #fef3c7 0%, transparent 50%),
+        var(--bg);
+      min-height: 100vh;
+    }
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 20px 64px;
+    }
+    header.top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 1.55rem;
+      letter-spacing: -0.02em;
+    }
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 42rem;
+      line-height: 1.45;
+      font-size: 0.95rem;
+    }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .badge {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+    }
+    .badge.ok { background: #dcfce7; color: var(--ok); border-color: #bbf7d0; }
+    .badge.warn { background: #ffedd5; color: var(--warn); border-color: #fed7aa; }
+    .badge.out { background: #fee2e2; color: var(--danger); border-color: #fecaca; text-decoration: line-through; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 340px) 1fr;
+      gap: 22px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    .steps { display: flex; flex-direction: column; gap: 8px; }
+    .step-btn {
+      text-align: left;
+      border: 1px solid var(--line);
+      background: #fafaf9;
+      border-radius: 12px;
+      padding: 12px 12px 12px 14px;
+      cursor: pointer;
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      align-items: start;
+      font: inherit;
+      color: inherit;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .step-btn:hover { border-color: #a8a29e; }
+    .step-btn.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .step-btn.done .num {
+      background: var(--accent);
+      color: white;
+    }
+    .num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: #e7e5e4;
+      color: var(--ink);
+    }
+    .step-btn strong { display: block; font-size: 0.92rem; }
+    .step-btn span { display: block; font-size: 0.78rem; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+
+    .phone-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 8px 0 4px;
+    }
+    .phone {
+      width: min(100%, var(--phone));
+      background: #0c0a09;
+      border-radius: 36px;
+      padding: 12px;
+      border: 1px solid #292524;
+    }
+    .phone-inner {
+      background: #fafaf9;
+      border-radius: 28px;
+      overflow: hidden;
+      min-height: 640px;
+      display: flex;
+      flex-direction: column;
+    }
+    .status-bar {
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      background: #fff;
+    }
+    .app-head {
+      padding: 10px 16px 12px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+    }
+    .app-head .kicker {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .app-head h3 {
+      margin: 2px 0 0;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+    .journey-bar {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #f5f5f4;
+      border: 1px solid var(--line);
+    }
+    .journey-bar .label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .track {
+      height: 8px;
+      border-radius: 999px;
+      background: #e7e5e4;
+      overflow: hidden;
+    }
+    .track > span {
+      display: block;
+      height: 100%;
+      background: var(--accent);
+      border-radius: inherit;
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+    .journey-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+    }
+    .pill {
+      font-size: 0.65rem;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+    .pill.on { background: var(--accent-soft); border-color: #99f6e4; color: var(--accent); font-weight: 600; }
+
+    .screen {
+      padding: 14px 16px 20px;
+      flex: 1;
+      overflow: auto;
+    }
+    .screen h4 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+    }
+    .screen .hint {
+      margin: 0 0 14px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .field {
+      margin-bottom: 10px;
+    }
+    .field label {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .field input, .field select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+    .field input:disabled {
+      background: #f5f5f4;
+      color: var(--muted);
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .card-box {
+      border: 1px dashed #a8a29e;
+      border-radius: 12px;
+      padding: 14px;
+      background: #fff;
+      margin-bottom: 12px;
+    }
+    .card-box.video {
+      min-height: 120px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.82rem;
+      background:
+        repeating-linear-gradient(
+          -45deg,
+          #fafaf9,
+          #fafaf9 8px,
+          #f5f5f4 8px,
+          #f5f5f4 16px
+        );
+    }
+    .card-box .title {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .btn {
+      flex: 1;
+      border: none;
+      border-radius: 999px;
+      padding: 11px 14px;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+    }
+    .btn.primary { background: var(--accent); color: #fff; }
+    .btn.ghost { background: #fff; border: 1px solid var(--line); color: var(--ink); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .callout {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      line-height: 1.4;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .callout.ok { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
+    .callout.warn { border-color: #fed7aa; background: #fffbeb; color: #9a3412; }
+    .callout.info { border-color: #99f6e4; background: #f0fdfa; color: #115e59; }
+
+    .side-notes {
+      margin-top: 16px;
+      display: grid;
+      gap: 10px;
+    }
+    .note {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .note strong { display: block; font-size: 0.88rem; margin-bottom: 4px; }
+    .note p { margin: 0; font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+
+    .nav-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .nav-row button {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font: inherit;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .nav-row button:hover { border-color: var(--accent); color: var(--accent); }
+
+    .profile-preview {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+    }
+    .profile-preview .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f5f5f4;
+      font-size: 0.8rem;
+    }
+    .profile-preview .row:last-child { border-bottom: none; }
+    .profile-preview .k { color: var(--muted); }
+    .profile-preview .v { font-weight: 600; text-align: right; }
+
+    footer.meta {
+      margin-top: 24px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="top">
+      <div class="brand">
+        <h1>Proposta visual · Onboard e jornada</h1>
+        <p>
+          Baseado na conversa de 23/10/2026 com Leomar Campos e no que o Flavio pediu.
+          Onboard obrigatório separado da jornada. Conta e cartão reutilizam o cadastro existente.
+          Dados da entrada nascem no perfil, sem duplicação.
+        </p>
+        <div class="badge-row">
+          <span class="badge ok">Para hoje</span>
+          <span class="badge">Onboard trava a entrada</span>
+          <span class="badge">Barra da jornada no app</span>
+          <span class="badge out">Fusão com evolução do Ian — fora</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel">
+        <h2>Etapas navegáveis</h2>
+        <div class="steps" id="steps"></div>
+        <div class="side-notes">
+          <div class="note">
+            <strong>Regra de segurança</strong>
+            <p>Erro em conta ou cartão mostra o aviso e deixa corrigir. A pessoa não fica presa fora do app sem caminho de volta.</p>
+          </div>
+          <div class="note">
+            <strong>Fechar no meio</strong>
+            <p>Ao reabrir, o fluxo retoma no passo pendente. O progresso já salvo (perfil, conta, cartão) permanece.</p>
+          </div>
+        </div>
+      </aside>
+
+      <main>
+        <div class="nav-row">
+          <button type="button" id="prevBtn">← Anterior</button>
+          <button type="button" id="nextBtn">Próxima →</button>
+          <button type="button" id="resetBtn">Reiniciar demo</button>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-inner">
+              <div class="status-bar"><span>9:41</span><span>Conora</span></div>
+              <div class="app-head">
+                <div class="kicker" id="screenKicker">Entrada</div>
+                <h3 id="screenTitle">Onboard</h3>
+                <div class="journey-bar" id="journeyBar">
+                  <div class="label">
+                    <span>Jornada Raio-X</span>
+                    <span id="journeyCount">0 de 4</span>
+                  </div>
+                  <div class="track"><span id="journeyFill"></span></div>
+                  <div class="journey-pills" id="journeyPills"></div>
+                </div>
+              </div>
+              <div class="screen" id="screen"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <footer class="meta">
+      Proposta de UI · Conora · 23 de outubro de 2026 · Sem fusão da jornada com marcos/Ian
+    </footer>
+  </div>
+
+  <script>
+    const JOURNEY = [
+      { key: "budget", label: "Orçamento" },
+      { key: "debt", label: "Dívida mensal" },
+      { key: "patrimony", label: "Patrimônio" },
+      { key: "projects", label: "Projetos de vida" },
+    ];
+
+    const state = {
+      step: 0,
+      name: "Flavio Barbosa",
+      phone: "(27) 99999-0000",
+      email: "flavio@elroy.com.br",
+      cep: "29000-000",
+      account: null,
+      card: null,
+      journeyDone: 0,
+      accountError: false,
+    };
+
+    const STEPS = [
+      {
+        id: "dados",
+        title: "Dados pessoais",
+        nav: "Nome, telefone, e-mail e CEP",
+        kicker: "Onboard · 1 de 4",
+        heading: "Seus dados",
+        render() {
+          return `
+            <h4>Seus dados</h4>
+            <p class="hint">Obrigatório para entrar. O que você digitar aqui já é o perfil — sem segundo cadastro.</p>
+            <div class="field"><label>Nome</label><input value="${esc(state.name)}" data-k="name" /></div>
+            <div class="field"><label>Telefone</label><input value="${esc(state.phone)}" data-k="phone" /></div>
+            <div class="field"><label>E-mail</label><input value="${esc(state.email)}" disabled /></div>
+            <div class="field"><label>CEP</label><input value="${esc(state.cep)}" data-k="cep" /></div>
+            <div class="callout info">E-mail vem do login (Google / Apple / senha). Só confirmação na tela.</div>
+            <div class="actions">
+              <button class="btn primary" data-go="1">Continuar</button>
+            </div>`;
+        },
+      },
+      {
+        id: "conta",
+        title: "Conta bancária",
+        nav: "Mesmos campos da tela Contas",
+        kicker: "Onboard · 2 de 4",
+        heading: "Conta bancária",
+        render() {
+          const err = state.accountError
+            ? `<div class="callout warn">Não foi possível salvar a conta. Corrija e tente de novo — você permanece no onboard, sem ficar preso fora do app.</div>`
+            : state.account
+              ? `<div class="callout ok">Conta "${esc(state.account)}" gravada no cadastro de Contas. O mesmo registro aparece no perfil.</div>`
+              : "";
+          return `
+            <h4>Conta bancária</h4>
+            <p class="hint">Campos idênticos ao cadastro de Contas. Um único registro, sem duplicar.</p>
+            <div class="card-box">
+              <div class="title">Nova conta · mesmo formulário</div>
+              <div class="field"><label>Descrição</label><input id="accName" value="Conta principal" /></div>
+              <div class="field"><label>Tipo de conta</label>
+                <select><option>Conta corrente</option><option>Conta poupança</option><option>Investimento</option></select>
+              </div>
+              <div class="field"><label>Banco</label><select><option>021 — Banestes</option><option>001 — Banco do Brasil</option></select></div>
+              <div class="grid-2">
+                <div class="field"><label>Agência</label><input value="1234" /></div>
+                <div class="field"><label>Número</label><input value="56789" /></div>
+              </div>
+              <div class="field"><label>Dígito</label><input value="0" style="max-width:80px" /></div>
+            </div>
+            ${err}
+            <div class="actions">
+              <button class="btn ghost" data-go="0">Voltar</button>
+              <button class="btn ghost" data-act="fail-account">Simular erro</button>
+              <button class="btn primary" data-act="save-account">Salvar conta</button>
+            </div>`;
+        },
+      },
+      {
+        id: "cartao",
+        title: "Cartão de crédito",
+        nav: "Mesmo CardForm + tela em Cadastros",
+        kicker: "Onboard · 3 de 4",
+        heading: "Cartões",
+        render() {
+          const ok = state.card
+            ? `<div class="callout ok">Cartão "${esc(state.card)}" no cadastro único. Também disponível em Cadastros → Cartões.</div>`
+            : "";
+          return `
+            <h4>Cartão de crédito</h4>
+            <p class="hint">Mesmos campos do cadastro de cartão. Conta de pagamento usa a conta criada no passo anterior.</p>
+            <div class="card-box">
+              <div class="title">Novo cartão · mesmo formulário</div>
+              <div class="field"><label>Nome</label><input id="cardName" value="Nubank" /></div>
+              <div class="field"><label>Limite (R$)</label><input value="5.000,00" /></div>
+              <div class="grid-2">
+                <div class="field"><label>Fechamento</label><input value="10" /></div>
+                <div class="field"><label>Vencimento</label><input value="17" /></div>
+              </div>
+              <div class="field"><label>Conta de pagamento</label>
+                <select><option>${esc(state.account || "Conta principal")}</option></select>
+              </div>
+            </div>
+            ${ok}
+            <div class="actions">
+              <button class="btn ghost" data-go="1">Voltar</button>
+              <button class="btn primary" data-act="save-card">Salvar cartão</button>
+            </div>`;
+        },
+      },
+      {
+        id: "video",
+        title: "Vídeo + concluir",
+        nav: "Placeholder do vídeo curto",
+        kicker: "Onboard · 4 de 4",
+        heading: "Como o Conora funciona",
+        render() {
+          return `
+            <h4>Vídeo de boas-vindas</h4>
+            <p class="hint">Por enquanto só o placeholder. Quando o vídeo existir, troca pelo link.</p>
+            <div class="card-box video">
+              <div>
+                <div style="font-size:1.4rem;margin-bottom:6px">▶</div>
+                Placeholder do vídeo<br />
+                <span style="font-size:0.72rem">link futuro aqui</span>
+              </div>
+            </div>
+            <div class="callout info">Assistir o vídeo não trava a entrada. O obrigatório são dados, conta e cartão.</div>
+            <div class="actions">
+              <button class="btn ghost" data-go="2">Voltar</button>
+              <button class="btn primary" data-go="4">Concluir e entrar</button>
+            </div>`;
+        },
+      },
+      {
+        id: "app",
+        title: "Dentro do app",
+        nav: "Barra da jornada + perfil",
+        kicker: "App · início",
+        heading: "Início",
+        render() {
+          return `
+            <h4>Você entrou</h4>
+            <p class="hint">Onboard concluído. A barra da jornada fica no topo, perto do Ian, e não bloqueia lançamentos.</p>
+            <div class="profile-preview">
+              <div class="row"><span class="k">Nome</span><span class="v">${esc(state.name)}</span></div>
+              <div class="row"><span class="k">Telefone</span><span class="v">${esc(state.phone)}</span></div>
+              <div class="row"><span class="k">E-mail</span><span class="v">${esc(state.email)}</span></div>
+              <div class="row"><span class="k">CEP</span><span class="v">${esc(state.cep)}</span></div>
+              <div class="row"><span class="k">Conta</span><span class="v">${esc(state.account || "—")}</span></div>
+              <div class="row"><span class="k">Cartão</span><span class="v">${esc(state.card || "—")}</span></div>
+            </div>
+            <div class="callout ok" style="margin-top:12px">Mesmos dados no Perfil. Conta e cartão são os registros das telas de Cadastros.</div>
+            <div class="actions">
+              <button class="btn ghost" data-act="journey">Avançar 1 passo da jornada</button>
+              <button class="btn primary" data-go="5">Ver regra anti-trava</button>
+            </div>`;
+        },
+      },
+      {
+        id: "safety",
+        title: "Anti-trava",
+        nav: "Erro de conta/cartão sem lockout",
+        kicker: "Proposta · segurança",
+        heading: "Se der erro",
+        render() {
+          return `
+            <h4>Conta ou cartão falhou</h4>
+            <p class="hint">O onboard trava a entrada até concluir, mas um erro de API não pode expulsar a pessoa sem saída.</p>
+            <div class="callout warn">
+              1. Mostrar o erro no passo atual.<br />
+              2. Manter o que já foi salvo (nome, CEP, conta ok).<br />
+              3. Permitir corrigir e tentar de novo.<br />
+              4. Fechar o app e voltar retoma o passo pendente.
+            </div>
+            <div class="callout info" style="margin-top:10px">
+              Fora desta proposta: fundir a jornada com a evolução do Ian / marcos. Isso fica para discussão separada.
+            </div>
+            <div class="actions">
+              <button class="btn ghost" data-go="4">Voltar ao app</button>
+              <button class="btn primary" data-act="reset">Reiniciar demo</button>
+            </div>`;
+        },
+      },
+    ];
+
+    function esc(s) {
+      return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function renderSteps() {
+      const root = document.getElementById("steps");
+      root.innerHTML = STEPS.map((s, i) => `
+        <button type="button" class="step-btn ${i === state.step ? "active" : ""} ${i < state.step ? "done" : ""}" data-go="${i}">
+          <span class="num">${i < state.step ? "✓" : i + 1}</span>
+          <span>
+            <strong>${s.title}</strong>
+            <span>${s.nav}</span>
+          </span>
+        </button>`).join("");
+    }
+
+    function renderJourney() {
+      const inApp = state.step >= 4;
+      const bar = document.getElementById("journeyBar");
+      bar.style.display = inApp ? "block" : "none";
+      const done = Math.min(state.journeyDone, JOURNEY.length);
+      document.getElementById("journeyCount").textContent = `${done} de ${JOURNEY.length}`;
+      document.getElementById("journeyFill").style.width = `${(done / JOURNEY.length) * 100}%`;
+      document.getElementById("journeyPills").innerHTML = JOURNEY.map((j, i) =>
+        `<span class="pill ${i < done ? "on" : ""}">${j.label}</span>`
+      ).join("");
+    }
+
+    function render() {
+      const s = STEPS[state.step];
+      document.getElementById("screenKicker").textContent = s.kicker;
+      document.getElementById("screenTitle").textContent = s.heading;
+      document.getElementById("screen").innerHTML = s.render();
+      renderSteps();
+      renderJourney();
+      document.getElementById("prevBtn").disabled = state.step === 0;
+      document.getElementById("nextBtn").disabled = state.step === STEPS.length - 1;
+      wire();
+    }
+
+    function wire() {
+      document.querySelectorAll("[data-go]").forEach((el) => {
+        el.addEventListener("click", () => {
+          const n = Number(el.getAttribute("data-go"));
+          if (Number.isFinite(n)) {
+            state.step = Math.max(0, Math.min(STEPS.length - 1, n));
+            state.accountError = false;
+            render();
+          }
+        });
+      });
+      document.querySelectorAll("input[data-k]").forEach((el) => {
+        el.addEventListener("input", () => {
+          state[el.getAttribute("data-k")] = el.value;
+        });
+      });
+      document.querySelectorAll("[data-act]").forEach((el) => {
+        el.addEventListener("click", () => {
+          const act = el.getAttribute("data-act");
+          if (act === "save-account") {
+            const name = document.getElementById("accName")?.value?.trim() || "Conta principal";
+            state.account = name;
+            state.accountError = false;
+            state.step = 2;
+            render();
+          } else if (act === "fail-account") {
+            state.accountError = true;
+            render();
+          } else if (act === "save-card") {
+            const name = document.getElementById("cardName")?.value?.trim() || "Cartão";
+            state.card = name;
+            state.step = 3;
+            render();
+          } else if (act === "journey") {
+            state.journeyDone = Math.min(JOURNEY.length, state.journeyDone + 1);
+            render();
+          } else if (act === "reset") {
+            reset();
+          }
+        });
+      });
+    }
+
+    function reset() {
+      state.step = 0;
+      state.account = null;
+      state.card = null;
+      state.journeyDone = 0;
+      state.accountError = false;
+      state.name = "Flavio Barbosa";
+      state.phone = "(27) 99999-0000";
+      state.email = "flavio@elroy.com.br";
+      state.cep = "29000-000";
+      render();
+    }
+
+    document.getElementById("prevBtn").addEventListener("click", () => {
+      state.step = Math.max(0, state.step - 1);
+      render();
+    });
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      state.step = Math.min(STEPS.length - 1, state.step + 1);
+      render();
+    });
+    document.getElementById("resetBtn").addEventListener("click", reset);
+
+    render();
+  </script>
+</body>
+</html>

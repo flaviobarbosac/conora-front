@@ -1,6 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
 import { formatDate } from '../lib/format'
-import { isNativeApp } from '../lib/platform'
 import { usePlanAccess } from '../hooks/usePlanAccess'
 import styles from './PlanBanner.module.css'
 
@@ -11,32 +10,27 @@ const TRIAL_WARNING_DAYS = 15
 export function PlanBanner() {
   const { plan } = usePlanAccess()
   const { pathname } = useLocation()
-  const hideCheckout = isNativeApp()
   if (!plan || pathname === '/plano') {
     return null
   }
 
   let tone: 'info' | 'warning' = 'info'
   let text: string
-  let cta: string | null
+  let cta: string
   if (plan.phase === 'Trial' && plan.daysLeft <= TRIAL_WARNING_DAYS) {
     text =
       plan.daysLeft <= 1
-        ? hideCheckout
-          ? 'Seu acesso gratuito termina hoje.'
-          : 'Seu acesso gratuito termina hoje. Assine para continuar lançando sem interrupção.'
-        : hideCheckout
-          ? `Seu acesso gratuito termina em ${plan.daysLeft} dias.`
-          : `Seu acesso gratuito termina em ${plan.daysLeft} dias. Escolha seu plano e continue sem interrupção.`
-    cta = hideCheckout ? null : 'Ver planos'
+        ? 'Seu acesso gratuito termina hoje. Assine para continuar lançando sem interrupção.'
+        : `Seu acesso gratuito termina em ${plan.daysLeft} dias. Escolha seu plano e continue sem interrupção.`
+    cta = 'Ver planos'
   } else if (plan.phase === 'Grace') {
     tone = 'warning'
     text = `Modo somente leitura: você pode consultar e exportar seus dados até ${formatDate(plan.blockAt)}.`
-    cta = hideCheckout ? null : 'Assinar agora'
+    cta = 'Assinar agora'
   } else if (plan.phase === 'Expired') {
     tone = 'warning'
     text = 'Seu plano venceu e o Conora está em modo somente leitura.'
-    cta = hideCheckout ? null : 'Renovar plano'
+    cta = 'Renovar plano'
   } else {
     return null
   }

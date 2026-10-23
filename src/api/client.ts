@@ -39,24 +39,30 @@ export function getRefreshToken(): string | null {
   return localStorage.getItem(REFRESH_KEY)
 }
 
-export function emailFromAccessToken(token: string | null): string {
+function accessTokenClaims(token: string | null): { email?: string; sub?: string } {
   if (!token) {
-    return ''
+    return {}
   }
 
   try {
     const payload = token.split('.')[1]
     if (!payload) {
-      return ''
+      return {}
     }
 
-    const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
-      email?: string
-    }
-    return json.email ?? ''
+    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { email?: string; sub?: string }
   } catch {
-    return ''
+    return {}
   }
+}
+
+export function emailFromAccessToken(token: string | null): string {
+  return accessTokenClaims(token).email ?? ''
+}
+
+/** Conora user id (JWT sub). Sent to the stores as appAccountToken so a purchase stays tied to this login. */
+export function userIdFromAccessToken(token: string | null): string {
+  return accessTokenClaims(token).sub ?? ''
 }
 
 export function persistSession(auth: AuthResponse): void {

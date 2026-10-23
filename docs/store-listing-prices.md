@@ -10,8 +10,10 @@ Fonte canônica no código: `Conora.Domain.Catalog.PlanCatalog` e `src/lib/store
 
 ## Publicação
 
-1. Google Play Console → assinaturas: cadastrar/atualizar os três produtos com estes valores.
-2. App Store Connect → assinaturas: mesmos valores (sem preço de aluno; aluno = 90 dias de trial no app).
-3. Conferir que o app lê ofertas via API (`/plan`) — não hardcode de preço na UI nativa de checkout (Android/iOS ocultam checkout digital).
+Os planos são vendidos no app **só pelas lojas** (In-App Purchase no iOS, Google Play Billing no Android):
+`src/lib/storeBilling.ts` abre a compra e chama `POST /plan/store/confirm`; a API valida na loja.
+SKUs em `src/lib/storeProducts.ts` (iguais a `StoreProductIds` no backend).
 
-Checklist Flavio: [ ] Play atualizado  [ ] App Store atualizado  [ ] API em produção com PlanCatalog novo
+Checklist completo das lojas e da API: `Conora-backEnd/docs/store-billing.md`.
+
+Checklist Flavio: [ ] Play (6 assinaturas, plano base `monthly`/`yearly`)  [ ] App Store (1 grupo, 6 produtos enviados com o build)  [ ] API em produção com credenciais das lojas
