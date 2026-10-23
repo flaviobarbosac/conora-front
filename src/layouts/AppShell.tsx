@@ -47,19 +47,20 @@ export function AppShell() {
   }, [profile.data?.themeId, setTheme])
 
   useEffect(() => {
-    if (!profile.data) return
+    const prefs = profile.data
+    if (!prefs) return
     let cancelled = false
     void gamificationApi.achievements().then((data) => {
       if (cancelled) return
       applyIanMaturity(maturityAgeFromAchievements(data.items), {
-        quiet: profile.data.quietMode,
-        photoEvolutionEnabled: profile.data.photoEvolutionEnabled !== false,
+        quiet: prefs.quietMode,
+        photoEvolutionEnabled: prefs.photoEvolutionEnabled !== false,
       })
     }).catch(() => {
       if (cancelled) return
       applyIanMaturity(0, {
-        quiet: profile.data.quietMode,
-        photoEvolutionEnabled: profile.data.photoEvolutionEnabled !== false,
+        quiet: prefs.quietMode,
+        photoEvolutionEnabled: prefs.photoEvolutionEnabled !== false,
       })
     })
     return () => {
