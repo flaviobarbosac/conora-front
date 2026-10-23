@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { familyApi } from '../api/finance'
+import { familyApi, gamificationApi } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
 import { isConsoleOperator } from '../auth/consoleAccess'
 import { AlertsBell } from '../components/AlertsBell'
@@ -11,6 +11,7 @@ import { Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
 import { PREFERENCES_CHANGED, readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
+import { applyIanMaturity, maturityAgeFromAchievements } from '../lib/speakPt'
 import { CADASTROS_ITEMS, NAV_ITEMS } from '../nav'
 import { ALL_THEMES, type ThemeId } from '../theme/themes'
 import { useTheme } from '../theme/ThemeProvider'
@@ -44,6 +45,31 @@ export function AppShell() {
       setTheme(profile.data.themeId)
     }
   }, [profile.data?.themeId, setTheme])
+
+  useEffect(() => {
+    if (!profile.data) return
+    let cancelled = false
+    void gamificationApi.achievements().then((data) => {
+      if (cancelled) return
+      applyIanMaturity(maturityAgeFromAchievements(data.items), {
+        quiet: profile.data.quietMode,
+        photoEvolutionEnabled: profile.data.photoEvolutionEnabled !== false,
+      })
+    }).catch(() => {
+      if (cancelled) return
+      applyIanMaturity(0, {
+        quiet: profile.data.quietMode,
+        photoEvolutionEnabled: profile.data.photoEvolutionEnabled !== false,
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [
+    profile.data?.quietMode,
+    profile.data?.photoEvolutionEnabled,
+    profile.data?.usuarioId,
+  ])
   const [cadastrosOpen, setCadastrosOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [themesMenuOpen, setThemesMenuOpen] = useState(false)
@@ -97,6 +123,8 @@ export function AppShell() {
         monthCloseDay: current.monthCloseDay,
         includeAbsoluteValuesInRetrospective: current.includeAbsoluteValuesInRetrospective,
         voiceEntryConfirm: current.voiceEntryConfirm !== false,
+        budgetAlertPercent: current.budgetAlertPercent ?? 70,
+        photoEvolutionEnabled: current.photoEvolutionEnabled !== false,
       })
       profile.reload()
       window.dispatchEvent(new Event('conora:profile-changed'))

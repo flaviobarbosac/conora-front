@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { lgpdApi, planApi, type Plan, type PlanOffer, type PlanTier } from '../api/finance'
 import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
@@ -21,7 +21,7 @@ import { showSaveToast } from '../lib/saveToast'
 import styles from './PlanPage.module.css'
 
 const TIERS: ReadonlyArray<PlanTier> = ['Individual', 'Family', 'FamilyPlus']
-const RECOMMENDED: PlanTier = 'Family'
+const RECOMMENDED: PlanTier = 'FamilyPlus'
 
 const INCLUDED = [
   'Lançamentos de receitas e despesas',
@@ -49,7 +49,7 @@ const FAQ: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: 'Qual a diferença entre os planos?',
-    a: 'Todos têm todas as funcionalidades do Conora. O que muda é o grupo familiar: o Individual é só para você, o Família inclui até 2 pessoas e o Família+ inclui 3 pessoas ou mais, cada uma com o próprio acesso.',
+    a: 'Todos têm todas as funcionalidades do Conora. O que muda é o grupo: o Individual é só para você, o Duo é para duas pessoas e o Family é para três ou mais, cada uma com o próprio acesso.',
   },
   {
     q: 'Como funciona o plano anual?',
@@ -67,6 +67,9 @@ function currentTier(plan: Plan): PlanTier | null {
 }
 
 export function PlanPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const inviteToken = (searchParams.get('convite') ?? '').trim()
   const plan = useLoad(() => planApi.get(), [])
   const access = usePlanAccess()
   const subscribe = useAction()
@@ -82,11 +85,19 @@ export function PlanPage() {
     if (data?.phase === 'Grace') markGraceScreenShown()
   }, [data?.phase])
 
+  useEffect(() => {
+    if (!inviteToken) return
+    // After the store step, continue to the invite accept screen with the same token.
+    if (data?.phase === 'Subscribed' || data?.phase === 'Trial') {
+      navigate(`/grupo/convite/${encodeURIComponent(inviteToken)}`, { replace: true })
+    }
+  }, [inviteToken, data?.phase, navigate])
+
   async function choose(offer: PlanOffer) {
     const info = TIER_INFO[offer.tier]
-    if (import.meta.env.PROD) {
+    if (import.meta.env.PROD || hideCheckout) {
       subscribe.setError(
-        'O pagamento on-line ainda está sendo liberado. Fale com o suporte para ativar seu plano agora.',
+        'A assinatura só muda quando a Google Play ou a App Store confirmar a compra. Abra o plano na loja do celular.',
       )
       return
     }
@@ -96,8 +107,10 @@ export function PlanPage() {
       { title: 'Confirmar assinatura', confirmLabel: 'Assinar', danger: false },
     )
     if (!ok) return
-    if (await subscribe.run(() => planApi.subscribe(offer.kind))) {
-      showSaveToast(`Plano ${info.title} ativado (ambiente de desenvolvimento).`)
+    // Dev stub: simulates the store purchase token the webhook will send in production.
+    const stubToken = `dev-store-${offer.kind}-${Date.now()}`
+    if (await subscribe.run(() => planApi.subscribe(offer.kind, stubToken))) {
+      showSaveToast(`Plano ${info.title} ativado (loja simulada em desenvolvimento).`)
       plan.reload()
       access.reload()
       window.dispatchEvent(new Event(PLAN_CHANGED))
@@ -113,6 +126,12 @@ export function PlanPage() {
 
   return (
     <div className={styles.page}>
+      {inviteToken ? (
+        <p className={styles.intro} role="status">
+          Você foi convidado para um grupo. Confirme o plano na loja; em seguida o Conora abre o aceite do convite.
+          Se você já paga Individual sozinho, o aceite cancela essa cobrança.
+        </p>
+      ) : null}
       <header className={styles.intro}>
         {hideCheckout ? (
           <>

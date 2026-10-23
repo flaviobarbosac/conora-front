@@ -43,9 +43,10 @@ import { isNativeApp } from '../lib/platform'
 import { readSharingView } from '../lib/sharingView'
 import { takeVoiceDraft, subscribeVoiceFill } from '../lib/voiceDraft'
 import { matchByName, resolveSpokenDate } from '../lib/voiceEntry'
-import { peekPendingShare, takePendingShare } from '../share/pendingShare'
+import { peekPendingShare, setPendingShare, takePendingShare } from '../share/pendingShare'
 import {
   peekPendingIntakeId,
+  pickReceiptMedia,
   pollReceipt,
   setPendingIntakeId,
   takePendingIntakeId,
@@ -152,12 +153,34 @@ export function EntriesPage() {
       const intake = await pollReceipt(intakeId)
       if (intake.status === 'Failed') {
         setOpenError(intake.failureReason ?? 'Não foi possível ler o recibo.')
+        takePendingIntakeId()
+        return
+      }
+      if (intake.status === 'Confirmed') {
+        takePendingIntakeId()
+        showSaveToast('Lançamento gravado.')
+        setShowForm(false)
+        entries.reload()
         return
       }
       if (intake.needsClassification || intake.status === 'NeedsClassification') {
         setReceiptIntake(intake)
         setClassifyOpen(true)
-        setShowForm(true)
+        setShowForm(false)
+        return
+      }
+      if (intake.status === 'Ready' && intake.proposedCategoryId) {
+        await receiptsApi.confirm(intake.id, {
+          categoryId: intake.proposedCategoryId,
+          accountId: intake.selectedBankAccountId ?? undefined,
+          amount: intake.extractedAmount ?? undefined,
+          occurredAt: intake.extractedOccurredAt ?? undefined,
+          description: intake.extractedName ?? undefined,
+        })
+        takePendingIntakeId()
+        showSaveToast('Lançamento gravado.')
+        setShowForm(false)
+        entries.reload()
         return
       }
       applyIntakeToForm(intake)
@@ -460,14 +483,38 @@ export function EntriesPage() {
             </Button>
             <Button
               variant="secondary"
-              disabled={monthClosed}
+              disabled={monthClosed || receiptBusy}
               onClick={() => {
                 void scanReceipt()
-                  .then(() => void openCreate())
+                  .then(() => void bootstrapReceipt('App'))
                   .catch(() => undefined)
               }}
             >
               Escanear recibo
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={monthClosed || receiptBusy}
+              onClick={() => {
+                void pickReceiptMedia()
+                  .then(async (file) => {
+                    const dataUrl = await new Promise<string>((resolve, reject) => {
+                      const reader = new FileReader()
+                      reader.onload = () => resolve(String(reader.result))
+                      reader.onerror = () => reject(new Error('Falha ao ler o arquivo.'))
+                      reader.readAsDataURL(file)
+                    })
+                    setPendingShare({
+                      fileName: file.name || 'recibo.pdf',
+                      mimeType: file.type || 'application/pdf',
+                      dataUrl,
+                    })
+                    await bootstrapReceipt('App')
+                  })
+                  .catch(() => undefined)
+              }}
+            >
+              Arquivo / PDF
             </Button>
           </>
         }
@@ -510,6 +557,18 @@ export function EntriesPage() {
         onClose={() => setClassifyOpen(false)}
         onClassified={(intake) => {
           setClassifyOpen(false)
+          if (intake.status === 'Confirmed') {
+            takePendingIntakeId()
+            showSaveToast('Lançamento gravado.')
+            setShowForm(false)
+            entries.reload()
+            return
+          }
+          if (intake.needsClassification || intake.status === 'NeedsClassification') {
+            setReceiptIntake(intake)
+            setClassifyOpen(true)
+            return
+          }
           applyIntakeToForm(intake)
         }}
       />

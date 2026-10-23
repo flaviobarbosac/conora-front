@@ -16,7 +16,108 @@ export const IAN_VOICES: readonly IanVoice[] = [
   { id: 'clara', label: 'Clara', pitch: 1, rate: 1 },
 ]
 
-const FEMALE_HINT = /maria|francisca|luciana|heloisa|leticia|female|feminina|vitoria|vitória/
+/** Portrait ages of the maturity journey, in order. 0 is the baby. */
+export const IAN_AGES = [0, 5, 8, 10, 12, 15, 18, 22, 30] as const
+
+export type IanAge = (typeof IAN_AGES)[number]
+
+/** Voice bands: the voice changes less often than the portrait. */
+export type IanVoiceBand = 'child' | 'preteen' | 'teen' | 'adult'
+
+export const IAN_MATURITY_CHANGED = 'conora.ianMaturity'
+
+const BAND_PITCH: Record<IanVoiceBand, number> = { child: 1.5, preteen: 1.3, teen: 1.12, adult: 1 }
+
+let maturityAge: IanAge | null = null
+
+export function voiceBandForAge(age: IanAge | null): IanVoiceBand {
+  if (age === null) {
+    return 'adult'
+  }
+  if (age <= 5) {
+    return 'child'
+  }
+  if (age <= 12) {
+    return 'preteen'
+  }
+  return age <= 18 ? 'teen' : 'adult'
+}
+
+/**
+ * Sets the age shown by the portrait and heard in the voice.
+ * Null (journey unknown) or quiet mode keeps the adult voice and the default portrait,
+ * so quiet mode never reveals the age through the voice.
+ */
+export function setIanMaturity(age: IanAge | null, quiet = false): void {
+  const next = quiet ? null : age
+  if (next === maturityAge) {
+    return
+  }
+  maturityAge = next
+  window.dispatchEvent(new Event(IAN_MATURITY_CHANGED))
+}
+
+export function getIanAge(): IanAge | null {
+  return maturityAge
+}
+
+/** Portrait for the current maturity. Unknown age uses the original jpg; every milestone age has its own png. */
+export function ianPortrait(id: IanVoiceId): string {
+  const base = id === 'clara' ? 'ian-menina' : 'ian-garoto'
+  const file =
+    maturityAge === null ? `${base}.jpg` : `${base}-${String(maturityAge).padStart(2, '0')}.png`
+  return `${import.meta.env.BASE_URL}assets/${file}`
+}
+
+/**
+ * Applies the settings toggle and the milestone age to portrait and voice.
+ * Evolution off always pins age 30 (adult voice). Quiet mode still hides age.
+ */
+export function applyIanMaturity(age: IanAge | null, options?: { quiet?: boolean; photoEvolutionEnabled?: boolean }): void {
+  const evolutionOn = options?.photoEvolutionEnabled !== false
+  const quiet = options?.quiet === true
+  if (quiet) {
+    setIanMaturity(null, true)
+    return
+  }
+  if (!evolutionOn) {
+    setIanMaturity(30)
+    return
+  }
+  setIanMaturity(age)
+}
+
+/** Highest earned milestone age in order (no skip). Baby (0) when none earned yet. */
+export function maturityAgeFromAchievements(
+  items: ReadonlyArray<{ key: string; earned: boolean }>,
+): IanAge {
+  const earned = new Set(items.filter((item) => item.earned).map((item) => item.key))
+  const order: ReadonlyArray<{ key: string; age: IanAge }> = [
+    { key: 'budget-half-filled', age: 8 },
+    { key: 'first-budget', age: 8 },
+    { key: 'first-month-closed', age: 10 },
+    { key: 'three-months-in-budget', age: 12 },
+    { key: 'payment-on-time', age: 15 },
+    { key: 'budget-on-time', age: 15 },
+    { key: 'reserve-started', age: 18 },
+    { key: 'has-reserve', age: 18 },
+    { key: 'reserve-complete', age: 22 },
+    { key: 'project-progress', age: 30 },
+  ]
+  const ages = [8, 10, 12, 15, 18, 22, 30] as const
+  const hasAge = (age: number) =>
+    order.some((item) => item.age === age && earned.has(item.key))
+  let current: IanAge = 0
+  for (const age of ages) {
+    if (!hasAge(age)) {
+      break
+    }
+    current = age
+  }
+  return current
+}
+
+const FEMALE_HINT =/maria|francisca|luciana|heloisa|leticia|female|feminina|vitoria|vitória/
 const MALE_HINT = /daniel|antonio|antônio|male|masculin|david|mark|guy|james/
 
 export function getIanVoice(): IanVoice {
@@ -108,8 +209,18 @@ function playClip(blob: Blob): Promise<void> {
   })
 }
 
+/** At age 30 the spoken line stays short and drops tutorial padding. */
+function speakTextForMaturity(text: string): string {
+  if (maturityAge !== 30) {
+    return text
+  }
+  const first = text.split(/(?<=[.!?…])\s+/)[0]?.trim() || text.trim()
+  return first.length > 160 ? `${first.slice(0, 157)}…` : first
+}
+
 async function speakHuman(text: string, voiceId: IanVoiceId, signal: AbortSignal): Promise<boolean> {
-  const blob = await apiPostBlob('/ai/speak', { text, voice: voiceId }, signal)
+  const band = voiceBandForAge(maturityAge)
+  const blob = await apiPostBlob('/ai/speak', { text: speakTextForMaturity(text), voice: voiceId, band }, signal)
   if (signal.aborted || !blob || blob.size < 64) {
     return false
   }
@@ -143,7 +254,7 @@ function speakBrowser(text: string, voiceId: IanVoiceId, gen: number): Promise<v
           utter.voice = voice
         }
         const natural = Boolean(voice && /natural|neural|online/i.test(voice.name))
-        utter.pitch = 1
+        utter.pitch = BAND_PITCH[voiceBandForAge(maturityAge)]
         utter.rate = natural ? 0.98 : 0.88
         utter.onend = () => resolve()
         utter.onerror = () => resolve()

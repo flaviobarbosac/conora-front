@@ -108,7 +108,7 @@ describe('buildAmountMaps', () => {
 })
 
 describe('chartWithAmounts', () => {
-  it('keeps an inactive leaf that still has money, and its parents', () => {
+  it('drops inactive leaves even when they still have money', () => {
     const root = account({ id: 'root', parentId: null, name: 'Essencial', level: 'Root' })
     const leaf = account({
       id: 'rent',
@@ -128,10 +128,10 @@ describe('chartWithAmounts', () => {
       [root, leaf, idle],
       idsWithAmount([new Map([['rent', 800]])]),
     )
-    expect(kept.map((item) => item.id).sort()).toEqual(['rent', 'root'])
+    expect(kept.map((item) => item.id)).toEqual([])
   })
 
-  it('drops an inactive leaf from the Raio-X chart when nothing active is under it', () => {
+  it('drops an inactive leaf from the chart when nothing active is under it', () => {
     const root = account({ id: 'root', parentId: null, name: 'Essencial', level: 'Root' })
     const leaf = account({
       id: 'rent',
@@ -141,7 +141,7 @@ describe('chartWithAmounts', () => {
       isActive: false,
     })
     const kept = chartWithAmounts([root, leaf], ['rent'], false)
-    expect(kept.map((item) => item.id)).toEqual(['root'])
+    expect(kept.map((item) => item.id)).toEqual([])
   })
 
   it('keeps an inactive parent of an active account', () => {

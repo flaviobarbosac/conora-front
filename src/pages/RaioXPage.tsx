@@ -232,7 +232,7 @@ export function RaioXPage() {
     [months, yearKey, scope],
   )
   const previousCash = useLoad(() => accountsApi.cashBalanceAtEndOfMonth(previousYm), [previousYm])
-  const accounts = useLoad(() => categoriesApi.list(undefined, true, false), [])
+  const accounts = useLoad(() => categoriesApi.list(undefined, false, false), [])
   const patrimony = useLoad(() => patrimonyApi.get(), [])
   const projects = useLoad(() => projectsApi.list(), [])
   const entries = useLoad(
@@ -777,10 +777,7 @@ function RaioXAccountBlock({
         <span className={styles.raioxToggle} aria-hidden>
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
-        <strong className={styles.raioxAccountName}>
-          {categoryLabel(account)}
-          {!account.isActive ? <span className={styles.rowSub}> · Inativa</span> : null}
-        </strong>
+        <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
         <TotalsCell
           totals={totals}
           stock={stock}

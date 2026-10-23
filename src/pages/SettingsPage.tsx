@@ -33,6 +33,8 @@ function fromProfile(
   monthCloseDay: number,
   includeAbsoluteValuesInRetrospective: boolean,
   voiceEntryConfirm: boolean,
+  budgetAlertPercent: number,
+  photoEvolutionEnabled: boolean,
 ): PrefDraft {
   return {
     quietMode,
@@ -41,6 +43,8 @@ function fromProfile(
     monthCloseDay,
     includeAbsoluteValuesInRetrospective,
     voiceEntryConfirm,
+    budgetAlertPercent,
+    photoEvolutionEnabled,
   }
 }
 
@@ -66,6 +70,8 @@ export function SettingsPage() {
       profile.data.monthCloseDay,
       profile.data.includeAbsoluteValuesInRetrospective,
       profile.data.voiceEntryConfirm !== false,
+      profile.data.budgetAlertPercent ?? 70,
+      profile.data.photoEvolutionEnabled !== false,
     )
     setDraft(next)
     setSaved(next)
@@ -93,6 +99,8 @@ export function SettingsPage() {
         monthCloseDay: draft.monthCloseDay,
         includeAbsoluteValuesInRetrospective: draft.includeAbsoluteValuesInRetrospective,
         voiceEntryConfirm: draft.voiceEntryConfirm,
+        budgetAlertPercent: draft.budgetAlertPercent,
+        photoEvolutionEnabled: draft.photoEvolutionEnabled,
       }),
     )
     if (!ok) return
@@ -197,6 +205,34 @@ export function SettingsPage() {
               }}
               hint="Dia da competência (1 a 31). Separado do dia de fechamento do cartão."
             />
+            <Field
+              label="Alerta de atenção do orçamento (%)"
+              name="budgetAlertPercent"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={99}
+              step={1}
+              value={String(draft.budgetAlertPercent ?? 70)}
+              onChange={(event) => {
+                const digits = event.target.value.replace(/\D/g, '')
+                patch({ budgetAlertPercent: digits ? Number(digits) : 0 })
+              }}
+              onBlur={() => {
+                const value = Math.min(99, Math.max(1, draft.budgetAlertPercent || 70))
+                patch({ budgetAlertPercent: value })
+              }}
+              hint="Amarelo desse percentual até 99%. Em 100% o aviso é Limite atingido. Acima de 100% fica vermelho."
+            />
+            <Select
+              label="Evolução das fotos do Ian e da Clara"
+              name="photoEvolutionEnabled"
+              value={draft.photoEvolutionEnabled !== false ? 'on' : 'off'}
+              onChange={(event) => patch({ photoEvolutionEnabled: event.target.value === 'on' })}
+            >
+              <option value="on">Ligada — foto e voz seguem os marcos</option>
+              <option value="off">Desligada — foto e voz ficam nos 30 anos</option>
+            </Select>
           </section>
 
           <section className={styles.section} id="retrospectiva">

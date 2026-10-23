@@ -24,13 +24,13 @@ export const TIER_INFO: Record<PlanTier, TierInfo> = {
     family: null,
   },
   Family: {
-    title: 'Família',
-    tagline: 'Para o casal ou a família pequena',
-    people: 'Você + até 2 pessoas',
-    family: 'Grupo familiar com até 2 pessoas',
+    title: 'Duo',
+    tagline: 'Para duas pessoas',
+    people: 'Você + 1 pessoa',
+    family: 'Grupo familiar com duas pessoas',
   },
   FamilyPlus: {
-    title: 'Família+',
+    title: 'Family',
     tagline: 'Para a família inteira',
     people: 'Você + 3 pessoas ou mais',
     family: 'Grupo familiar com 3 pessoas ou mais',
