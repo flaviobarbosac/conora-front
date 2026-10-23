@@ -346,7 +346,7 @@ function CategoryTreeRow({
                 disabled={busy}
                 onChange={(event) => onRenameIsActive(event.target.checked)}
               />
-              Ativa
+              Ativa / inativa
             </label>
             <Button type="submit" disabled={busy || !renameName.trim()}>
               Salvar
@@ -394,7 +394,7 @@ function CategoryTreeRow({
           {canManage && !renaming ? (
             <>
               <Button variant="ghost" disabled={busy} onClick={() => onStartRename(account)}>
-                Renomear
+                Editar
               </Button>
               {account.isActive ? (
                 <Button variant="ghost" disabled={busy} onClick={() => onSetActive(account, false)}>
