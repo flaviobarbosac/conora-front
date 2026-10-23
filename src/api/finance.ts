@@ -273,6 +273,7 @@ export type Alert = {
   message: string
   categoryId: string | null
   percent: number | null
+  seen?: boolean
 }
 
 export type Dashboard = {
@@ -301,6 +302,14 @@ export type MonthlyReport = {
 export const dashboardApi = {
   get: (ym: string) => apiFetch<Dashboard>(`/dashboard/${ym}`),
   alerts: (ym: string) => apiFetch<Alert[]>(`/dashboard/${ym}/alerts`),
+  markAlertsSeen: (competenceYm: string, items: { code: string; categoryId?: string | null }[]) =>
+    apiFetch<void>(
+      '/dashboard/alerts/seen',
+      json('POST', {
+        competenceYm,
+        items: items.map((item) => ({ code: item.code, categoryId: item.categoryId ?? null })),
+      }),
+    ),
   monthlyReport: (ym: string) => apiFetch<MonthlyReport>(`/reports/monthly/${ym}`),
 }
 
@@ -708,6 +717,8 @@ export type FamilyProfile = {
   hasAppleLogin?: boolean
   budgetAlertPercent?: number
   photoEvolutionEnabled?: boolean
+  phone?: string | null
+  cep?: string | null
 }
 
 export type DeleteAccountInput = {
@@ -782,9 +793,18 @@ export type FamilyGroupResponse = {
   pendingOwnerTransfer: FamilyOwnerTransfer | null
 }
 
+export type UpdateProfileInput = {
+  name: string
+  phone?: string | null
+  cep?: string | null
+}
+
 export const familyApi = {
   profile: () => apiFetch<FamilyProfile>('/family/profile'),
-  updateProfile: (name: string) => apiFetch<FamilyProfile>('/family/profile', json('PUT', { name })),
+  updateProfile: (input: string | UpdateProfileInput) => {
+    const body = typeof input === 'string' ? { name: input } : input
+    return apiFetch<FamilyProfile>('/family/profile', json('PUT', body))
+  },
   updatePreferences: (input: UserPreferencesInput) =>
     apiFetch<FamilyProfile>('/family/preferences', json('PUT', input)),
   completeOnboarding: () => apiFetch<FamilyProfile>('/family/onboarding/complete', json('POST')),

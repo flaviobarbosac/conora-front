@@ -339,6 +339,38 @@
 
 /* ---------- Included + FAQ ---------- */
 
+.legalBlock {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.legalBlock h3 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+.legalScroll {
+  max-height: 140px;
+  overflow: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-body);
+}
+
+.legalScroll p {
+  margin: 0 0 var(--space-2);
+}
+
+.legalScroll p:last-child {
+  margin-bottom: 0;
+}
+
 .included,
 .faq {
   background: var(--surface);

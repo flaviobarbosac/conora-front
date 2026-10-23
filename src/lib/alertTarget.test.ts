@@ -34,9 +34,12 @@ describe('alertTarget', () => {
     )
   })
 
-  it('keeps category review, card limit, and a negative month on their screens', () => {
+  it('keeps category review, card limit, month close, and a negative month on their screens', () => {
     expect(alertTarget(alert({ code: 'CATEGORY_PENDING_REVIEW', categoryId: null, percent: null }), '2026-10')).toBe(
       '/categorias',
+    )
+    expect(alertTarget(alert({ code: 'MONTH_CLOSE_PENDING', categoryId: null, percent: null, severity: 'Attention' }), '2026-10')).toBe(
+      '/mes',
     )
     expect(alertTarget(alert({ code: 'CARD_LIMIT', categoryId: null, percent: 110 }), '2026-10')).toBe('/cartoes')
     expect(alertTarget(alert({ code: 'NEGATIVE_RESULT', categoryId: null, percent: null, severity: 'Attention' }), '2026-10')).toBe(

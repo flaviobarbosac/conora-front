@@ -1,0 +1,226 @@
+.wrap {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.headerCard {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.kicker {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+  margin: 0;
+}
+
+.headerTitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: var(--space-3);
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.portrait {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 1px solid var(--border-subtle);
+  background: var(--selected);
+  flex-shrink: 0;
+  display: block;
+}
+
+.portraitNext {
+  border: 2px solid var(--accent);
+}
+
+.dot {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  background: var(--selected);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.dotDone {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.dotNext {
+  background: var(--primary);
+  color: var(--primary-on);
+  border: 2px solid var(--accent);
+}
+
+.line {
+  width: 2px;
+  flex: 1;
+  min-height: 20px;
+  margin-top: 4px;
+  background: var(--border-subtle);
+}
+
+.lineDone {
+  background: var(--primary);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+  display: grid;
+  gap: 6px;
+}
+
+.cardNext {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
+}
+
+.cardDone {
+  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 35%, var(--border-subtle));
+}
+
+.cardLast {
+  margin-bottom: 0;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.chip {
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--bg-app);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.chipCadastro {
+  background: var(--selected);
+  color: var(--primary);
+  border-color: var(--selected);
+}
+
+.chipMarco {
+  background: var(--selected);
+  color: var(--primary);
+  border-color: var(--accent);
+}
+
+.chipApex {
+  background: var(--success-bg);
+  color: var(--success);
+  border-color: var(--success-bg);
+}
+
+.ageLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+  letter-spacing: var(--tracking-tight);
+}
+
+.cardAction {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.cardBody {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-body);
+}
+
+.cta {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  margin-top: var(--space-2);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--primary-on);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.cta:hover {
+  filter: brightness(1.03);
+}
+
+.footer {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.footerHint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.homeToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}

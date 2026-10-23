@@ -2285,7 +2285,8 @@ button.compact {
   }
 
   .homePage .header,
-  .homeUrgent {
+  .homeUrgent,
+  .homeJourney {
     align-self: stretch;
   }
 
@@ -2303,6 +2304,13 @@ button.compact {
     position: absolute;
     inset: 0;
   }
+}
+
+.homeJourney {
+  width: 100%;
+  max-width: 40rem;
+  margin-inline: auto;
+  padding-bottom: var(--space-6);
 }
 
 .homeLaunch {

@@ -1,13 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { dashboardApi, familyApi } from '../api/finance'
 import { scanReceipt } from '../camera/scanReceipt'
 import { HomeLaunchO } from '../components/HomeLaunchO'
+import { JornadaTimeline } from '../components/JornadaTimeline'
 import { PageHeader } from '../components/PageHeader'
 import { ErrorText } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
 import { currentCompetence } from '../lib/format'
+import {
+  PREFERENCES_CHANGED,
+  PREF_KEYS,
+  readHomeJourneyTimeline,
+  writeHomeJourneyTimeline,
+} from '../lib/preferences'
 import { speechRecognitionAvailable } from '../lib/voiceDraft'
 import styles from './page.module.css'
 
@@ -24,8 +31,20 @@ export function HomePage() {
   const profile = useLoad(() => familyApi.profile(), [])
   const dashboard = useLoad(() => dashboardApi.get(currentCompetence()), [])
   const [voiceError, setVoiceError] = useState<string | null>(null)
+  const [showJourney, setShowJourney] = useState(readHomeJourneyTimeline)
   const name = firstName(profile.data?.name)
   const pendingCategories = dashboard.data?.alerts.find((alert) => alert.code === 'CATEGORY_PENDING_REVIEW')
+
+  useEffect(() => {
+    function onPrefs(event: Event) {
+      const detail = (event as CustomEvent<{ key?: string }>).detail
+      if (!detail?.key || detail.key === PREF_KEYS.homeJourneyTimeline) {
+        setShowJourney(readHomeJourneyTimeline())
+      }
+    }
+    window.addEventListener(PREFERENCES_CHANGED, onPrefs)
+    return () => window.removeEventListener(PREFERENCES_CHANGED, onPrefs)
+  }, [])
 
   function openManual() {
     navigate('/lancamentos?novo=1')
@@ -46,6 +65,11 @@ export function HomePage() {
     window.dispatchEvent(new Event('conora:open-voice'))
   }
 
+  function closeJourney() {
+    writeHomeJourneyTimeline(false)
+    setShowJourney(false)
+  }
+
   return (
     <div className={`${styles.page} ${styles.homePage}`}>
       <PageHeader kicker="Início" title={name ? `Olá, ${name}` : 'Olá'} />
@@ -62,6 +86,12 @@ export function HomePage() {
       <section className={styles.homeLaunch} aria-label="Lançamento">
         <HomeLaunchO listening={false} onScan={openScan} onVoice={openVoice} onManual={openManual} />
       </section>
+
+      {showJourney ? (
+        <section className={styles.homeJourney} aria-label="Jornada Raio X">
+          <JornadaTimeline onClose={closeJourney} />
+        </section>
+      ) : null}
     </div>
   )
 }

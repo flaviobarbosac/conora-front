@@ -286,7 +286,10 @@ export function SettingsPage() {
             <span>{profile.data?.name?.trim() || 'Sem nome'}</span>
           </Link>
         </div>
-        <p className={styles.muted}>Baixe uma cópia dos seus dados ou exclua sua conta definitivamente.</p>
+        <p className={styles.muted}>
+          Processos satélites da LGPD: baixe uma cópia dos seus dados ou exclua sua conta definitivamente. O
+          aceite ciente da LGPD é pedido só no pagamento de um plano pago — não no acesso gratuito.
+        </p>
         <div className={styles.actions}>
           <Button variant="secondary" disabled={privacy.busy} onClick={() => void exportData()}>
             Exportar meus dados
