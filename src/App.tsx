@@ -21,6 +21,7 @@ import { ImportPage } from './pages/ImportPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
+import { JornadaRaioXPage } from './pages/JornadaRaioXPage'
 import { MarcosPage } from './pages/MarcosPage'
 import { MonthPage } from './pages/MonthPage'
 import { MorePage } from './pages/MorePage'
@@ -155,6 +156,7 @@ export default function App() {
                 <Route path="/projetos" element={<ProjectsPage />} />
                 <Route path="/projetos/:id" element={<ProjectDetailPage />} />
                 <Route path="/relatorios" element={<MorePage />} />
+                <Route path="/jornada" element={<JornadaRaioXPage />} />
                 <Route path="/marcos" element={<MarcosPage />} />
                 <Route path="/retrospectiva" element={<RetrospectivePage />} />
                 <Route path="/diagnostico" element={<DiagnosisPage />} />
