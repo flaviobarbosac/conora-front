@@ -79,8 +79,8 @@ export function buildAmountMaps(lines: BudgetLine[]): {
 }
 
 /**
- * Active categories stay, with their parents.
- * Inactive accounts leave listing screens (budget, Raio-X, pickers).
+ * Active analytical accounts stay, with their parents (parents may be inactive).
+ * Inactive leaves leave listing screens. Empty active roots with no live leaf drop out.
  * keepInactiveWithAmount is unused and kept for call-site compatibility.
  */
 export function chartWithAmounts(
@@ -93,7 +93,7 @@ export function chartWithAmounts(
   const byId = new Map(accounts.map((account) => [account.id, account]))
   const keep = new Set<string>()
   for (const account of accounts) {
-    if (!account.isActive) {
+    if (!account.isActive || account.level !== 'Analytical') {
       continue
     }
     let current: Category | undefined = account
