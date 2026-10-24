@@ -720,6 +720,7 @@ export type FamilyProfile = {
   photoEvolutionEnabled?: boolean
   phone?: string | null
   cep?: string | null
+  contractAcknowledgedAt?: string | null
 }
 
 export type DeleteAccountInput = {
