@@ -669,7 +669,7 @@ function matchesEntryType(section: string, type: FormType): boolean {
   if (type === 'Income') {
     return section === 'Income' || section === 'LifeProject' || section === 'Asset' || section === 'Liability'
   }
-  return section === 'Discount' || section === 'Essential' || section === 'Social' || section === 'Asset' || section === 'Liability'
+  return section === 'Discount' || section === 'Essential' || section === 'Social' || section === 'Debt' || section === 'Asset' || section === 'Liability'
 }
 
 function EntryForm({

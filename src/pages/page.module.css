@@ -1084,6 +1084,26 @@ button.compact {
   height: 20px;
 }
 
+.leakageFilter {
+  flex: 1 0 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.leakageFilter input {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
 .budgetSaveBar {
   display: flex;
   align-items: center;
