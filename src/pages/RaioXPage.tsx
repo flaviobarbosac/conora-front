@@ -948,6 +948,7 @@ function RaioXSideCards({
                     <strong>{bar.name}</strong>
                     <span className={styles.moneyValue}>{consumptionLabel(bar.planned, bar.actual)}</span>
                   </span>
+                  <ConsumptionBar percent={bar.progressPct} color={accountBarColor(bar.section)} />
                 </button>
               </li>
             ))}
@@ -997,12 +998,14 @@ function RaioXSideCards({
           const items = projects.filter((project) => project.horizon === horizon.key)
           const goal = items.reduce((sum, project) => sum + project.goalAmount, 0)
           const accumulated = items.reduce((sum, project) => sum + project.accumulatedAmount, 0)
+          const percent = goal <= 0 ? 0 : Math.min(100, (accumulated / goal) * 100)
           return (
             <Link key={horizon.key} className={styles.horizonRow} to={`/projetos?horizonte=${horizon.key}`}>
               <span className={styles.horizonMeta}>
                 <strong>{horizon.label}</strong>
                 <span>{consumptionLabel(goal, accumulated)}</span>
               </span>
+              <ConsumptionBar percent={percent} color={HORIZON_BAR_COLOR[horizon.key]} />
             </Link>
           )
         })}
@@ -1012,12 +1015,49 @@ function RaioXSideCards({
   )
 }
 
+const ACCOUNT_BAR_COLOR = {
+  Income: '#2F8A78',
+  Discount: '#5B7194',
+  Debt: '#B85C6A',
+  Essential: '#3F5E8C',
+  LifeProject: '#A6843A',
+  Social: '#7A5A94',
+} as const
+
+function accountBarColor(section: CategorySection): string {
+  if (section in ACCOUNT_BAR_COLOR) {
+    return ACCOUNT_BAR_COLOR[section as keyof typeof ACCOUNT_BAR_COLOR]
+  }
+  return '#5B7194'
+}
+
+const HORIZON_BAR_COLOR = {
+  short: '#3E8F5C',
+  mid: '#C47A4E',
+  long: '#3A7F94',
+} as const
+
+function ConsumptionBar({ percent, color }: { percent: number; color: string }) {
+  return (
+    <span
+      className={styles.progress}
+      aria-hidden
+      style={{ background: `color-mix(in srgb, ${color} 32%, var(--border-subtle))` }}
+    >
+      <span
+        className={styles.progressFill}
+        style={{ width: `${Math.min(100, Math.max(0, percent))}%`, background: color }}
+      />
+    </span>
+  )
+}
+
 /** Fulfilled of total, then the real percent. Same reading as a life-project line. */
 function consumptionLabel(total: number, fulfilled: number): string {
-  if (total <= 0) {
-    return `${formatMoney(fulfilled)} de — · —`
-  }
-  return `${formatMoney(fulfilled)} de ${formatMoney(total)} · ${formatPercent((fulfilled / total) * 100)}`
+  const safeTotal = Number.isFinite(total) ? total : 0
+  const safeFulfilled = Number.isFinite(fulfilled) ? fulfilled : 0
+  const percent = safeTotal <= 0 ? 0 : (safeFulfilled / safeTotal) * 100
+  return `${formatMoney(safeFulfilled)} de ${formatMoney(safeTotal)} · ${formatPercent(Number.isFinite(percent) ? percent : 0)}`
 }
 
 function PairCard({
