@@ -5,6 +5,8 @@ type Props = {
   acceptLgpd: boolean
   onAcceptContract: (value: boolean) => void
   onAcceptLgpd: (value: boolean) => void
+  /** Hide the checkboxes when the screen is only for reading. */
+  showChecks?: boolean
 }
 
 /** Contract + cancellation + LGPD — only at paid-plan checkout. Free tier has no LGPD checkbox. */
@@ -13,13 +15,13 @@ export function LegalConsentPanel({
   acceptLgpd,
   onAcceptContract,
   onAcceptLgpd,
+  showChecks = true,
 }: Props) {
   return (
     <section className={styles.included} aria-label="Contrato, cancelamento e LGPD">
       <h2>Antes de pagar</h2>
-      <p className={styles.people}>
-        O aceite abaixo vale só no pagamento de um plano pago. No acesso gratuito não há exigência de
-        assinatura da LGPD.
+      <p className={styles.note}>
+        O aceite vale no pagamento de um plano pago. No acesso gratuito não há exigência de assinatura da LGPD.
       </p>
 
       <article className={styles.legalBlock}>
@@ -79,18 +81,22 @@ export function LegalConsentPanel({
         </div>
       </article>
 
-      <label className={styles.people}>
-        <input
-          type="checkbox"
-          checked={acceptContract}
-          onChange={(event) => onAcceptContract(event.target.checked)}
-        />{' '}
-        Li e aceito o contrato de uso e a política de cancelamento.
-      </label>
-      <label className={styles.people}>
-        <input type="checkbox" checked={acceptLgpd} onChange={(event) => onAcceptLgpd(event.target.checked)} />{' '}
-        Autorizo o tratamento dos meus dados conforme a LGPD e os processos satélites descritos.
-      </label>
+      {showChecks ? (
+        <>
+          <label className={styles.check}>
+            <input
+              type="checkbox"
+              checked={acceptContract}
+              onChange={(event) => onAcceptContract(event.target.checked)}
+            />
+            Li e aceito o contrato de uso e a política de cancelamento.
+          </label>
+          <label className={styles.check}>
+            <input type="checkbox" checked={acceptLgpd} onChange={(event) => onAcceptLgpd(event.target.checked)} />
+            Autorizo o tratamento dos meus dados conforme a LGPD e os processos satélites descritos.
+          </label>
+        </>
+      ) : null}
     </section>
   )
 }

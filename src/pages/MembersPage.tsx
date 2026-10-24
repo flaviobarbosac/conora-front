@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { familyApi, type FamilyInvite, type FamilyMemberUser, type FamilyNotice } from '../api/finance'
+import { Link, useNavigate } from 'react-router-dom'
+import { familyApi, planApi, type FamilyInvite, type FamilyMemberUser, type FamilyNotice } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
@@ -9,8 +9,9 @@ import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { confirmDestructive } from '../lib/confirm'
+import { familyInviteLimit } from '../lib/planAccess'
 import { formatDateTime } from '../lib/format'
-import { cameraAvailable, renderQrDataUrl, startQrScan, type QrScanSession } from '../lib/qrInvite'
+import { cameraAvailable, renderQrDataUrl, startQrScan, type QrKind, type QrScanSession } from '../lib/qrInvite'
 import { showSaveToast } from '../lib/saveToast'
 import styles from './page.module.css'
 
@@ -18,9 +19,11 @@ export function MembersPage() {
   const navigate = useNavigate()
   const profile = useLoad(() => familyApi.profile(), [])
   const group = useLoad(() => familyApi.group(), [])
+  const plan = useLoad(() => planApi.get(), [])
   const [displayName, setDisplayName] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [transferQr, setTransferQr] = useState<string | null>(null)
   const [qrInviteId, setQrInviteId] = useState<string | null>(null)
   const [qrExpiresAt, setQrExpiresAt] = useState<string | null>(null)
   const [scanning, setScanning] = useState(false)
@@ -42,6 +45,21 @@ export function MembersPage() {
       scanRef.current = null
     }
   }, [])
+
+  const transferUrl = groupData?.isBudgetOwner ? groupData.pendingOwnerTransfer?.authorizeUrl : null
+  useEffect(() => {
+    if (!transferUrl || groupData?.pendingOwnerTransfer?.isAuthorized) {
+      setTransferQr(null)
+      return
+    }
+    let cancelled = false
+    void renderQrDataUrl(transferUrl).then((dataUrl) => {
+      if (!cancelled) setTransferQr(dataUrl)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [transferUrl, groupData?.pendingOwnerTransfer?.isAuthorized])
 
   async function saveProfile(event: FormEvent) {
     event.preventDefault()
@@ -66,6 +84,10 @@ export function MembersPage() {
       inviteAction.setError('Informe o e-mail do convite.')
       return
     }
+    if (seatFull && seat) {
+      inviteAction.setError(seat.message)
+      return
+    }
     if (await inviteAction.run(() => familyApi.invite(email))) {
       showSaveToast('Convite enviado.')
       setInviteEmail('')
@@ -75,6 +97,10 @@ export function MembersPage() {
 
   async function showQr() {
     setQrError(null)
+    if (seatFull && seat) {
+      setQrError(seat.message)
+      return
+    }
     try {
       const created = await familyApi.createQrInvite()
       const dataUrl = await renderQrDataUrl(created.joinUrl)
@@ -116,9 +142,9 @@ export function MembersPage() {
     try {
       scanRef.current = await startQrScan(
         video,
-        (token) => {
+        (token, kind) => {
           setScanning(false)
-          void acceptFromQr(token)
+          void acceptFromQr(token, kind)
         },
         (message) => setQrError(message),
       )
@@ -134,8 +160,15 @@ export function MembersPage() {
     setScanning(false)
   }
 
-  async function acceptFromQr(token: string) {
+  async function acceptFromQr(token: string, kind: QrKind = 'invite') {
     stopScan()
+    if (kind === 'owner') {
+      if (await qrAction.run(() => familyApi.acceptOwnerTransfer(token))) {
+        showSaveToast('Autorização registrada. O orçamento muda quando o titular cancelar na loja.')
+        group.reload()
+      }
+      return
+    }
     if (await qrAction.run(() => familyApi.acceptInvite(token))) {
       showSaveToast('Você entrou no grupo.')
       group.reload()
@@ -180,7 +213,7 @@ export function MembersPage() {
   async function transferOwnership(member: FamilyMemberUser) {
     if (
       !(await confirmDestructive(
-        `Transferir o orçamento familiar para ${member.name}? A pessoa receberá um e-mail para aceitar.`,
+        `Pedir para ${member.name} autorizar a administração? Ela escaneia o QR. Nada muda até ela autorizar e você cancelar na loja.`,
         { title: 'Transferir orçamento', confirmLabel: 'Enviar pedido' },
       ))
     ) {
@@ -188,6 +221,13 @@ export function MembersPage() {
     }
     if (await rowAction.run(() => familyApi.requestOwnerTransfer(member.usuarioId))) {
       showSaveToast('Pedido de transferência enviado.')
+      group.reload()
+    }
+  }
+
+  async function confirmStoreCancelled() {
+    if (await rowAction.run(() => familyApi.confirmStoreCancelled())) {
+      showSaveToast('Cancelamento registrado. Os orçamentos deste mês em diante foram para a nova responsável.')
       group.reload()
     }
   }
@@ -222,6 +262,9 @@ export function MembersPage() {
   }
 
   const openInvites = (groupData?.pendingInvites.filter((i) => i.isOpen && i.email.trim()) ?? [])
+  const seat = plan.data ? familyInviteLimit(plan.data) : null
+  const occupiedExtra = Math.max(0, (groupData?.members.length ?? 1) - 1) + openInvites.length
+  const seatFull = seat !== null && occupiedExtra >= seat.maxExtra
   const hasGroup = Boolean(groupData?.groupId)
   const canInvite = !hasGroup || Boolean(groupData?.isBudgetOwner)
   const canScan = !hasGroup
@@ -307,8 +350,23 @@ export function MembersPage() {
             </ul>
             {groupData.pendingOwnerTransfer ? (
               <p className={styles.muted}>
-                Transferência pendente para {groupData.pendingOwnerTransfer.toName} (até{' '}
-                {formatDateTime(groupData.pendingOwnerTransfer.expiresAt)}).
+                A transferência de administração fica disponível do dia 1 ao dia 5. Pendente para{' '}
+                {groupData.pendingOwnerTransfer.toName}.
+                {groupData.pendingOwnerTransfer.isAuthorized
+                  ? ' Autorizada. Cancele a assinatura na loja. Depois do cancelamento, a nova responsável tem 24 horas para assinar.'
+                  : ' Ela precisa autorizar no QR antes de qualquer mudança.'}{' '}
+                {groupData.isBudgetOwner && groupData.pendingOwnerTransfer.isAuthorized ? (
+                  <>
+                    {' '}
+                    <Button
+                      variant="secondary"
+                      disabled={rowAction.busy}
+                      onClick={() => void confirmStoreCancelled()}
+                    >
+                      Já cancelei na loja
+                    </Button>
+                  </>
+                ) : null}
                 {groupData.isBudgetOwner ? (
                   <>
                     {' '}
@@ -318,6 +376,9 @@ export function MembersPage() {
                   </>
                 ) : null}
               </p>
+            ) : null}
+            {transferQr ? (
+              <img src={transferQr} alt="QR para a nova responsável autorizar a administração" width={220} height={220} />
             ) : null}
             {hasGroup ? (
               <div className={styles.actions}>
@@ -340,6 +401,11 @@ export function MembersPage() {
             <p className={styles.muted}>
               O responsável mostra o QR. Quem ainda não está em grupo lê o código nesta mesma tela.
             </p>
+            {seatFull && seat && canInvite ? (
+              <p className={styles.muted}>
+                {seat.message} <Link to="/plano">Ver planos</Link>
+              </p>
+            ) : null}
             <div className={styles.actions}>
               {canInvite ? (
                 qrDataUrl ? (
@@ -382,6 +448,11 @@ export function MembersPage() {
 
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Convidar por e-mail</h2>
+            {seatFull && seat && canInvite ? (
+              <p className={styles.muted}>
+                {seat.message} <Link to="/plano">Ver planos</Link>
+              </p>
+            ) : null}
             {canInvite ? (
               <form className={styles.form} onSubmit={(event) => void sendInvite(event)}>
                 <div className={styles.formWide}>

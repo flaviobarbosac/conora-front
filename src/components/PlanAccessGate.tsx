@@ -9,6 +9,10 @@ import { graceScreenShown, PLAN_CHANGED } from '../lib/planAccess'
 
 const PLANS_PATH = '/plano'
 
+function isPlansScreen(pathname: string) {
+  return pathname === PLANS_PATH || pathname.startsWith(`${PLANS_PATH}/`)
+}
+
 /**
  * Applies the access lifecycle: after day 100 without a plan only the plans screen opens;
  * between days 90 and 100 the plans screen is shown once per app session (read-only access).
@@ -31,7 +35,7 @@ export function RequirePlanAccess() {
   }
   const phase = plan.data?.phase
   const consoleOpen = pathname === '/console' && isConsoleOperator(session?.email)
-  if (pathname !== PLANS_PATH && !consoleOpen) {
+  if (!isPlansScreen(pathname) && !consoleOpen) {
     if (phase === 'Blocked') {
       return <Navigate to={PLANS_PATH} replace />
     }

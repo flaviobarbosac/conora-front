@@ -32,8 +32,8 @@ export const TIER_INFO: Record<PlanTier, TierInfo> = {
   FamilyPlus: {
     title: 'Família',
     tagline: 'Para a família inteira',
-    people: 'Até 5 pessoas (você + 4)',
-    family: 'Grupo familiar com até 5 pessoas',
+    people: 'Até 6 pessoas (você + 5)',
+    family: 'Grupo familiar com até 6 pessoas',
   },
 }
 
@@ -46,6 +46,31 @@ export const PHASE_LABEL: Record<AccessPhase, string> = {
 }
 
 const LEGACY_KINDS: ReadonlyArray<PlanKind> = ['Monthly1490', 'Yearly14990']
+
+/** Seats beyond the owner. Trial and no plan count as Individual (no invites). */
+export function familyInviteLimit(plan: Plan | null | undefined): { maxExtra: number; message: string } {
+  const tier = plan?.phase === 'Subscribed' ? plan.tier : null
+  const fromOffer = tier ? plan?.offers.find((offer) => offer.tier === tier)?.maxExtraMembers : null
+  const maxExtra = fromOffer ?? 0
+  if (tier === 'Family') {
+    return {
+      maxExtra,
+      message:
+        'O plano Duo permite só você e mais 1 pessoa (2 no total). Para incluir mais gente, mude para o plano Família.',
+    }
+  }
+  if (tier === 'FamilyPlus') {
+    return {
+      maxExtra,
+      message: 'O plano Família permite você e mais 5 pessoas (6 no total).',
+    }
+  }
+  return {
+    maxExtra: 0,
+    message:
+      'O plano Individual é só para você. Para convidar alguém, mude para o Duo (você + 1) ou para o Família (você + 5).',
+  }
+}
 
 export function tierOfKind(kind: PlanKind): PlanTier {
   if (kind.startsWith('FamilyPlus')) return 'FamilyPlus'

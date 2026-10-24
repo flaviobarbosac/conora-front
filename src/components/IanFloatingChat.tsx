@@ -791,7 +791,16 @@ export function IanFloatingChat() {
         className={active ? styles.agentOn : styles.agent}
         aria-label="Falar com o Ian"
         aria-pressed={active}
-        onClick={openListening}
+        onClick={(event) => {
+          if (compact || event.detail === 0) {
+            openListening()
+          }
+        }}
+        onDoubleClick={() => {
+          if (!compact) {
+            openListening()
+          }
+        }}
       >
         <img className={styles.agentFace} src={ianPortrait(voiceId)} alt="" />
         {active ? (

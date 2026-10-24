@@ -17,7 +17,7 @@ export function OwnerTransferPage() {
       return
     }
     if (await action.run(() => familyApi.acceptOwnerTransfer(token))) {
-      showSaveToast('Você assumiu o orçamento familiar.')
+      showSaveToast('Autorização registrada. O orçamento muda quando o titular cancelar na loja.')
       window.location.assign('/app/membros')
     }
   }
@@ -29,12 +29,13 @@ export function OwnerTransferPage() {
       {action.busy ? <Loading /> : null}
       <section className={styles.section}>
         <p>
-          Ao aceitar, você passa a ser o responsável pelo orçamento do grupo e recebe as linhas de planejamento
-          atuais. Só você poderá editar o orçamento familiar daí em diante.
+          Ao autorizar, você aceita assumir a administração. O orçamento do titular, deste mês em diante,
+          passa para você quando ele cancelar a assinatura na loja. Você tem 24 horas depois disso para assinar
+          e o grupo seguir com você.
         </p>
         <div className={styles.actions}>
           <Button disabled={action.busy || !token} onClick={() => void accept()}>
-            Aceitar transferência
+            Autorizar
           </Button>
         </div>
       </section>
