@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   accountsApi,
   budgetsApi,
   categoriesApi,
   entriesApi,
+  projectsApi,
   type Budget,
   type BudgetYear,
   type Category,
   type CategorySection,
   type Entry,
+  type LifeProject,
   type SharingScope,
   entryDisplayDescription,
 } from '../api/finance'
@@ -20,6 +22,7 @@ import { ProgressToneLegend } from '../components/ProgressToneLegend'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
 import { categoryLabel } from '../lib/categoryLabel'
+import { LIFE_HORIZONS } from '../lib/lifeHorizon'
 import { compareCategorySiblings, isCashFlowSection } from '../lib/categoryOrder'
 import { buildBudgetMacroBars } from '../lib/homeInsights'
 import { currentCompetence, formatCompetence, formatDate, formatMoney, formatPercent, shiftCompetence } from '../lib/format'
@@ -35,7 +38,6 @@ import {
   progressTone,
   sectionHead,
   sectionPlannedActual,
-  sectionRealized,
   sumBranch,
   yearsNeededForMonths,
   type ProgressTone,
@@ -232,6 +234,7 @@ export function RaioXPage() {
     [ym, months, scope],
   )
   const bankAccounts = useLoad(() => accountsApi.list(), [])
+  const projects = useLoad(() => projectsApi.list(), [])
 
   useEffect(() => {
     function onVoiceSaved() {
@@ -503,7 +506,8 @@ export function RaioXPage() {
           previousCash.error ??
           accounts.error ??
           entries.error ??
-          yearsBudget.error
+          yearsBudget.error ??
+          projects.error
         }
       />
       {(budget.loading && !data) || loadingRange ? <Loading /> : null}
@@ -523,8 +527,14 @@ export function RaioXPage() {
       {data ? (
         <RaioXSideCards
           budget={data}
-          assets={sectionRealized(byParent, actual, 'Asset', list)}
-          liabilities={sectionRealized(byParent, actual, 'Liability', list)}
+          accounts={list}
+          byParent={byParent}
+          planned={planned}
+          actual={actual}
+          projects={(projects.data ?? []).filter((project) =>
+            scope === 'Family' ? true : project.scope === 'Personal',
+          )}
+          projectsLoading={projects.loading && !projects.data}
           focus={focus}
           onFocus={toggleFocus}
           onExpandSection={(section) => {
@@ -871,23 +881,51 @@ function RaioXHero({
   )
 }
 
+function sectionTotals(
+  accounts: Category[],
+  byParent: Map<string | null, Category[]>,
+  planned: Map<string, number>,
+  actual: Map<string, number>,
+  section: CategorySection,
+): RaioXTotals {
+  const head = sectionHead(accounts, section)
+  if (!head) {
+    return { planned: 0, actual: 0 }
+  }
+  return sumBranch(head.id, byParent, planned, actual)
+}
+
 function RaioXSideCards({
   budget,
-  assets,
-  liabilities,
+  accounts,
+  byParent,
+  planned,
+  actual,
+  projects,
+  projectsLoading,
   focus,
   onFocus,
   onExpandSection,
 }: {
   budget: Budget
-  assets: number
-  liabilities: number
+  accounts: Category[]
+  byParent: Map<string | null, Category[]>
+  planned: Map<string, number>
+  actual: Map<string, number>
+  projects: LifeProject[]
+  projectsLoading: boolean
   focus: RaioXFocus
   onFocus: (next: RaioXFocus) => void
   onExpandSection: (section: CategorySection) => void
 }) {
+  const assets = sectionTotals(accounts, byParent, planned, actual, 'Asset')
+  const liabilities = sectionTotals(accounts, byParent, planned, actual, 'Liability')
+  const net = {
+    planned: assets.planned - liabilities.planned,
+    actual: assets.actual - liabilities.actual,
+  }
+  const patrimonyActive = focus === 'patrimony'
   const bars = buildBudgetMacroBars(budget)
-  const netWorth = assets - liabilities
 
   return (
     <div className={styles.macroGrid}>
@@ -908,69 +946,148 @@ function RaioXSideCards({
                 >
                   <span className={styles.macroBarLabel}>
                     <strong>{bar.name}</strong>
-                    <span className={styles.moneyValue}>
-                      {formatMoney(bar.planned)} / {formatMoney(bar.actual)}
-                    </span>
+                    <span className={styles.moneyValue}>{consumptionLabel(bar.planned, bar.actual)}</span>
                   </span>
-                  <span className={styles.progress} aria-hidden>
-                    <span
-                      className={`${styles.progressFill} ${
-                        bar.tone === 'over'
-                          ? styles.progressFill_danger
-                          : bar.tone === 'muted' || bar.tone === 'unbudgeted'
-                            ? styles.progressFillMuted
-                            : styles.progressFillActual
-                      }`}
-                      style={{ width: `${bar.progressPct}%` }}
-                    />
-                  </span>
+                  <ConsumptionBar percent={bar.progressPct} color={accountBarColor(bar.section)} />
                 </button>
               </li>
             ))}
           </ul>
         )}
       </section>
-      <section
-        className={styles.macroCard}
-        aria-label="Patrimônio"
-        onClick={(event) => event.stopPropagation()}
-      >
+      <div className={styles.macroSplit}>
+      <section className={styles.macroCard} aria-label="Patrimônio" onClick={(event) => event.stopPropagation()}>
         <div className={styles.macroHead}>
           <strong>Patrimônio</strong>
         </div>
         <div className={styles.heroCards}>
-          <button
-            type="button"
-            className={`${styles.heroCard} ${focus === 'patrimony' ? styles.heroCardPatrimonyActive : ''}`}
-            aria-pressed={focus === 'patrimony'}
+          <PairCard
+            label="Ativo"
+            totals={assets}
+            active={patrimonyActive}
+            amountClass={styles.positive}
             onClick={() => onFocus('patrimony')}
-          >
-            <span>Ativo</span>
-            <strong className={`${styles.moneyValue} ${styles.positive}`}>{formatMoney(assets)}</strong>
-          </button>
-          <button
-            type="button"
-            className={`${styles.heroCard} ${focus === 'patrimony' ? styles.heroCardPatrimonyActive : ''}`}
-            aria-pressed={focus === 'patrimony'}
+          />
+          <PairCard
+            label="Passivo"
+            totals={liabilities}
+            active={patrimonyActive}
+            amountClass={styles.negative}
             onClick={() => onFocus('patrimony')}
-          >
-            <span>Passivo</span>
-            <strong className={`${styles.moneyValue} ${styles.negative}`}>{formatMoney(liabilities)}</strong>
-          </button>
-          <button
-            type="button"
-            className={`${styles.heroCard} ${focus === 'patrimony' ? styles.heroCardPatrimonyActive : ''}`}
-            aria-pressed={focus === 'patrimony'}
+          />
+          <PairCard
+            label="Patrimônio líquido"
+            totals={net}
+            active={patrimonyActive}
+            amountClass={net.actual < 0 ? styles.negative : ''}
+            note="Ativo − passivo"
             onClick={() => onFocus('patrimony')}
-          >
-            <span>Patrimônio líquido</span>
-            <strong className={`${styles.moneyValue} ${netWorth < 0 ? styles.negative : ''}`}>
-              {formatMoney(netWorth)}
-            </strong>
-            <span className={styles.muted}>Ativo − passivo</span>
-          </button>
+          />
         </div>
       </section>
+      <section
+        className={styles.macroCard}
+        aria-label="Projetos de vida"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className={styles.macroHead}>
+          <strong>Projetos de vida</strong>
+        </div>
+        {projectsLoading ? <Loading /> : null}
+        {LIFE_HORIZONS.map((horizon) => {
+          const items = projects.filter((project) => project.horizon === horizon.key)
+          const goal = items.reduce((sum, project) => sum + project.goalAmount, 0)
+          const accumulated = items.reduce((sum, project) => sum + project.accumulatedAmount, 0)
+          const percent = goal <= 0 ? 0 : Math.min(100, (accumulated / goal) * 100)
+          return (
+            <Link key={horizon.key} className={styles.horizonRow} to={`/projetos?horizonte=${horizon.key}`}>
+              <span className={styles.horizonMeta}>
+                <strong>{horizon.label}</strong>
+                <span>{consumptionLabel(goal, accumulated)}</span>
+              </span>
+              <ConsumptionBar percent={percent} color={HORIZON_BAR_COLOR[horizon.key]} />
+            </Link>
+          )
+        })}
+      </section>
+      </div>
     </div>
+  )
+}
+
+const ACCOUNT_BAR_COLOR = {
+  Income: '#2F8A78',
+  Discount: '#5B7194',
+  Debt: '#B85C6A',
+  Essential: '#3F5E8C',
+  LifeProject: '#A6843A',
+  Social: '#7A5A94',
+} as const
+
+function accountBarColor(section: CategorySection): string {
+  if (section in ACCOUNT_BAR_COLOR) {
+    return ACCOUNT_BAR_COLOR[section as keyof typeof ACCOUNT_BAR_COLOR]
+  }
+  return '#5B7194'
+}
+
+const HORIZON_BAR_COLOR = {
+  short: '#3E8F5C',
+  mid: '#C47A4E',
+  long: '#3A7F94',
+} as const
+
+function ConsumptionBar({ percent, color }: { percent: number; color: string }) {
+  return (
+    <span
+      className={styles.progress}
+      aria-hidden
+      style={{ background: `color-mix(in srgb, ${color} 32%, var(--border-subtle))` }}
+    >
+      <span
+        className={styles.progressFill}
+        style={{ width: `${Math.min(100, Math.max(0, percent))}%`, background: color }}
+      />
+    </span>
+  )
+}
+
+/** Fulfilled of total, then the real percent. Same reading as a life-project line. */
+function consumptionLabel(total: number, fulfilled: number): string {
+  const safeTotal = Number.isFinite(total) ? total : 0
+  const safeFulfilled = Number.isFinite(fulfilled) ? fulfilled : 0
+  const percent = safeTotal <= 0 ? 0 : (safeFulfilled / safeTotal) * 100
+  return `${formatMoney(safeFulfilled)} de ${formatMoney(safeTotal)} · ${formatPercent(Number.isFinite(percent) ? percent : 0)}`
+}
+
+function PairCard({
+  label,
+  totals,
+  active,
+  amountClass,
+  note,
+  onClick,
+}: {
+  label: string
+  totals: RaioXTotals
+  active: boolean
+  amountClass: string
+  note?: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className={`${styles.heroCard} ${active ? styles.heroCardPatrimonyActive : ''}`}
+      aria-pressed={active}
+      onClick={onClick}
+    >
+      <span>{label}</span>
+      <strong className={`${styles.moneyValue} ${amountClass}`}>{formatMoney(totals.actual)}</strong>
+      <span className={styles.muted}>
+        Previsto {formatMoney(totals.planned)} · Realizado {formatMoney(totals.actual)}
+      </span>
+      {note ? <span className={styles.muted}>{note}</span> : null}
+    </button>
   )
 }

@@ -1279,6 +1279,12 @@ button.compact {
   grid-template-columns: 1fr;
 }
 
+.macroSplit {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr;
+}
+
 .macroCard {
   display: flex;
   flex-direction: column;
