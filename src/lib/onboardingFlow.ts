@@ -36,7 +36,7 @@ export const ONBOARDING_WALKTHROUGH: ReadonlyArray<{
   { step: 'profile', collects: ['nome', 'telefone', 'e-mail', 'CEP'], persistsIn: 'perfil' },
   { step: 'account', collects: ['conta bancária'], persistsIn: 'contas' },
   { step: 'card', collects: ['cartão de crédito'], persistsIn: 'cartões' },
-  { step: 'video', collects: ['placeholder do vídeo'], persistsIn: 'onboardingCompleted' },
+  { step: 'video', collects: ['vídeo de boas-vindas'], persistsIn: 'onboardingCompleted' },
 ]
 
 export function digitsOnly(value: string | null | undefined): string {
