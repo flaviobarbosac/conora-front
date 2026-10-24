@@ -277,28 +277,20 @@ export function PlanPage() {
                     <h2>{info.title}</h2>
                     <p>{info.tagline}</p>
                   </div>
+                  {/* The billed amount is the most prominent price (App Store guideline 3.1.2). */}
                   <div className={styles.price}>
-                    <strong>{formatMoney(offer.monthlyEquivalent)}</strong>
-                    <span>/mês</span>
+                    <strong>{storePrice ?? formatMoney(offer.price)}</strong>
+                    <span>/{offer.yearly ? 'ano' : 'mês'}</span>
                   </div>
                   <p className={styles.priceNote}>
-                    {storePrice ? (
+                    {offer.yearly ? (
                       <>
-                        {storePrice} por {offer.yearly ? 'ano' : 'mês'} na {storeName()}
-                        {offer.yearly ? (
-                          <>
-                            {' '}
-                            · <span className={styles.save}>economize {formatMoney(savings)}</span>
-                          </>
-                        ) : null}
-                      </>
-                    ) : offer.yearly ? (
-                      <>
-                        {formatMoney(offer.price)} por ano ·{' '}
+                        Cobrança anual{storePrice ? ` na ${storeName()}` : ''} · equivale a{' '}
+                        {formatMoney(offer.monthlyEquivalent)}/mês ·{' '}
                         <span className={styles.save}>economize {formatMoney(savings)}</span>
                       </>
                     ) : (
-                      'Cobrança mensal'
+                      `Cobrança mensal${storePrice ? ` na ${storeName()}` : ''}`
                     )}
                   </p>
                   <p className={styles.people}>{info.people}</p>
