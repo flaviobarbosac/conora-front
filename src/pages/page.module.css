@@ -2680,6 +2680,14 @@ button.compact {
   padding: var(--space-6) var(--space-4) calc(var(--space-8, 32px) + env(safe-area-inset-bottom));
 }
 
+.welcomeVideo {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
 .journeyProgress {
   display: grid;
   gap: var(--space-2);

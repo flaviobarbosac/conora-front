@@ -25,7 +25,7 @@ const STEPS: { id: Step; title: string; hint: string }[] = [
   { id: 'profile', title: 'Seus dados', hint: 'Nome, telefone, e-mail e CEP.' },
   { id: 'account', title: 'Conta bancária', hint: 'A mesma conta da tela Contas.' },
   { id: 'card', title: 'Cartão de crédito', hint: 'O mesmo cadastro da tela Cartões.' },
-  { id: 'video', title: 'Vídeo rápido', hint: 'Placeholder até o vídeo existir.' },
+  { id: 'video', title: 'Vídeo rápido', hint: 'Um vídeo curto para começar.' },
 ]
 
 function formatPhone(value: string): string {
@@ -297,10 +297,13 @@ export function OnboardingPage() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>Vídeo rápido</h2>
           <div className={styles.closeRitual}>
-            <p className={styles.muted}>
-              Placeholder do vídeo de boas-vindas. Quando o arquivo existir, trocamos este bloco pelo player.
-            </p>
-            <div className={styles.skeleton} style={{ minHeight: 160 }} aria-hidden />
+            <iframe
+              className={styles.welcomeVideo}
+              src="https://www.youtube.com/embed/ljs3zGINCAs"
+              title="Vídeo de boas-vindas"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
           </div>
           <div className={styles.formActions}>
             <Button variant="secondary" onClick={() => setStep('card')}>

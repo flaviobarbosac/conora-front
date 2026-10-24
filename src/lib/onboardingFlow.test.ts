@@ -15,7 +15,7 @@ describe('onboarding walkthrough (ponta a ponta)', () => {
       'CEP',
       'conta bancária',
       'cartão de crédito',
-      'placeholder do vídeo',
+      'vídeo de boas-vindas',
     ])
     expect(ONBOARDING_WALKTHROUGH.map((s) => s.step)).toEqual([
       'profile',
