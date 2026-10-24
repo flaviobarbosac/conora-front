@@ -856,8 +856,19 @@ export type Plan = {
 
 export const planApi = {
   get: () => apiFetch<Plan>('/plan'),
+  /** Development / Testing only (the API answers 404 in production). */
   subscribe: (plan: PlanKind, storePurchaseToken?: string) =>
     apiFetch<Plan>('/plan/subscribe', json('POST', { plan, storePurchaseToken })),
+  /** Validates an App Store / Google Play purchase with the store and returns the updated plan. */
+  confirmStore: (purchase: StorePurchase) => apiFetch<Plan>('/plan/store/confirm', json('POST', purchase)),
+}
+
+/** channel: 1 = Google Play, 2 = App Store (Conora.Domain.Ports.StoreBillingChannel). */
+export type StorePurchase = {
+  channel: 1 | 2
+  productId: string
+  transactionId: string
+  purchaseToken?: string
 }
 
 export const feedbackApi = {
