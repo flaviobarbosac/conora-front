@@ -61,7 +61,7 @@ const FAQ: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: 'Qual a diferença entre os planos?',
-    a: 'Todos têm todas as funcionalidades do Conora. O que muda é o grupo: o Individual é só para você, o Duo é para duas pessoas e o Family é para até cinco pessoas, cada uma com o próprio acesso.',
+    a: 'Todos têm todas as funcionalidades do Conora. O que muda é o grupo: o Individual é só para você, o Duo é para duas pessoas e o Família é para até cinco pessoas, cada uma com o próprio acesso.',
   },
   {
     q: 'Como cancelo?',
@@ -73,7 +73,7 @@ const FAQ: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: 'Como funciona o plano anual?',
-    a: 'Você paga 10 mensalidades e usa por 12 meses: são 2 meses grátis em relação ao plano mensal.',
+    a: 'Você paga uma vez e usa por 12 meses, com 16% de desconto em relação a 12 mensalidades: quase 2 meses grátis.',
   },
 ]
 
@@ -238,7 +238,7 @@ export function PlanPage() {
                 onClick={() => setYearly(true)}
               >
                 Anual
-                <span className={styles.freeBadge}>2 meses grátis</span>
+                <span className={styles.freeBadge}>16% de desconto</span>
               </button>
             </div>
           </div>

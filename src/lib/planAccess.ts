@@ -30,7 +30,7 @@ export const TIER_INFO: Record<PlanTier, TierInfo> = {
     family: 'Grupo familiar com duas pessoas',
   },
   FamilyPlus: {
-    title: 'Family',
+    title: 'Família',
     tagline: 'Para a família inteira',
     people: 'Até 5 pessoas (você + 4)',
     family: 'Grupo familiar com até 5 pessoas',

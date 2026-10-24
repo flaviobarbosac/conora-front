@@ -27,14 +27,14 @@ export function LegalConsentPanel({
         <div className={styles.legalScroll} tabIndex={0}>
           <p>
             O Conora é um serviço de organização financeira pessoal e familiar. Ao assinar, você recebe
-            acesso às funcionalidades do plano escolhido (Individual, Duo ou Family) pelo ciclo mensal ou
+            acesso às funcionalidades do plano escolhido (Individual, Duo ou Família) pelo ciclo mensal ou
             anual. Os dados financeiros que você lança são seus; o Conora processa esses dados para
             prestar o serviço (orçamento, raio-x, alertas, assistente Ian e exportações).
           </p>
           <p>
             A cobrança é feita pela Google Play ou pela App Store, conforme a loja da sua conta. O valor
-            exibido no app espelha o catálogo vigente (Individual R$&nbsp;49,90, Duo R$&nbsp;59,90, Family
-            R$&nbsp;79,00 mensais; o anual equivale a 10 mensalidades).
+            exibido no app espelha o catálogo vigente (Individual R$&nbsp;49,90, Duo R$&nbsp;59,90, Família
+            R$&nbsp;79,90 mensais; anual R$&nbsp;499,90, R$&nbsp;599,90 e R$&nbsp;799,90).
           </p>
           <p>
             É proibido usar o Conora para fins ilícitos, tentar acessar dados de outros clientes ou

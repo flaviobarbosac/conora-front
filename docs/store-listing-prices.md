@@ -2,11 +2,11 @@
 
 Fonte canônica no código: `Conora.Domain.Catalog.PlanCatalog` e `src/lib/storePrices.ts`.
 
-| Plano (loja) | SKU lógico | Mensal | Anual (10× mensal) | Pessoas |
+| Plano (loja) | SKU lógico | Mensal | Anual (faixa Apple) | Pessoas |
 |---|---|---:|---:|---:|
-| Individual | IndividualMonthly / Yearly | R$ 49,90 | R$ 499,00 | 1 |
-| Duo | FamilyMonthly / Yearly | R$ 59,90 | R$ 599,00 | 2 |
-| Family | FamilyPlusMonthly / Yearly | R$ 79,00 | R$ 790,00 | até 5 |
+| Individual | IndividualMonthly / Yearly | R$ 49,90 | R$ 499,90 | 1 |
+| Duo | FamilyMonthly / Yearly | R$ 59,90 | R$ 599,90 | 2 |
+| Família | FamilyPlusMonthly / Yearly | R$ 79,90 | R$ 799,90 | até 5 |
 
 ## Publicação
 
