@@ -6,8 +6,9 @@ export const CATEGORY_SECTION_ORDER: CategorySection[] = [
   'Income',
   'Expense',
   'Discount',
-  'LifeProject',
+  'Debt',
   'Essential',
+  'LifeProject',
   'Social',
   'Patrimony',
   'Asset',
@@ -18,16 +19,18 @@ export const CATEGORY_SECTION_ORDER: CategorySection[] = [
 export const CASH_FLOW_SECTIONS: CategorySection[] = [
   'Income',
   'Discount',
-  'LifeProject',
+  'Debt',
   'Essential',
+  'LifeProject',
   'Social',
 ]
 
 /** Expense posting sections under Despesa. */
 export const EXPENSE_SECTIONS: CategorySection[] = [
   'Discount',
-  'LifeProject',
+  'Debt',
   'Essential',
+  'LifeProject',
   'Social',
 ]
 
@@ -87,6 +90,8 @@ export function sectionLabel(section: CategorySection): string {
       return 'Essencial'
     case 'Social':
       return 'Social'
+    case 'Debt':
+      return 'Dívidas e despesas financeiras'
     case 'Asset':
       return 'Ativo'
     case 'Liability':

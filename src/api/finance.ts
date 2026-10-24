@@ -11,6 +11,7 @@ export type CategorySection =
   | 'LifeProject'
   | 'Essential'
   | 'Social'
+  | 'Debt'
   | 'Asset'
   | 'Liability'
   | 'Budget'

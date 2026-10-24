@@ -5,16 +5,11 @@ import {
   budgetsApi,
   categoriesApi,
   entriesApi,
-  patrimonyApi,
-  projectsApi,
   type Budget,
   type BudgetYear,
   type Category,
   type CategorySection,
   type Entry,
-  type LifeProject,
-  type PatrimonyItem,
-  type PatrimonySummary,
   type SharingScope,
   entryDisplayDescription,
 } from '../api/finance'
@@ -25,7 +20,7 @@ import { ProgressToneLegend } from '../components/ProgressToneLegend'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
 import { categoryLabel } from '../lib/categoryLabel'
-import { compareCategorySiblings, isCashFlowSection, isPatrimonySection } from '../lib/categoryOrder'
+import { compareCategorySiblings, isCashFlowSection } from '../lib/categoryOrder'
 import { buildBudgetMacroBars } from '../lib/homeInsights'
 import { currentCompetence, formatCompetence, formatDate, formatMoney, formatPercent, shiftCompetence } from '../lib/format'
 import {
@@ -36,12 +31,11 @@ import {
   groupAccountsByParent,
   idsWithAmount,
   monthsEndingAt,
-  patrimonyRootAmounts,
-  patrimonyStockMap,
   progressPercent,
   progressTone,
   sectionHead,
   sectionPlannedActual,
+  sectionRealized,
   sumBranch,
   yearsNeededForMonths,
   type ProgressTone,
@@ -154,10 +148,6 @@ function parseSectionParam(raw: string | null): CategorySection | null {
   return null
 }
 
-function isStockSection(section: CategorySection): boolean {
-  return section === 'Patrimony' || isPatrimonySection(section)
-}
-
 function sumYearField(
   years: BudgetYear[],
   monthList: string[],
@@ -234,8 +224,6 @@ export function RaioXPage() {
   )
   const previousCash = useLoad(() => accountsApi.cashBalanceAtEndOfMonth(previousYm), [previousYm])
   const accounts = useLoad(() => categoriesApi.list(undefined, false, false), [])
-  const patrimony = useLoad(() => patrimonyApi.get(), [])
-  const projects = useLoad(() => projectsApi.list(), [])
   const entries = useLoad(
     () =>
       months === 1
@@ -249,18 +237,10 @@ export function RaioXPage() {
     function onVoiceSaved() {
       entries.reload()
       budget.reload()
-      patrimony.reload()
-      projects.reload()
     }
     window.addEventListener('conora:voice-saved', onVoiceSaved)
     return () => window.removeEventListener('conora:voice-saved', onVoiceSaved)
-  }, [entries.reload, budget.reload, patrimony.reload, projects.reload])
-
-  const patAmounts = useMemo(
-    () => patrimonyStockMap(patrimony.data?.items ?? []),
-    [patrimony.data],
-  )
-  const emptyAmounts = useMemo(() => new Map<string, number>(), [])
+  }, [entries.reload, budget.reload])
 
   const { planned, actual } = useMemo(() => {
     if (months === 1) {
@@ -270,8 +250,8 @@ export function RaioXPage() {
   }, [months, budget.data, yearsBudget.data, monthList])
 
   const list = useMemo(
-    () => chartWithAmounts(accounts.data ?? [], idsWithAmount([planned, actual, patAmounts]), false),
-    [accounts.data, planned, actual, patAmounts],
+    () => chartWithAmounts(accounts.data ?? [], idsWithAmount([planned, actual]), false),
+    [accounts.data, planned, actual],
   )
   const byParent = useMemo(() => {
     const map = groupAccountsByParent(list)
@@ -332,29 +312,6 @@ export function RaioXPage() {
     }
     return map
   }, [entries.data])
-
-  const patItemsByAccount = useMemo(() => {
-    const map = new Map<string, PatrimonyItem[]>()
-    for (const item of patrimony.data?.items ?? []) {
-      const bucket = map.get(item.categoryId) ?? []
-      bucket.push(item)
-      map.set(item.categoryId, bucket)
-    }
-    return map
-  }, [patrimony.data])
-
-  const projectsByAccount = useMemo(() => {
-    const map = new Map<string, LifeProject[]>()
-    for (const project of projects.data ?? []) {
-      if (!project.categoryId) {
-        continue
-      }
-      const bucket = map.get(project.categoryId) ?? []
-      bucket.push(project)
-      map.set(project.categoryId, bucket)
-    }
-    return map
-  }, [projects.data])
 
   useEffect(() => {
     if (!focusSection || list.length === 0) {
@@ -480,16 +437,6 @@ export function RaioXPage() {
     navigate(`/lancamentos?${params.toString()}`)
   }
 
-  function openPatItem(item: PatrimonyItem) {
-    const params = new URLSearchParams({ search: item.name })
-    navigate(`/patrimonio?${params.toString()}`)
-  }
-
-  function openProject(project: LifeProject) {
-    const params = new URLSearchParams({ search: project.name })
-    navigate(`/projetos?${params.toString()}`)
-  }
-
   const data = budget.data
   const highlighted = focusSections(focus)
   const loadingRange = months > 1 && yearsBudget.loading && !yearsBudget.data
@@ -539,6 +486,14 @@ export function RaioXPage() {
                 {MONTHS_MAX}
               </span>
             </label>
+            <label className={styles.leakageFilter} onClick={(event) => event.stopPropagation()}>
+              <input
+                type="checkbox"
+                checked={leakageOnly}
+                onChange={(event) => setLeakageOnly(event.target.checked)}
+              />
+              Mostrar só contas acima de 100% (vazamento)
+            </label>
           </>
         }
       />
@@ -547,8 +502,6 @@ export function RaioXPage() {
           budget.error ??
           previousCash.error ??
           accounts.error ??
-          patrimony.error ??
-          projects.error ??
           entries.error ??
           yearsBudget.error
         }
@@ -570,7 +523,8 @@ export function RaioXPage() {
       {data ? (
         <RaioXSideCards
           budget={data}
-          patrimony={patrimony.data}
+          assets={sectionRealized(byParent, actual, 'Asset', list)}
+          liabilities={sectionRealized(byParent, actual, 'Liability', list)}
           focus={focus}
           onFocus={toggleFocus}
           onExpandSection={(section) => {
@@ -620,31 +574,17 @@ export function RaioXPage() {
               byParent={byParent}
               planned={planned}
               actual={actual}
-              patAmounts={patAmounts}
-              emptyAmounts={emptyAmounts}
               open={open}
               highlighted={highlighted}
               entriesByAccount={entriesByAccount}
               categoryNameById={categoryNameById}
               bankNameById={bankNameById}
-              patItemsByAccount={patItemsByAccount}
-              projectsByAccount={projectsByAccount}
               leakageOnly={leakageOnly}
               onToggle={toggle}
               onOpenEntry={openEntry}
-              onOpenPatItem={openPatItem}
-              onOpenProject={openProject}
               onUnbudgetedClick={openBudgetForAccount}
             />
           ))}
-          <label className={styles.muted} style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12 }}>
-            <input
-              type="checkbox"
-              checked={leakageOnly}
-              onChange={(event) => setLeakageOnly(event.target.checked)}
-            />
-            Mostrar só contas acima de 100% (vazamento)
-          </label>
         </div>
       ) : null}
     </div>
@@ -720,20 +660,14 @@ function RaioXAccountBlock({
   byParent,
   planned,
   actual,
-  patAmounts,
-  emptyAmounts,
   open,
   highlighted,
   entriesByAccount,
   categoryNameById,
   bankNameById,
-  patItemsByAccount,
-  projectsByAccount,
   leakageOnly,
   onToggle,
   onOpenEntry,
-  onOpenPatItem,
-  onOpenProject,
   onUnbudgetedClick,
 }: {
   account: Category
@@ -741,20 +675,14 @@ function RaioXAccountBlock({
   byParent: Map<string | null, Category[]>
   planned: Map<string, number>
   actual: Map<string, number>
-  patAmounts: Map<string, number>
-  emptyAmounts: Map<string, number>
   open: Set<string>
   highlighted: CategorySection[]
   entriesByAccount: Map<string, Entry[]>
   categoryNameById: Map<string, string>
   bankNameById: Map<string, string>
-  patItemsByAccount: Map<string, PatrimonyItem[]>
-  projectsByAccount: Map<string, LifeProject[]>
   leakageOnly: boolean
   onToggle: (id: string) => void
   onOpenEntry: (entry: Entry) => void
-  onOpenPatItem: (item: PatrimonyItem) => void
-  onOpenProject: (project: LifeProject) => void
   onUnbudgetedClick: (accountId: string) => void
 }) {
   if (leakageOnly && !branchHasLeakage(account.id, byParent, planned, actual)) {
@@ -763,25 +691,12 @@ function RaioXAccountBlock({
   const children = (byParent.get(account.id) ?? []).filter(
     (child) => !leakageOnly || branchHasLeakage(child.id, byParent, planned, actual),
   )
-  const stock = isStockSection(account.section)
   const launchEntries =
     account.level === 'Analytical' ? (entriesByAccount.get(account.id) ?? []) : []
-  // Patrimony stock rows stay on the category total. The item lines themselves are not listed.
-  const launchPatItems: PatrimonyItem[] = patItemsByAccount.size < 0 ? (patItemsByAccount.get(account.id) ?? []) : []
-  const launchProjects =
-    account.level === 'Analytical' && account.section === 'LifeProject'
-      ? (projectsByAccount.get(account.id) ?? [])
-      : []
-  const hasLaunches = launchEntries.length > 0 || launchPatItems.length > 0 || launchProjects.length > 0
-  const leafActual =
-    !stock && account.level === 'Analytical' && account.section !== 'LifeProject'
-      ? (actual.get(account.id) ?? 0)
-      : 0
-  const expandable = children.length > 0 || hasLaunches || leafActual !== 0
+  const leafActual = account.level === 'Analytical' ? (actual.get(account.id) ?? 0) : 0
+  const expandable = children.length > 0 || launchEntries.length > 0 || leafActual !== 0
   const expanded = open.has(account.id)
-  const totals = stock
-    ? sumBranch(account.id, byParent, emptyAmounts, patAmounts)
-    : sumBranch(account.id, byParent, planned, actual)
+  const totals = sumBranch(account.id, byParent, planned, actual)
   const focused = focusClass(account.section, highlighted)
   const rowClass =
     account.level === 'Root' ||
@@ -812,15 +727,7 @@ function RaioXAccountBlock({
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
         <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
-        <TotalsCell
-          totals={totals}
-          stock={stock}
-          onUnbudgetedClick={
-            stock || account.section === 'LifeProject' || account.section === 'Patrimony'
-              ? undefined
-              : () => onUnbudgetedClick(account.id)
-          }
-        />
+        <TotalsCell totals={totals} onUnbudgetedClick={() => onUnbudgetedClick(account.id)} />
       </button>
       {expanded
         ? children.map((child) => (
@@ -831,20 +738,14 @@ function RaioXAccountBlock({
               byParent={byParent}
               planned={planned}
               actual={actual}
-              patAmounts={patAmounts}
-              emptyAmounts={emptyAmounts}
               open={open}
               highlighted={highlighted}
               entriesByAccount={entriesByAccount}
               categoryNameById={categoryNameById}
               bankNameById={bankNameById}
-              patItemsByAccount={patItemsByAccount}
-              projectsByAccount={projectsByAccount}
               leakageOnly={leakageOnly}
               onToggle={onToggle}
               onOpenEntry={onOpenEntry}
-              onOpenPatItem={onOpenPatItem}
-              onOpenProject={onOpenProject}
               onUnbudgetedClick={onUnbudgetedClick}
             />
           ))
@@ -861,67 +762,13 @@ function RaioXAccountBlock({
             />
           ))
         : null}
-      {expanded
-        ? launchPatItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`${styles.raioxRow} ${styles.raioxEntry}`}
-              style={{ paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }}
-              onClick={() => onOpenPatItem(item)}
-            >
-              <span />
-              <span className={styles.rowMain}>
-                <strong>{item.name}</strong>
-                <span className={styles.rowSub}>{item.groupName}</span>
-              </span>
-              <span className={styles.raioxTotals}>
-                <span className={styles.raioxAmount} />
-                <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>
-                  {formatMoney(Math.abs(item.amount))}
-                </span>
-                <span className={styles.raioxPercent} />
-              </span>
-            </button>
-          ))
-        : null}
-      {expanded
-        ? launchProjects.map((project) => (
-            <button
-              key={project.id}
-              type="button"
-              className={`${styles.raioxRow} ${styles.raioxEntry}`}
-              style={{ paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }}
-              onClick={() => onOpenProject(project)}
-            >
-              <span />
-              <span className={styles.rowMain}>
-                <strong>{project.name}</strong>
-                <span className={styles.rowSub}>Projeto de vida</span>
-              </span>
-              <span className={styles.raioxTotals}>
-                <span className={styles.raioxAmount} />
-                <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>
-                  {formatMoney(project.accumulatedAmount)}
-                </span>
-                <span className={styles.raioxPercent} />
-              </span>
-            </button>
-          ))
-        : null}
-      {expanded && account.level === 'Analytical' && children.length === 0 && !hasLaunches ? (
+      {expanded && account.level === 'Analytical' && children.length === 0 && launchEntries.length === 0 ? (
         <div
           className={`${styles.raioxRow} ${styles.raioxEntry}`}
           style={{ paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }}
         >
           <span />
-          <span className={styles.muted}>
-            {isPatrimonySection(account.section)
-              ? 'Nenhum item de patrimônio nesta conta.'
-              : account.section === 'LifeProject'
-                ? 'Nenhum projeto nesta conta.'
-                : 'Nenhum lançamento nesta conta.'}
-          </span>
+          <span className={styles.muted}>Nenhum lançamento nesta conta.</span>
           <span />
         </div>
       ) : null}
@@ -1026,19 +873,21 @@ function RaioXHero({
 
 function RaioXSideCards({
   budget,
-  patrimony,
+  assets,
+  liabilities,
   focus,
   onFocus,
   onExpandSection,
 }: {
   budget: Budget
-  patrimony: PatrimonySummary | null | undefined
+  assets: number
+  liabilities: number
   focus: RaioXFocus
   onFocus: (next: RaioXFocus) => void
   onExpandSection: (section: CategorySection) => void
 }) {
   const bars = buildBudgetMacroBars(budget)
-  const amounts = patrimony ? patrimonyRootAmounts(patrimony) : null
+  const netWorth = assets - liabilities
 
   return (
     <div className={styles.macroGrid}>
@@ -1081,51 +930,47 @@ function RaioXSideCards({
           </ul>
         )}
       </section>
-      {amounts ? (
-        <section
-          className={styles.macroCard}
-          aria-label="Patrimônio"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className={styles.macroHead}>
-            <strong>Patrimônio</strong>
-          </div>
-          <div className={styles.heroCards}>
-            <button
-              type="button"
-              className={`${styles.heroCard} ${focus === 'patrimony' ? styles.heroCardPatrimonyActive : ''}`}
-              aria-pressed={focus === 'patrimony'}
-              onClick={() => onFocus('patrimony')}
-            >
-              <span>Ativo</span>
-              <strong className={`${styles.moneyValue} ${styles.positive}`}>{formatMoney(amounts.assets)}</strong>
-            </button>
-            <button
-              type="button"
-              className={`${styles.heroCard} ${focus === 'patrimony' ? styles.heroCardPatrimonyActive : ''}`}
-              aria-pressed={focus === 'patrimony'}
-              onClick={() => onFocus('patrimony')}
-            >
-              <span>Passivo</span>
-              <strong className={`${styles.moneyValue} ${styles.negative}`}>
-                {formatMoney(amounts.liabilities)}
-              </strong>
-            </button>
-            <button
-              type="button"
-              className={`${styles.heroCard} ${focus === 'patrimony' ? styles.heroCardPatrimonyActive : ''}`}
-              aria-pressed={focus === 'patrimony'}
-              onClick={() => onFocus('patrimony')}
-            >
-              <span>Patrimônio líquido</span>
-              <strong className={`${styles.moneyValue} ${amounts.netWorth < 0 ? styles.negative : ''}`}>
-                {formatMoney(amounts.netWorth)}
-              </strong>
-              <span className={styles.muted}>Ativo − passivo</span>
-            </button>
-          </div>
-        </section>
-      ) : null}
+      <section
+        className={styles.macroCard}
+        aria-label="Patrimônio"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className={styles.macroHead}>
+          <strong>Patrimônio</strong>
+        </div>
+        <div className={styles.heroCards}>
+          <button
+            type="button"
+            className={`${styles.heroCard} ${focus === 'patrimony' ? styles.heroCardPatrimonyActive : ''}`}
+            aria-pressed={focus === 'patrimony'}
+            onClick={() => onFocus('patrimony')}
+          >
+            <span>Ativo</span>
+            <strong className={`${styles.moneyValue} ${styles.positive}`}>{formatMoney(assets)}</strong>
+          </button>
+          <button
+            type="button"
+            className={`${styles.heroCard} ${focus === 'patrimony' ? styles.heroCardPatrimonyActive : ''}`}
+            aria-pressed={focus === 'patrimony'}
+            onClick={() => onFocus('patrimony')}
+          >
+            <span>Passivo</span>
+            <strong className={`${styles.moneyValue} ${styles.negative}`}>{formatMoney(liabilities)}</strong>
+          </button>
+          <button
+            type="button"
+            className={`${styles.heroCard} ${focus === 'patrimony' ? styles.heroCardPatrimonyActive : ''}`}
+            aria-pressed={focus === 'patrimony'}
+            onClick={() => onFocus('patrimony')}
+          >
+            <span>Patrimônio líquido</span>
+            <strong className={`${styles.moneyValue} ${netWorth < 0 ? styles.negative : ''}`}>
+              {formatMoney(netWorth)}
+            </strong>
+            <span className={styles.muted}>Ativo − passivo</span>
+          </button>
+        </div>
+      </section>
     </div>
   )
 }
