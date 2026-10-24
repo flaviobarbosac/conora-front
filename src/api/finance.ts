@@ -757,6 +757,8 @@ export type FamilyOwnerTransfer = {
   expiresAt: string
   isOpen: boolean
   isIncoming: boolean
+  isAuthorized?: boolean
+  authorizeUrl?: string | null
 }
 
 export type FamilyInvite = {
@@ -809,6 +811,7 @@ export const familyApi = {
   updatePreferences: (input: UserPreferencesInput) =>
     apiFetch<FamilyProfile>('/family/preferences', json('PUT', input)),
   completeOnboarding: () => apiFetch<FamilyProfile>('/family/onboarding/complete', json('POST')),
+  acknowledgeContract: () => apiFetch<FamilyProfile>('/family/profile/contract-acknowledgment', json('POST')),
   group: () => apiFetch<FamilyGroupResponse>('/family/group'),
   invite: (email: string) => apiFetch<FamilyInvite>('/family/invites', json('POST', { email })),
   createQrInvite: () =>
@@ -824,6 +827,7 @@ export const familyApi = {
   cancelOwnerTransfer: () => apiFetch<void>('/family/owner-transfer', json('DELETE')),
   acceptOwnerTransfer: (token: string) =>
     apiFetch<FamilyGroupResponse>(`/family/owner-transfer/${token}/accept`, json('POST')),
+  confirmStoreCancelled: () => apiFetch<void>('/family/owner-transfer/store-cancelled', json('POST')),
   readNotice: (id: string) => apiFetch<void>(`/family/notices/${id}/read`, json('POST')),
 }
 
@@ -857,6 +861,7 @@ export type Plan = {
 
 export const planApi = {
   get: () => apiFetch<Plan>('/plan'),
+  courseCheckout: () => apiFetch<{ checkoutUrl: string | null }>('/plan/course', { auth: false }),
   /** Development / Testing only (the API answers 404 in production). */
   subscribe: (plan: PlanKind, storePurchaseToken?: string) =>
     apiFetch<Plan>('/plan/subscribe', json('POST', { plan, storePurchaseToken })),

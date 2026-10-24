@@ -1,14 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Product } from '@capgo/native-purchases'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { lgpdApi, planApi, type Plan, type PlanOffer, type PlanTier } from '../api/finance'
-import { LegalConsentPanel } from '../components/LegalConsentPanel'
+import { familyApi, lgpdApi, planApi, type Plan, type PlanOffer, type PlanTier } from '../api/finance'
 import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { usePlanAccess } from '../hooks/usePlanAccess'
-import { confirmDestructive } from '../lib/confirm'
 import { downloadBlob, formatDate, formatMoney } from '../lib/format'
 import {
   markGraceScreenShown,
@@ -18,11 +16,10 @@ import {
   tierOfKind,
   TRIAL_DAYS,
 } from '../lib/planAccess'
+import { purchasePlan } from '../lib/planCheckout'
 import { isAndroidApp, isNativeApp } from '../lib/platform'
 import { showSaveToast } from '../lib/saveToast'
 import {
-  buyInStore,
-  isStoreCancel,
   openStoreSubscriptions,
   restoreStorePurchases,
   STORE_PRODUCT_IDS,
@@ -91,6 +88,8 @@ export function PlanPage() {
   const [searchParams] = useSearchParams()
   const inviteToken = (searchParams.get('convite') ?? '').trim()
   const plan = useLoad(() => planApi.get(), [])
+  const course = useLoad(() => planApi.courseCheckout(), [])
+  const profile = useLoad(() => familyApi.profile(), [])
   const access = usePlanAccess()
   const subscribe = useAction()
   const exporter = useAction()
@@ -99,12 +98,12 @@ export function PlanPage() {
   // Native apps sell plans only through the store (App Store In-App Purchase / Google Play Billing).
   // The web shows the plans but sends the user to the app; local development keeps a stub checkout.
   const storeCheckout = storeCheckoutAvailable()
-  const devCheckout = !import.meta.env.PROD && !isNativeApp()
-  const canBuy = storeCheckout || devCheckout
+  const webPlans = !isNativeApp()
+  const [storeHint, setStoreHint] = useState(false)
+  const storeHintRef = useRef<HTMLElement>(null)
   const [products, setProducts] = useState<Record<string, Product>>({})
   const [cycleChoice, setYearly] = useState<boolean | null>(null)
-  const [acceptContract, setAcceptContract] = useState(false)
-  const [acceptLgpd, setAcceptLgpd] = useState(false)
+  const [selected, setSelected] = useState<PlanTier>(RECOMMENDED)
   // Default to yearly (best value); subscribers start on their current cycle.
   const yearly = cycleChoice ?? (data?.phase === 'Subscribed' && data.plan ? data.yearly : true)
 
@@ -138,45 +137,26 @@ export function PlanPage() {
     }
   }, [inviteToken, data?.phase, navigate])
 
+  function explainStore() {
+    setStoreHint(true)
+    queueMicrotask(() => storeHintRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
+  }
+
   async function choose(offer: PlanOffer) {
-    const info = TIER_INFO[offer.tier]
-    if (!canBuy) {
-      subscribe.setError('A assinatura é feita no app Conora, pela App Store ou pelo Google Play.')
+    setSelected(offer.tier)
+    if (!storeCheckout) {
+      explainStore()
       return
     }
-    if (!acceptContract || !acceptLgpd) {
-      subscribe.setError('Aceite o contrato, a política de cancelamento e a LGPD antes de assinar.')
+    if (!profile.data?.contractAcknowledgedAt) {
+      navigate(`/plano/contrato?kind=${encodeURIComponent(offer.kind)}`)
       return
     }
-    if (storeCheckout) {
-      // The store shows its own confirmation sheet with the final price; the API validates the purchase.
-      const productId = STORE_PRODUCT_IDS[offer.kind]
-      let cancelled = false
-      const ok = await subscribe.run(async () => {
-        try {
-          await buyInStore(offer.kind, productId ? products[productId] : undefined)
-        } catch (error) {
-          if (isStoreCancel(error)) {
-            cancelled = true
-            return
-          }
-          throw error
-        }
-      })
-      if (ok && !cancelled) planChanged(`Plano ${info.title} ativado. Obrigado por assinar o Conora!`)
-      return
-    }
-    const cycle = offer.yearly ? 'ano' : 'mês'
-    const ok = await confirmDestructive(
-      `Assinar o plano ${info.title} ${offer.yearly ? 'anual' : 'mensal'} por ${formatMoney(offer.price)}/${cycle}?`,
-      { title: 'Confirmar assinatura', confirmLabel: 'Assinar', danger: false },
-    )
-    if (!ok) return
-    // Dev stub: the API only accepts it in Development / Testing.
-    const stubToken = `dev-store-${offer.kind}-${Date.now()}`
-    if (await subscribe.run(() => planApi.subscribe(offer.kind, stubToken))) {
-      planChanged(`Plano ${info.title} ativado (loja simulada em desenvolvimento).`)
-    }
+    let message: string | null = null
+    const ok = await subscribe.run(async () => {
+      message = await purchasePlan(offer, products)
+    })
+    if (ok && message) planChanged(message)
   }
 
   async function restore() {
@@ -217,8 +197,34 @@ export function PlanPage() {
         <StatusHero plan={data} exporting={exporter.busy} onExport={() => void exportData()} />
       ) : null}
 
+      {course.data?.checkoutUrl ? (
+        <a className={styles.hotmart} href={course.data.checkoutUrl} target="_blank" rel="noreferrer">
+          Comprar o treinamento na Hotmart
+        </a>
+      ) : null}
+
       {data ? (
         <>
+          {!storeCheckout ? (
+            <section className={styles.payNotice} role="note">
+              <strong>A assinatura é feita no app</strong>
+              <span>
+                Abra o Conora no celular e pague pela App Store ou pelo Google Play, com este mesmo login. O plano
+                passa a valer aqui no navegador.
+              </span>
+            </section>
+          ) : null}
+
+          {storeHint ? (
+            <section ref={storeHintRef} className={styles.storeHint} role="status">
+              <strong>Seu plano fica no aplicativo</strong>
+              <span>
+                Assinar, renovar ou cancelar a gente faz pelo app do Conora. Baixe na App Store ou no Google Play,
+                entre com este mesmo login e cuide do seu plano por lá.
+              </span>
+            </section>
+          ) : null}
+
           <div className={styles.cycleRow}>
             <div className={styles.cycle} role="radiogroup" aria-label="Forma de cobrança">
               <button
@@ -243,13 +249,6 @@ export function PlanPage() {
             </div>
           </div>
 
-          <LegalConsentPanel
-            acceptContract={acceptContract}
-            acceptLgpd={acceptLgpd}
-            onAcceptContract={setAcceptContract}
-            onAcceptLgpd={setAcceptLgpd}
-          />
-
           <div className={styles.cards}>
             {TIERS.map((tier) => {
               const offer = offerFor(data.offers, tier, yearly)
@@ -266,8 +265,12 @@ export function PlanPage() {
               return (
                 <section
                   key={tier}
-                  className={`${styles.card} ${recommended ? styles.cardRecommended : ''}`}
+                  data-tier={tier}
+                  className={[styles.card, recommended ? styles.cardRecommended : '', selected === tier ? styles.cardSelected : '']
+                    .filter(Boolean)
+                    .join(' ')}
                   aria-label={`Plano ${info.title}`}
+                  onClick={() => setSelected(tier)}
                 >
                   {recommended ? <span className={styles.ribbon}>Recomendado</span> : null}
                   <div className={styles.cardHead}>
@@ -308,22 +311,29 @@ export function PlanPage() {
                     )}
                     {info.family ? <li className={styles.yes}>Cada pessoa com o próprio login</li> : null}
                   </ul>
-                  {canBuy ? (
-                    <Button
-                      className={styles.cta}
-                      variant={recommended && !isCurrent ? 'primary' : 'secondary'}
-                      disabled={
-                        subscribe.busy ||
-                        !acceptContract ||
-                        !acceptLgpd ||
-                        (storeCheckout && (isCurrent || androidSwitch))
+                  <p className={styles.currentSlot}>{isCurrent ? 'Seu plano atual' : '\u00a0'}</p>
+                  <Button
+                    className={styles.cta}
+                    variant="secondary"
+                    disabled={subscribe.busy || (storeCheckout && (isCurrent || androidSwitch))}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setSelected(tier)
+                      if (webPlans) {
+                        explainStore()
+                        return
                       }
-                      onClick={() => void choose(offer)}
-                    >
-                      {isCurrent ? (storeCheckout ? 'Plano atual' : 'Renovar plano atual') : `Assinar ${info.title}`}
-                    </Button>
-                  ) : null}
-                  {isCurrent ? <p className={styles.currentNote}>Seu plano atual</p> : null}
+                      void choose(offer)
+                    }}
+                  >
+                    {webPlans
+                      ? isCurrent
+                        ? 'Renovar plano atual'
+                        : `Assinar ${info.title}`
+                      : isCurrent
+                        ? 'Plano atual'
+                        : `Assinar ${info.title}`}
+                  </Button>
                   {androidSwitch ? (
                     <p className={styles.currentNote}>
                       Para trocar de plano, cancele o atual em “Gerenciar assinatura” e assine este depois.
@@ -361,12 +371,9 @@ export function PlanPage() {
             </section>
           ) : null}
 
-          {!canBuy ? (
-            <p className={styles.support} role="note">
-              Para assinar, abra o app Conora no celular: a assinatura é feita pela App Store ou pelo Google Play, e
-              vale também aqui no navegador.
-            </p>
-          ) : null}
+          <p className={styles.support}>
+            <Link to="/plano/contrato">Ver contrato, cancelamento e LGPD</Link>
+          </p>
         </>
       ) : null}
 

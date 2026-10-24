@@ -28,6 +28,7 @@ import { MorePage } from './pages/MorePage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { OwnerTransferPage } from './pages/OwnerTransferPage'
 import { PatrimonyPage } from './pages/PatrimonyPage'
+import { ContractPage } from './pages/ContractPage'
 import { PlanPage } from './pages/PlanPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
@@ -165,6 +166,7 @@ export default function App() {
                 <Route path="/patrimonio" element={<PatrimonyPage />} />
                 <Route path="/membros" element={<MembersPage />} />
                 <Route path="/plano" element={<PlanPage />} />
+                <Route path="/plano/contrato" element={<ContractPage />} />
                 <Route path="/operacao" element={<AdminPage />} />
                 <Route path="/ajuda" element={<HelpPage />} />
                 <Route path="/perfil" element={<ProfilePage />} />

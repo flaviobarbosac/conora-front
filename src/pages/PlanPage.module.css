@@ -81,6 +81,74 @@
   gap: var(--space-3);
   flex-wrap: wrap;
   margin-top: var(--space-2);
+  align-items: center;
+}
+
+.heroActions a {
+  color: var(--primary);
+  font-weight: var(--weight-semibold);
+}
+
+/* Web: payment happens in the native app. */
+.payNotice {
+  background: var(--warning-bg);
+  border: 2px solid var(--warning);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.payNotice strong {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+.payNotice span {
+  font-size: var(--text-lg);
+  line-height: var(--leading-body);
+  color: var(--text);
+}
+
+.storeHint {
+  background: var(--surface);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.storeHint strong {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+.storeHint span {
+  font-size: var(--text-lg);
+  line-height: var(--leading-body);
+  color: var(--text);
+}
+
+.hotmart {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--btn-h);
+  padding: 0 var(--space-6);
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--primary-on);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  text-align: center;
 }
 
 /* ---------- Timeline ---------- */
@@ -208,6 +276,7 @@
 }
 
 .card {
+  --plan-accent: var(--primary);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -216,10 +285,24 @@
   border-radius: var(--radius-xl);
   background: var(--surface);
   border: 1px solid var(--border-subtle);
+  cursor: pointer;
+}
+
+.card[data-tier='Family'] {
+  --plan-accent: color-mix(in srgb, var(--primary) 65%, var(--accent));
+}
+
+.card[data-tier='FamilyPlus'] {
+  --plan-accent: var(--success);
 }
 
 .cardRecommended {
-  border: 2px solid var(--primary);
+  border: 2px solid var(--plan-accent);
+  box-shadow: var(--shadow);
+}
+
+.cardSelected {
+  border: 2px solid var(--plan-accent);
   box-shadow: var(--shadow);
 }
 
@@ -325,9 +408,36 @@
   color: var(--text-muted);
 }
 
-.cta {
+.currentSlot {
+  min-height: 1.25em;
+  margin: 0;
+  text-align: center;
+  font-size: var(--text-sm);
+  line-height: 1.25em;
+  color: var(--success);
+  font-weight: var(--weight-semibold);
+}
+
+.card .cta {
   width: 100%;
-  margin-top: var(--space-2);
+  margin-top: 0;
+  background: var(--surface);
+  color: var(--plan-accent);
+  border-color: var(--plan-accent);
+}
+
+.cardSelected .cta {
+  background: var(--plan-accent);
+  color: var(--primary-on);
+  border-color: var(--plan-accent);
+}
+
+@media (hover: hover) {
+  .card:hover .cta {
+    background: var(--plan-accent);
+    color: var(--primary-on);
+    border-color: var(--plan-accent);
+  }
 }
 
 .currentNote {
@@ -439,6 +549,26 @@
   font-weight: var(--weight-semibold);
 }
 
+.note {
+  color: var(--text-secondary);
+  line-height: var(--leading-body);
+}
+
+.check {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  font-size: var(--text-lg);
+  line-height: var(--leading-body);
+}
+
+.check input {
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
 @media (max-width: 599px) {
   .intro h1 {
     font-size: var(--text-h2);
@@ -448,7 +578,17 @@
     grid-template-columns: 1fr;
   }
 
+  .cycle {
+    width: 100%;
+  }
+
   .cycle button {
-    padding: 0 var(--space-4);
+    flex: 1;
+    justify-content: center;
+    padding: 0 var(--space-3);
+  }
+
+  .heroActions button {
+    width: 100%;
   }
 }

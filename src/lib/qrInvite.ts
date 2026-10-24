@@ -10,24 +10,35 @@ export async function renderQrDataUrl(text: string): Promise<string> {
   })
 }
 
-export function tokenFromQrPayload(raw: string): string | null {
+export type QrKind = 'invite' | 'owner'
+
+export function parseQrPayload(raw: string): { kind: QrKind; token: string } | null {
   const trimmed = raw.trim()
   if (!trimmed) {
     return null
   }
   try {
     const url = new URL(trimmed)
-    const match = url.pathname.match(/\/grupo\/convite\/([^/]+)/i)
-    if (match?.[1]) {
-      return decodeURIComponent(match[1])
+    const owner = url.pathname.match(/\/grupo\/owner\/([^/]+)/i)
+    if (owner?.[1]) {
+      return { kind: 'owner', token: decodeURIComponent(owner[1]) }
+    }
+    const invite = url.pathname.match(/\/grupo\/convite\/([^/]+)/i)
+    if (invite?.[1]) {
+      return { kind: 'invite', token: decodeURIComponent(invite[1]) }
     }
   } catch {
     // plain token
   }
   if (/^[0-9A-Fa-f]{48,128}$/.test(trimmed)) {
-    return trimmed
+    return { kind: 'invite', token: trimmed }
   }
   return null
+}
+
+export function tokenFromQrPayload(raw: string): string | null {
+  const parsed = parseQrPayload(raw)
+  return parsed?.kind === 'invite' ? parsed.token : null
 }
 
 export function cameraAvailable(): boolean {
@@ -40,7 +51,7 @@ export type QrScanSession = {
 
 export async function startQrScan(
   video: HTMLVideoElement,
-  onToken: (token: string) => void,
+  onToken: (token: string, kind: QrKind) => void,
   onError: (message: string) => void,
 ): Promise<QrScanSession> {
   if (!cameraAvailable()) {
@@ -84,14 +95,14 @@ export async function startQrScan(
         const image = context.getImageData(0, 0, canvas.width, canvas.height)
         const code = jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' })
         if (code?.data) {
-          const token = tokenFromQrPayload(code.data)
-          if (token) {
+          const parsed = parseQrPayload(code.data)
+          if (parsed) {
             handled = true
-            onToken(token)
+            onToken(parsed.token, parsed.kind)
             stop()
             return
           }
-          onError('QR lido, mas o código do convite não é válido.')
+          onError('QR lido, mas o código não é válido.')
         }
       }
     }
