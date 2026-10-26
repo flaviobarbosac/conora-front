@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Product } from '@capgo/native-purchases'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { familyApi, lgpdApi, planApi, type Plan, type PlanOffer, type PlanTier } from '../api/finance'
 import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
@@ -16,6 +16,7 @@ import {
   tierOfKind,
   TRIAL_DAYS,
 } from '../lib/planAccess'
+import { ConoraCelebrate } from '../components/ConoraCelebrate'
 import { purchasePlan } from '../lib/planCheckout'
 import { isAndroidApp, isNativeApp } from '../lib/platform'
 import { showSaveToast } from '../lib/saveToast'
@@ -85,6 +86,7 @@ function currentTier(plan: Plan): PlanTier | null {
 
 export function PlanPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const inviteToken = (searchParams.get('convite') ?? '').trim()
   const plan = useLoad(() => planApi.get(), [])
@@ -104,12 +106,20 @@ export function PlanPage() {
   const [products, setProducts] = useState<Record<string, Product>>({})
   const [cycleChoice, setYearly] = useState<boolean | null>(null)
   const [selected, setSelected] = useState<PlanTier>(RECOMMENDED)
+  const [celebrateOpen, setCelebrateOpen] = useState(
+    () => Boolean((location.state as { celebrate?: boolean } | null)?.celebrate),
+  )
   // Default to yearly (best value); subscribers start on their current cycle.
   const yearly = cycleChoice ?? (data?.phase === 'Subscribed' && data.plan ? data.yearly : true)
 
   useEffect(() => {
     if (data?.phase === 'Grace') markGraceScreenShown()
   }, [data?.phase])
+
+  useEffect(() => {
+    if (!(location.state as { celebrate?: boolean } | null)?.celebrate) return
+    navigate(location.pathname + location.search, { replace: true, state: {} })
+  }, [location.pathname, location.search, location.state, navigate])
 
   useEffect(() => {
     if (!storeCheckout) return
@@ -156,7 +166,10 @@ export function PlanPage() {
     const ok = await subscribe.run(async () => {
       message = await purchasePlan(offer, products)
     })
-    if (ok && message) planChanged(message)
+    if (ok && message) {
+      planChanged(message)
+      setCelebrateOpen(true)
+    }
   }
 
   async function restore() {
@@ -178,6 +191,14 @@ export function PlanPage() {
 
   return (
     <div className={styles.page}>
+      {celebrateOpen ? (
+        <ConoraCelebrate
+          title="Assinatura confirmada"
+          message="Vivendo bem o presente, planejando um futuro melhor."
+          showIan
+          onClose={() => setCelebrateOpen(false)}
+        />
+      ) : null}
       {inviteToken ? (
         <p className={styles.intro} role="status">
           Você foi convidado para um grupo. Confirme o plano na loja; em seguida o Conora abre o aceite do convite.

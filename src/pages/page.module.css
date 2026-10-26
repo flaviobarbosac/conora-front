@@ -1258,6 +1258,35 @@ button.compact {
   text-align: center;
 }
 
+.budgetValueTrigger,
+.budgetDayTrigger {
+  display: block;
+  width: 100%;
+  height: 1.5rem;
+  min-height: 1.5rem;
+  margin: 0;
+  padding-inline: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  line-height: 1.5rem;
+}
+
+.budgetDayTrigger {
+  padding-inline: 0;
+  text-align: center;
+}
+
+.budgetValueTrigger:disabled,
+.budgetDayTrigger:disabled {
+  opacity: 0.6;
+}
+
 .raioxBudgetField {
   width: var(--money-field-w);
   min-width: var(--money-field-w);
@@ -2758,4 +2787,38 @@ button.compact {
   color: var(--primary);
   font-size: var(--text-h3);
   font-weight: var(--weight-semibold);
+}
+
+.celebrateInline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-8) var(--space-5);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+  text-align: center;
+}
+
+.celebrateSymbol {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.celebrateTitle {
+  margin: 0;
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+  line-height: var(--leading-tight);
+}
+
+.celebrateMessage {
+  margin: 0;
+  max-width: 28rem;
+  font-size: var(--text-lg);
+  line-height: var(--leading-body);
+  color: var(--text-secondary);
 }

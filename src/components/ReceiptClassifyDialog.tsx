@@ -157,7 +157,6 @@ export function ReceiptClassifyDialog({ open, intake, onClose, onClassified }: P
                     onChange={() => setSelectedCode(category.code ?? '')}
                   />
                   <span>
-                    {category.displayNumber ? `${category.displayNumber} · ` : ''}
                     {category.name}
                   </span>
                 </label>

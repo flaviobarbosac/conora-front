@@ -137,6 +137,17 @@ async function refreshAccessToken(): Promise<boolean> {
   return refreshInFlight
 }
 
+/** Rebuilds the access token from the refresh token (native apps after process kill). */
+export async function restoreSession(): Promise<boolean> {
+  if (getAccessToken()) {
+    return true
+  }
+  if (!getRefreshToken()) {
+    return false
+  }
+  return refreshAccessToken()
+}
+
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers()
   headers.set('Accept', 'application/json')

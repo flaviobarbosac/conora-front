@@ -60,7 +60,10 @@ const RaioXPage = lazy(() =>
 )
 
 function RequireAuth() {
-  const { session } = useAuth()
+  const { session, authReady } = useAuth()
+  if (!authReady) {
+    return null
+  }
   if (!session) {
     return <Navigate to="/login" replace />
   }
