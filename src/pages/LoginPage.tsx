@@ -19,7 +19,7 @@ function safeReturnTo(raw: string | null): string {
 }
 
 export function LoginPage() {
-  const { session, login, loginGoogle, loginApple } = useAuth()
+  const { session, authReady, login, loginGoogle, loginApple } = useAuth()
   const [searchParams] = useSearchParams()
   const afterLogin = safeReturnTo(searchParams.get('returnTo'))
   const fromInvite = afterLogin.startsWith('/grupo/convite/')
@@ -33,6 +33,10 @@ export function LoginPage() {
     : '/recuperar-senha'
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  if (!authReady) {
+    return null
+  }
 
   if (session) {
     return <Navigate to={afterLogin} replace />

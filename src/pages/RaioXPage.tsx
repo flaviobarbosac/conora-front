@@ -287,6 +287,10 @@ export function RaioXPage() {
     () => [incomeHead, expenseHead, patrimonyHead].filter(Boolean) as Category[],
     [incomeHead, expenseHead, patrimonyHead],
   )
+  const hasLeakage = useMemo(
+    () => rootRows.some((root) => branchHasLeakage(root.id, byParent, planned, actual)),
+    [rootRows, byParent, planned, actual],
+  )
 
   const categoryNameById = useMemo(() => {
     const map = new Map<string, string>()
@@ -564,7 +568,22 @@ export function RaioXPage() {
         />
       ) : null}
       {accounts.loading && !accounts.data ? <Loading /> : null}
-      {rootRows.length > 0 ? (
+      {rootRows.length > 0 && leakageOnly && !hasLeakage ? (
+        <section className={styles.celebrateInline} aria-label="Sem vazamento de orçamento">
+          <img
+            className={styles.celebrateSymbol}
+            src={`${import.meta.env.BASE_URL}brand/simbolo.png`}
+            alt=""
+            width={72}
+            height={72}
+          />
+          <h2 className={styles.celebrateTitle}>Parabéns</h2>
+          <p className={styles.celebrateMessage}>
+            Nenhuma categoria passou do orçamento. Seu mês está no eixo.
+          </p>
+        </section>
+      ) : null}
+      {rootRows.length > 0 && !(leakageOnly && !hasLeakage) ? (
         <div className={styles.raioxList}>
           <ProgressToneLegend />
           <div className={`${styles.raioxRow} ${styles.raioxHead}`}>

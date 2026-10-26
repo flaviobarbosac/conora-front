@@ -44,10 +44,10 @@ describe('setIanMaturity', () => {
     expect(ianPortrait('clara')).toMatch(/ian-menina-15\.png$/)
   })
 
-  it('hides the age in quiet mode', () => {
+  it('hides the journey age in quiet mode with the adult portrait', () => {
     setIanMaturity(8, true)
     expect(getIanAge()).toBeNull()
     expect(voiceBandForAge(getIanAge())).toBe('adult')
-    expect(ianPortrait('ian')).toMatch(/ian-garoto\.jpg$/)
+    expect(ianPortrait('ian')).toMatch(/ian-garoto-30\.png$/)
   })
 })

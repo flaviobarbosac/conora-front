@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   budgetsApi,
@@ -15,6 +16,7 @@ import {
   type ReceiptIntake,
   type SharingScope,
 } from '../api/finance'
+import { BudgetValueSheet } from '../components/BudgetValueSheet'
 import { ReceiptClassifyDialog } from '../components/ReceiptClassifyDialog'
 import { pickReceiptMedia, pollReceipt } from '../lib/receiptFlow'
 import { scanReceipt, fileFromPending } from '../camera/scanReceipt'
@@ -27,6 +29,7 @@ import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
 import { IntegerField } from '../components/ui/IntegerField'
+import { useNarrowPhone } from '../hooks/useNarrowPhone'
 
 import { Select } from '../components/ui/Select'
 import { TextArea } from '../components/ui/TextArea'
@@ -727,6 +730,8 @@ function BudgetAccountBlock({
   onDraftChange: (id: string, value: string) => void
   onDayChange: (id: string, value: string) => void
 }) {
+  const narrowPhone = useNarrowPhone()
+  const [sheetOpen, setSheetOpen] = useState(false)
   const children = byParent.get(account.id) ?? []
   const groups = children.filter((child) => child.level === 'Group')
   const leaves = children.filter((child) => child.level === 'Analytical')
@@ -756,7 +761,12 @@ function BudgetAccountBlock({
     const locked = lockedCategoryIds.has(account.id)
     const needsProject = account.section === 'LifeProject' && !locked
     const draft = drafts[account.id] ?? formatMoneyInput(planned.get(account.id) ?? 0)
+    const dayValue = dayDrafts[account.id] ?? ''
     const isFocused = focusedId === account.id
+    const fieldDisabled = busy || !canEdit || locked || needsProject
+    const showDay = EXPENSE_SECTIONS.includes(account.section)
+    const displayAmount = locked ? formatMoneyInput(planned.get(account.id) ?? 0) : draft
+
     return (
       <div
         id={`budget-account-${account.id}`}
@@ -781,19 +791,31 @@ function BudgetAccountBlock({
           edit={
             <span className={styles.budgetPlannedCell}>
               <span className={styles.raioxBudgetField}>
-                <MoneyField
-                  compact
-                  label={`Orçamento ${categoryLabel(account)}`}
-                  name={`budget-${account.id}`}
-                  value={locked ? formatMoneyInput(planned.get(account.id) ?? 0) : draft}
-                  disabled={busy || !canEdit || locked || needsProject}
-                  onChange={(value) => onDraftChange(account.id, value)}
-                />
+                {narrowPhone ? (
+                  <button
+                    type="button"
+                    className={styles.budgetValueTrigger}
+                    disabled={fieldDisabled}
+                    aria-label={`Editar orçamento ${categoryLabel(account)}`}
+                    onClick={() => setSheetOpen(true)}
+                  >
+                    {displayAmount || '0,00'}
+                  </button>
+                ) : (
+                  <MoneyField
+                    compact
+                    label={`Orçamento ${categoryLabel(account)}`}
+                    name={`budget-${account.id}`}
+                    value={displayAmount}
+                    disabled={fieldDisabled}
+                    onChange={(value) => onDraftChange(account.id, value)}
+                  />
+                )}
               </span>
               <button
                 type="button"
                 className={styles.budgetSpreadIcon}
-                disabled={busy || !canEdit || locked || needsProject}
+                disabled={fieldDisabled}
                 aria-label={`Repetir ou parcelar ${categoryLabel(account)}`}
                 title="Repetir ou parcelar"
                 onClick={() => onOpenYear(account.id)}
@@ -803,24 +825,54 @@ function BudgetAccountBlock({
             </span>
           }
           day={
-            EXPENSE_SECTIONS.includes(account.section) ? (
+            showDay ? (
               <span className={styles.budgetDayField}>
-                <IntegerField
-                  compact
-                  label={`Dia de vencimento ${categoryLabel(account)}`}
-                  name={`budget-day-${account.id}`}
-                  placeholder="Dia"
-                  maxLength={2}
-                  value={dayDrafts[account.id] ?? ''}
-                  disabled={busy || !canEdit || locked || needsProject}
-                  onChange={(value) => onDayChange(account.id, value)}
-                />
+                {narrowPhone ? (
+                  <button
+                    type="button"
+                    className={styles.budgetDayTrigger}
+                    disabled={fieldDisabled}
+                    aria-label={`Editar dia de vencimento ${categoryLabel(account)}`}
+                    onClick={() => setSheetOpen(true)}
+                  >
+                    {dayValue || '—'}
+                  </button>
+                ) : (
+                  <IntegerField
+                    compact
+                    label={`Dia de vencimento ${categoryLabel(account)}`}
+                    name={`budget-day-${account.id}`}
+                    placeholder="Dia"
+                    maxLength={2}
+                    value={dayValue}
+                    disabled={fieldDisabled}
+                    onChange={(value) => onDayChange(account.id, value)}
+                  />
+                )}
               </span>
             ) : (
               <span className={styles.budgetDayField} aria-hidden="true" />
             )
           }
         />
+        {sheetOpen
+          ? createPortal(
+              <BudgetValueSheet
+                categoryName={categoryLabel(account)}
+                amount={displayAmount}
+                day={showDay ? dayValue : null}
+                onCancel={() => setSheetOpen(false)}
+                onConfirm={(nextAmount, nextDay) => {
+                  onDraftChange(account.id, nextAmount)
+                  if (showDay && nextDay !== null) {
+                    onDayChange(account.id, nextDay)
+                  }
+                  setSheetOpen(false)
+                }}
+              />,
+              document.body,
+            )
+          : null}
       </div>
     )
   }

@@ -69,7 +69,7 @@ export function ContractPage() {
     if (!ok || !message) return
     showSaveToast(message)
     window.dispatchEvent(new Event(PLAN_CHANGED))
-    navigate('/plano', { replace: true })
+    navigate('/plano', { replace: true, state: { celebrate: true } })
   }
 
   const title = offer ? TIER_INFO[offer.tier].title : null

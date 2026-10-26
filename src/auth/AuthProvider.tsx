@@ -1,12 +1,15 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   authApi,
   clearSession,
   emailFromAccessToken,
   getAccessToken,
+  getRefreshToken,
   persistSession,
+  restoreSession,
   type AuthResponse,
 } from '../api/client'
+import { isNativeApp } from '../lib/platform'
 
 type Session = {
   email: string
@@ -14,6 +17,7 @@ type Session = {
 
 type AuthContextValue = {
   session: Session | null
+  authReady: boolean
   login: (usuario: string, password: string) => Promise<void>
   register: (name: string, email: string, cpf: string, password: string) => Promise<void>
   loginGoogle: (idToken: string) => Promise<void>
@@ -27,11 +31,38 @@ function sessionFromAuth(auth: AuthResponse): Session {
   return { email: auth.email }
 }
 
+function needsNativeRestore(): boolean {
+  return isNativeApp() && !getAccessToken() && Boolean(getRefreshToken())
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(() => {
     const token = getAccessToken()
     return token ? { email: emailFromAccessToken(token) } : null
   })
+  const [authReady, setAuthReady] = useState(() => !needsNativeRestore())
+
+  useEffect(() => {
+    if (authReady) {
+      return
+    }
+    let cancelled = false
+    void restoreSession().then((ok) => {
+      if (cancelled) {
+        return
+      }
+      if (ok) {
+        const token = getAccessToken()
+        if (token) {
+          setSession({ email: emailFromAccessToken(token) })
+        }
+      }
+      setAuthReady(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [authReady])
 
   const applyAuth = useCallback((auth: AuthResponse) => {
     persistSession(auth)
@@ -77,8 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ session, login, register, loginGoogle, loginApple, logout }),
-    [session, login, register, loginGoogle, loginApple, logout],
+    () => ({ session, authReady, login, register, loginGoogle, loginApple, logout }),
+    [session, authReady, login, register, loginGoogle, loginApple, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

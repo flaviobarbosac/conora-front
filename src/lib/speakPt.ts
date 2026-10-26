@@ -26,9 +26,33 @@ export type IanVoiceBand = 'child' | 'preteen' | 'teen' | 'adult'
 
 export const IAN_MATURITY_CHANGED = 'conora.ianMaturity'
 
+const AGE_CACHE_KEY = 'conora.ianAge'
+
 const BAND_PITCH: Record<IanVoiceBand, number> = { child: 1.5, preteen: 1.3, teen: 1.12, adult: 1 }
 
-let maturityAge: IanAge | null = null
+function readCachedAge(): IanAge | null {
+  try {
+    const raw = localStorage.getItem(AGE_CACHE_KEY)
+    if (raw === null) {
+      return null
+    }
+    const age = Number(raw) as IanAge
+    return (IAN_AGES as readonly number[]).includes(age) ? age : null
+  } catch {
+    return null
+  }
+}
+
+function writeCachedAge(age: IanAge): void {
+  try {
+    localStorage.setItem(AGE_CACHE_KEY, String(age))
+  } catch {
+    /* private mode */
+  }
+}
+
+/** Last known age from a previous visit, used so the portrait does not flash the old jpg. */
+let maturityAge: IanAge | null = readCachedAge()
 
 export function voiceBandForAge(age: IanAge | null): IanVoiceBand {
   if (age === null) {
@@ -45,8 +69,8 @@ export function voiceBandForAge(age: IanAge | null): IanVoiceBand {
 
 /**
  * Sets the age shown by the portrait and heard in the voice.
- * Null (journey unknown) or quiet mode keeps the adult voice and the default portrait,
- * so quiet mode never reveals the age through the voice.
+ * Null (journey unknown) or quiet mode keeps the adult voice; quiet mode uses the adult portrait
+ * so it never reveals the journey age.
  */
 export function setIanMaturity(age: IanAge | null, quiet = false): void {
   const next = quiet ? null : age
@@ -54,6 +78,9 @@ export function setIanMaturity(age: IanAge | null, quiet = false): void {
     return
   }
   maturityAge = next
+  if (next !== null) {
+    writeCachedAge(next)
+  }
   window.dispatchEvent(new Event(IAN_MATURITY_CHANGED))
 }
 
@@ -61,11 +88,15 @@ export function getIanAge(): IanAge | null {
   return maturityAge
 }
 
-/** Portrait for the current maturity. Unknown age uses the original jpg; every milestone age has its own png. */
+/**
+ * Portrait for the current maturity. Never uses the legacy jpg.
+ * Quiet / unknown age uses the adult (30) png. The module seeds maturityAge from cache on load
+ * so the first paint already matches the last visit.
+ */
 export function ianPortrait(id: IanVoiceId): string {
   const base = id === 'clara' ? 'ian-menina' : 'ian-garoto'
-  const file =
-    maturityAge === null ? `${base}.jpg` : `${base}-${String(maturityAge).padStart(2, '0')}.png`
+  const age = maturityAge ?? 30
+  const file = `${base}-${String(age).padStart(2, '0')}.png`
   return `${import.meta.env.BASE_URL}assets/${file}`
 }
 
