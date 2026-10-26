@@ -8,12 +8,22 @@ type Props = {
   categoryName: string
   amount: string
   day: string | null
+  hasNext?: boolean
   onConfirm: (amount: string, day: string | null) => void
+  onNext?: (amount: string, day: string | null) => void
   onCancel: () => void
 }
 
 /** Full-screen edit sheet for budget amount (and due day) on narrow phones. */
-export function BudgetValueSheet({ categoryName, amount, day, onConfirm, onCancel }: Props) {
+export function BudgetValueSheet({
+  categoryName,
+  amount,
+  day,
+  hasNext = false,
+  onConfirm,
+  onNext,
+  onCancel,
+}: Props) {
   const titleId = useId()
   const [draftAmount, setDraftAmount] = useState(amount)
   const [draftDay, setDraftDay] = useState(day ?? '')
@@ -41,6 +51,10 @@ export function BudgetValueSheet({ categoryName, amount, day, onConfirm, onCance
       previous?.focus?.()
     }
   }, [onCancel])
+
+  function resolvedDay(): string | null {
+    return showDay ? draftDay : null
+  }
 
   return (
     <div
@@ -75,10 +89,16 @@ export function BudgetValueSheet({ categoryName, amount, day, onConfirm, onCance
           <Button variant="secondary" type="button" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button
-            type="button"
-            onClick={() => onConfirm(draftAmount, showDay ? draftDay : null)}
-          >
+          {hasNext && onNext ? (
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => onNext(draftAmount, resolvedDay())}
+            >
+              Próxima
+            </Button>
+          ) : null}
+          <Button type="button" onClick={() => onConfirm(draftAmount, resolvedDay())}>
             Ok
           </Button>
         </div>

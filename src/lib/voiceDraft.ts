@@ -1,3 +1,6 @@
+import { ensureNativeSpeechPermission, startNativeSpeech } from './nativeSpeech'
+import { isNativeApp } from './platform'
+
 const KEY = 'conora.voiceDraft'
 
 export type VoiceDraft = {
@@ -106,6 +109,9 @@ type SpeechWindow = Window & {
 }
 
 export function speechRecognitionAvailable(): boolean {
+  if (isNativeApp()) {
+    return true
+  }
   const w = window as SpeechWindow
   return Boolean(w.SpeechRecognition || w.webkitSpeechRecognition)
 }
@@ -141,6 +147,102 @@ const DEFAULT_VOICE_MAX_MS = 30_000
  * confirm() / timeout resolves with what was heard; cancel() rejects.
  */
 export function beginVoiceListen(options?: {
+  maxMs?: number
+  onTranscript?: (text: string) => void
+}): VoiceListenHandle {
+  if (isNativeApp()) {
+    return beginNativeVoiceListen(options)
+  }
+  return beginWebVoiceListen(options)
+}
+
+function beginNativeVoiceListen(options?: {
+  maxMs?: number
+  onTranscript?: (text: string) => void
+}): VoiceListenHandle {
+  let settled = false
+  let liveText = ''
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let stopNative: (() => Promise<void>) | null = null
+
+  let resolveDraft: (draft: VoiceDraft) => void = () => undefined
+  let rejectDraft: (error: Error) => void = () => undefined
+
+  const promise = new Promise<VoiceDraft>((resolve, reject) => {
+    resolveDraft = resolve
+    rejectDraft = reject
+  })
+
+  function cleanup() {
+    if (timer) {
+      clearTimeout(timer)
+      timer = null
+    }
+  }
+
+  function settleOk() {
+    if (settled) {
+      return
+    }
+    settled = true
+    cleanup()
+    const transcript = liveText.trim()
+    void stopNative?.()
+    if (!transcript) {
+      rejectDraft(new Error('Nenhuma fala detectada. Tente de novo.'))
+      return
+    }
+    resolveDraft({
+      description: transcript,
+      amount: amountFromTranscript(transcript),
+    })
+  }
+
+  function settleErr(error: Error) {
+    if (settled) {
+      return
+    }
+    settled = true
+    cleanup()
+    void stopNative?.()
+    rejectDraft(error)
+  }
+
+  void (async () => {
+    const allowed = await ensureNativeSpeechPermission()
+    if (settled) {
+      return
+    }
+    if (!allowed) {
+      settleErr(new Error('Permita o microfone para lançar por voz.'))
+      return
+    }
+    try {
+      const session = await startNativeSpeech({
+        continuous: true,
+        onPartial: (text) => {
+          liveText = text
+          options?.onTranscript?.(text)
+        },
+        onError: (message) => settleErr(new Error(message)),
+      })
+      stopNative = session.stop
+    } catch {
+      settleErr(new Error('Não foi possível iniciar o ditado.'))
+    }
+  })()
+
+  const maxMs = options?.maxMs ?? DEFAULT_VOICE_MAX_MS
+  timer = setTimeout(() => settleOk(), maxMs)
+
+  return {
+    promise,
+    confirm: () => settleOk(),
+    cancel: () => settleErr(new Error('Ditado cancelado.')),
+  }
+}
+
+function beginWebVoiceListen(options?: {
   maxMs?: number
   onTranscript?: (text: string) => void
 }): VoiceListenHandle {
@@ -333,6 +435,181 @@ function withoutEcho(live: string, spoken: string): string {
  * pause() while a phrase is handled. armBarge() listens over the reply and cuts it off.
  */
 export function beginVoiceSession(options: {
+  onPhrase: (text: string) => void
+  onActivity?: () => void
+  onBarge?: () => void
+  onError?: (message: string) => void
+  gapMs?: number
+}): VoiceSessionHandle {
+  if (isNativeApp()) {
+    return beginNativeVoiceSession(options)
+  }
+  return beginWebVoiceSession(options)
+}
+
+function beginNativeVoiceSession(options: {
+  onPhrase: (text: string) => void
+  onActivity?: () => void
+  onBarge?: () => void
+  onError?: (message: string) => void
+  gapMs?: number
+}): VoiceSessionHandle {
+  let stopped = false
+  let paused = false
+  let echo = ''
+  let barged = false
+  let buffer = ''
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let stopNative: (() => Promise<void>) | null = null
+  let starting = false
+  const gapMs = options.gapMs ?? END_OF_SPEECH_MS
+
+  function clearTimer() {
+    if (timer) {
+      clearTimeout(timer)
+      timer = null
+    }
+  }
+
+  function emit() {
+    const phrase = buffer.trim()
+    buffer = ''
+    clearTimer()
+    if (!phrase || stopped || paused) {
+      return
+    }
+    options.onPhrase(phrase)
+  }
+
+  function arm() {
+    clearTimer()
+    timer = setTimeout(emit, gapMs)
+  }
+
+  function onPartial(text: string) {
+    if (stopped || (paused && !echo)) {
+      return
+    }
+    let live = text.trim()
+    if (!live) {
+      return
+    }
+    if (echo) {
+      if (isEcho(live, echo)) {
+        return
+      }
+      if (!barged) {
+        barged = true
+        options.onBarge?.()
+      }
+      live = withoutEcho(live, echo)
+      if (!live) {
+        clearTimer()
+        return
+      }
+    }
+    buffer = live
+    if (isCancelPhrase(live)) {
+      emit()
+      return
+    }
+    options.onActivity?.()
+    arm()
+  }
+
+  async function boot() {
+    if (stopped || starting) {
+      return
+    }
+    starting = true
+    try {
+      const allowed = await ensureNativeSpeechPermission()
+      if (stopped) {
+        return
+      }
+      if (!allowed) {
+        stopped = true
+        options.onError?.('Permita o microfone para falar com o Ian.')
+        return
+      }
+      const session = await startNativeSpeech({
+        continuous: true,
+        onPartial,
+        onError: (message) => {
+          if (stopped) {
+            return
+          }
+          stopped = true
+          options.onError?.(message)
+        },
+      })
+      if (stopped) {
+        await session.stop()
+        return
+      }
+      stopNative = session.stop
+    } catch {
+      if (!stopped) {
+        stopped = true
+        options.onError?.('Não foi possível iniciar o ditado.')
+      }
+    } finally {
+      starting = false
+    }
+  }
+
+  async function tearDown() {
+    clearTimer()
+    const stop = stopNative
+    stopNative = null
+    if (stop) {
+      await stop()
+    }
+  }
+
+  void boot()
+
+  return {
+    pause: () => {
+      paused = true
+      echo = ''
+      barged = false
+      clearTimer()
+      void tearDown()
+    },
+    resume: () => {
+      if (stopped || !paused) {
+        return
+      }
+      paused = false
+      echo = ''
+      barged = false
+      buffer = ''
+      void boot()
+    },
+    armBarge: (spoken: string) => {
+      if (stopped) {
+        return
+      }
+      echo = spoken
+      barged = false
+      paused = false
+      buffer = ''
+      clearTimer()
+      if (!stopNative) {
+        void boot()
+      }
+    },
+    cancel: () => {
+      stopped = true
+      paused = true
+      clearTimer()
+      void tearDown()
+    },
+  }
+}
+
+function beginWebVoiceSession(options: {
   onPhrase: (text: string) => void
   onActivity?: () => void
   onBarge?: () => void

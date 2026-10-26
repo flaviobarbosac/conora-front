@@ -74,6 +74,10 @@
 	<string>O Conora acessa suas fotos somente quando você escolhe um recibo para lançar.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>O Conora salva imagens na galeria apenas se você pedir.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>O Conora usa o microfone para ditado de lançamentos e para você falar com o Ian.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>O Conora reconhece sua fala para preencher lançamentos e conversar com o Ian.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
