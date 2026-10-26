@@ -7,6 +7,9 @@
   padding-bottom: var(--bottom-nav-h);
   padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
   background: var(--bg-app);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .sidebar {
