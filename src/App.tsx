@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom'
 import { lazy, useEffect, useState } from 'react'
 import { familyApi } from './api/finance'
 import { listenNativeShare } from './share/receiveShare'
+import { listenAppLinks } from './lib/appLinks'
 import { useAuth } from './auth/AuthProvider'
 import { isConsoleOperator } from './auth/consoleAccess'
 import { ConfirmDialogHost } from './components/ConfirmDialog'
@@ -127,6 +128,7 @@ export default function App() {
   const navigate = useNavigate()
 
   useEffect(() => listenNativeShare(() => navigate('/compartilhar')), [navigate])
+  useEffect(() => listenAppLinks((route) => navigate(route)), [navigate])
 
   return (
     <UnsavedChangesProvider>

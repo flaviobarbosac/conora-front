@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core'
+
 const ACCESS_KEY = 'conora.accessToken'
 const REFRESH_KEY = 'conora.refreshToken'
 const LEGACY_ACCESS_KEY = 'onra.accessToken'
@@ -151,6 +153,10 @@ export async function restoreSession(): Promise<boolean> {
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers()
   headers.set('Accept', 'application/json')
+  // Lets the API point e-mail links (validation, password reset) back to the app.
+  if (Capacitor.isNativePlatform()) {
+    headers.set('X-Conora-Client', Capacitor.getPlatform())
+  }
   if (options.body !== undefined) {
     headers.set('Content-Type', 'application/json')
   }

@@ -4,6 +4,7 @@ import { authApi } from '../api/client'
 import { Button } from '../components/ui/Button'
 import { Field } from '../components/ui/Field'
 import { AuthLayout } from '../layouts/AuthLayout'
+import { AppHandoff, useAppHandoff } from '../lib/appLinks'
 import styles from './auth.module.css'
 
 export function ResetPasswordPage() {
@@ -14,6 +15,7 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [busy, setBusy] = useState(false)
+  const { handoff, url, continueInBrowser } = useAppHandoff('redefinir-senha')
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -37,6 +39,8 @@ export function ResetPasswordPage() {
       setBusy(false)
     }
   }
+
+  if (handoff) return <AppHandoff url={url} onContinue={continueInBrowser} />
 
   return (
     <AuthLayout

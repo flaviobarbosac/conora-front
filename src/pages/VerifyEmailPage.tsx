@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { authApi, persistSession } from '../api/client'
 import { AuthLayout } from '../layouts/AuthLayout'
+import { AppHandoff, useAppHandoff } from '../lib/appLinks'
 import styles from './auth.module.css'
 
 export function VerifyEmailPage() {
@@ -9,8 +10,11 @@ export function VerifyEmailPage() {
   const token = (searchParams.get('token') ?? '').trim()
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(true)
+  const { handoff, url, continueInBrowser } = useAppHandoff('validar-email')
 
   useEffect(() => {
+    // The token is single-use: keep it for the app until the user picks the browser.
+    if (handoff) return
     let cancelled = false
     async function run() {
       if (!token) {
@@ -35,7 +39,9 @@ export function VerifyEmailPage() {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, handoff])
+
+  if (handoff) return <AppHandoff url={url} onContinue={continueInBrowser} />
 
   return (
     <AuthLayout
