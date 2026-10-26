@@ -310,6 +310,7 @@ function BudgetTreeEditor({
   const [yearAccountId, setYearAccountId] = useState<string | null>(null)
   const [createCategoryId, setCreateCategoryId] = useState<string | null>(null)
   const [focusedId, setFocusedId] = useState<string | null>(null)
+  const [sheetCategoryId, setSheetCategoryId] = useState<string | null>(null)
   const saveAction = useAction()
 
   const lockedCategoryIds = useMemo(() => {
@@ -482,6 +483,22 @@ function BudgetTreeEditor({
       )
     : null
 
+  const editableAnalyticals = useMemo(
+    () =>
+      collectAnalyticalAccounts(roots, byParent, matches).filter((account) =>
+        isBudgetSheetEditable(account, lockedCategoryIds, canEdit),
+      ),
+    [roots, byParent, matches, lockedCategoryIds, canEdit],
+  )
+
+  const sheetAccount = sheetCategoryId
+    ? cashAccounts.find((account) => account.id === sheetCategoryId)
+    : null
+  const sheetIndex = sheetAccount
+    ? editableAnalyticals.findIndex((account) => account.id === sheetAccount.id)
+    : -1
+  const sheetHasNext = sheetIndex >= 0 && sheetIndex < editableAnalyticals.length - 1
+
   function toggle(id: string) {
     setOpen((current) => {
       const next = new Set(current)
@@ -492,6 +509,64 @@ function BudgetTreeEditor({
       }
       return next
     })
+  }
+
+  function expandAncestors(categoryId: string) {
+    const byId = new Map(cashAccounts.map((account) => [account.id, account]))
+    const ancestors = new Set<string>()
+    let current = byId.get(categoryId)
+    while (current?.parentId) {
+      ancestors.add(current.parentId)
+      current = byId.get(current.parentId)
+    }
+    if (ancestors.size === 0) {
+      return
+    }
+    setOpen((openIds) => {
+      const next = new Set(openIds)
+      for (const id of ancestors) {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  function applySheetDraft(categoryId: string, amount: string, day: string | null) {
+    if (lockedCategoryIds.has(categoryId)) {
+      return
+    }
+    setDrafts((current) => ({ ...current, [categoryId]: amount }))
+    if (day !== null) {
+      setDayDrafts((current) => ({ ...current, [categoryId]: day }))
+    }
+  }
+
+  function openValueSheet(categoryId: string) {
+    expandAncestors(categoryId)
+    setFocusedId(categoryId)
+    setSheetCategoryId(categoryId)
+  }
+
+  function advanceValueSheet(amount: string, day: string | null) {
+    if (!sheetCategoryId) {
+      return
+    }
+    applySheetDraft(sheetCategoryId, amount, day)
+    const index = editableAnalyticals.findIndex((account) => account.id === sheetCategoryId)
+    const next = index >= 0 ? editableAnalyticals[index + 1] : undefined
+    if (!next) {
+      setSheetCategoryId(null)
+      return
+    }
+    expandAncestors(next.id)
+    setFocusedId(next.id)
+    setSheetCategoryId(next.id)
+    window.setTimeout(() => {
+      document.getElementById(`budget-account-${next.id}`)?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      })
+    }, 80)
   }
 
   function cancelEdits() {
@@ -619,6 +694,7 @@ function BudgetTreeEditor({
                 setYearAccountId(id)
               }}
               onCreateProject={(id) => setCreateCategoryId(id)}
+              onOpenValueSheet={openValueSheet}
               onDraftChange={(id, value) => {
                 if (lockedCategoryIds.has(id)) {
                   return
@@ -635,6 +711,33 @@ function BudgetTreeEditor({
           ))}
         </div>
       ) : null}
+      {sheetAccount
+        ? createPortal(
+            <BudgetValueSheet
+              key={sheetAccount.id}
+              categoryName={categoryLabel(sheetAccount)}
+              amount={
+                lockedCategoryIds.has(sheetAccount.id)
+                  ? formatMoneyInput(planned.get(sheetAccount.id) ?? 0)
+                  : (drafts[sheetAccount.id] ??
+                    formatMoneyInput(planned.get(sheetAccount.id) ?? 0))
+              }
+              day={
+                EXPENSE_SECTIONS.includes(sheetAccount.section)
+                  ? (dayDrafts[sheetAccount.id] ?? '')
+                  : null
+              }
+              hasNext={sheetHasNext}
+              onCancel={() => setSheetCategoryId(null)}
+              onNext={sheetHasNext ? advanceValueSheet : undefined}
+              onConfirm={(nextAmount, nextDay) => {
+                applySheetDraft(sheetAccount.id, nextAmount, nextDay)
+                setSheetCategoryId(null)
+              }}
+            />,
+            document.body,
+          )
+        : null}
       {yearAccount && !lockedCategoryIds.has(yearAccount.id) ? (
         <BudgetYearSheet
           ym={ym}
@@ -708,6 +811,7 @@ function BudgetAccountBlock({
   onToggle,
   onOpenYear,
   onCreateProject,
+  onOpenValueSheet,
   onDraftChange,
   onDayChange,
 }: {
@@ -727,11 +831,11 @@ function BudgetAccountBlock({
   onToggle: (id: string) => void
   onOpenYear: (id: string) => void
   onCreateProject: (id: string) => void
+  onOpenValueSheet: (id: string) => void
   onDraftChange: (id: string, value: string) => void
   onDayChange: (id: string, value: string) => void
 }) {
   const narrowPhone = useNarrowPhone()
-  const [sheetOpen, setSheetOpen] = useState(false)
   const children = byParent.get(account.id) ?? []
   const groups = children.filter((child) => child.level === 'Group')
   const leaves = children.filter((child) => child.level === 'Analytical')
@@ -797,7 +901,7 @@ function BudgetAccountBlock({
                     className={styles.budgetValueTrigger}
                     disabled={fieldDisabled}
                     aria-label={`Editar orçamento ${categoryLabel(account)}`}
-                    onClick={() => setSheetOpen(true)}
+                    onClick={() => onOpenValueSheet(account.id)}
                   >
                     {displayAmount || '0,00'}
                   </button>
@@ -833,7 +937,7 @@ function BudgetAccountBlock({
                     className={styles.budgetDayTrigger}
                     disabled={fieldDisabled}
                     aria-label={`Editar dia de vencimento ${categoryLabel(account)}`}
-                    onClick={() => setSheetOpen(true)}
+                    onClick={() => onOpenValueSheet(account.id)}
                   >
                     {dayValue || '—'}
                   </button>
@@ -855,24 +959,6 @@ function BudgetAccountBlock({
             )
           }
         />
-        {sheetOpen
-          ? createPortal(
-              <BudgetValueSheet
-                categoryName={categoryLabel(account)}
-                amount={displayAmount}
-                day={showDay ? dayValue : null}
-                onCancel={() => setSheetOpen(false)}
-                onConfirm={(nextAmount, nextDay) => {
-                  onDraftChange(account.id, nextAmount)
-                  if (showDay && nextDay !== null) {
-                    onDayChange(account.id, nextDay)
-                  }
-                  setSheetOpen(false)
-                }}
-              />,
-              document.body,
-            )
-          : null}
       </div>
     )
   }
@@ -920,6 +1006,7 @@ function BudgetAccountBlock({
               onToggle={onToggle}
               onOpenYear={onOpenYear}
               onCreateProject={onCreateProject}
+              onOpenValueSheet={onOpenValueSheet}
               onDraftChange={onDraftChange}
               onDayChange={onDayChange}
             />
@@ -945,6 +1032,7 @@ function BudgetAccountBlock({
               onToggle={onToggle}
               onOpenYear={onOpenYear}
               onCreateProject={onCreateProject}
+              onOpenValueSheet={onOpenValueSheet}
               onDraftChange={onDraftChange}
               onDayChange={onDayChange}
             />
@@ -971,6 +1059,53 @@ function groupHasMatch(
       ? matches.has(child.id)
       : groupHasMatch(child.id, byParent, matches),
   )
+}
+
+/** Tree order matching BudgetAccountBlock: groups depth-first, then analytical siblings. */
+function collectAnalyticalAccounts(
+  roots: Category[],
+  byParent: Map<string | null, Category[]>,
+  matches: Set<string> | null,
+): Category[] {
+  const result: Category[] = []
+
+  function walk(account: Category) {
+    const children = byParent.get(account.id) ?? []
+    const groups = children.filter((child) => child.level === 'Group')
+    const leaves = children.filter((child) => child.level === 'Analytical')
+    for (const group of groups) {
+      if (!matches || groupHasMatch(group.id, byParent, matches)) {
+        walk(group)
+      }
+    }
+    for (const leaf of leaves) {
+      if (!matches || matches.has(leaf.id)) {
+        result.push(leaf)
+      }
+    }
+  }
+
+  for (const root of roots) {
+    walk(root)
+  }
+  return result
+}
+
+function isBudgetSheetEditable(
+  account: Category,
+  lockedCategoryIds: Set<string>,
+  canEdit: boolean,
+): boolean {
+  if (!canEdit || account.level !== 'Analytical') {
+    return false
+  }
+  if (lockedCategoryIds.has(account.id)) {
+    return false
+  }
+  if (account.section === 'LifeProject') {
+    return false
+  }
+  return true
 }
 
 type AppliedMonth = { ym: string; amount: number }

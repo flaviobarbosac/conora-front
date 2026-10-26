@@ -1648,6 +1648,18 @@ button.compact {
 @media (max-width: 719px) {
   .page {
     gap: var(--space-4);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  .budgetRow {
+    min-width: 0;
+  }
+
+  .raioxRow {
+    min-width: 0;
   }
 
   .section {
@@ -1702,8 +1714,8 @@ button.compact {
   }
 
   .homeLaunchO {
-    width: min(100%, 100vw);
-    max-width: none;
+    width: 100%;
+    max-width: 100%;
     padding: 0;
   }
 
