@@ -1,0 +1,29 @@
+---
+description: Roteiro para publicar o Conora Android no Google Play. Use quando o usuário pedir "publicar no Android", "subir para a Play Store", "nova versão Android" ou similar.
+alwaysApply: false
+---
+
+# Publicar Conora no Android (Google Play)
+
+Sempre por este roteiro. Nunca gerar AAB local nem enviar pelo Play Console.
+
+1. **Origem é a `main`.** O workflow `.github/workflows/android-play.yml` sempre compila a `main`.
+2. **Conferir o que falta na `main`:**
+   `gh api repos/flaviobarbosac/conora-front/compare/main...develop --jq '.commits[] | .sha[0:7] + " " + (.commit.message | split("\n")[0])'`
+   - Se houver commits, mostrar a lista ao usuário e perguntar se pode levar `develop` para `main`
+     (esse merge também publica o front web).
+3. **Versão.** O `versionName` vem do `package.json` da `main`; o `versionCode` é gerado pelo workflow
+   (fórmula do iOS + número da execução). Se o usuário quiser um número de versão novo, subir o
+   `version` do `package.json` em `develop` antes do passo 2 (Conventional Commit `chore: bump version to X`).
+4. **Publicar** (padrão = produção, Brasil, lançamento completo, enviado para revisão):
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-android.ps1`
+   - Com merge de develop aprovado: acrescentar `-MergeDevelop`.
+   - Notas da versão: `-Notes "texto em pt-BR"` (padrão "Melhorias e correções.").
+   - Só teste interno, se o usuário pedir: `-Track internal`.
+5. **Reportar** ao usuário: versão, versionCode, link da execução e que a versão entra no ar
+   sozinha quando o Google aprovar a revisão (publicação gerenciada desligada).
+6. **Se falhar:** `gh run view <id> --repo flaviobarbosac/conora-front --log-failed` e explicar a causa.
+   Erro "Version code ... has already been used": rodar de novo (o número da execução muda).
+
+Segredos (gravados por `scripts/set-android-play-secrets.ps1`, no GitHub, nunca no repositório): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`, `VITE_GOOGLE_CLIENT_ID`.

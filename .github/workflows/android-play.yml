@@ -1,0 +1,142 @@
+name: Android Google Play
+
+# Publication only, on request: scripts/publish-android.ps1 (or gh workflow run).
+# Always builds what is on main. Default track is production (Brasil, full rollout,
+# sent for review); internal is kept for a quick test build.
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: Google Play track
+        required: true
+        type: choice
+        options:
+          - production
+          - internal
+        default: production
+      release_notes:
+        description: Release notes (pt-BR)
+        required: false
+        type: string
+        default: Melhorias e correções.
+
+concurrency:
+  group: conora-android-play
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PACKAGE_NAME: br.com.conora.app
+
+jobs:
+  play:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Same formula as iOS: version from package.json, version code
+      # = year * 100000 + minor * 1000 + patch + workflow run number.
+      # package.json is not rewritten and the bump is not committed.
+      - name: Set version for this publication
+        env:
+          TRACK: ${{ inputs.track }}
+        run: |
+          VERSION_NAME="$(node -p "require('./package.json').version")"
+          IFS='.' read -r YEAR MINOR PATCH <<< "$VERSION_NAME"
+          BASE=$((YEAR * 100000 + MINOR * 1000 + PATCH))
+          VERSION_CODE=$((BASE + GITHUB_RUN_NUMBER))
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+          echo "TRACK=$TRACK" >> "$GITHUB_ENV"
+          echo "Conora ${VERSION_NAME} (${VERSION_CODE}) -> ${TRACK}"
+
+      # Not npm run cap:sync: build:android bumps package.json.
+      - name: Build web assets
+        env:
+          VITE_API_URL: https://api.conora.com.br
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_APPLE_CLIENT_ID: br.com.conora.app
+          VITE_APPLE_SERVICES_ID: br.com.conora.web
+          VITE_PLATAFORMA: android
+        run: |
+          npx tsc -b
+          npx vite build --mode android
+          node scripts/sync-android-google-auth.mjs --mode android
+          node scripts/patch-android-share-intent.mjs
+          npx cap sync android
+
+      - name: Install upload keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "Missing Android signing secrets."
+            exit 1
+          fi
+          KEYSTORE_PATH="$RUNNER_TEMP/conora-upload.keystore"
+          echo -n "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          {
+            echo "storeFile=$KEYSTORE_PATH"
+            echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
+            echo "keyAlias=$ANDROID_KEY_ALIAS"
+            echo "keyPassword=$ANDROID_KEY_PASSWORD"
+          } > mobile/android/keystore.properties
+
+      - name: Build signed AAB
+        working-directory: mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleRelease --no-daemon -PconoraVersionCode="$VERSION_CODE"
+          rm -f keystore.properties
+
+      - name: Keep AAB as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: conora-${{ env.VERSION_NAME }}-${{ env.VERSION_CODE }}
+          path: mobile/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Write release notes
+        if: inputs.release_notes != ''
+        env:
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/whatsnew"
+          printf '%s' "$RELEASE_NOTES" > "$RUNNER_TEMP/whatsnew/whatsnew-pt-BR"
+          echo "WHATSNEW_DIR=$RUNNER_TEMP/whatsnew" >> "$GITHUB_ENV"
+
+      # Service account needs the "Release apps" permissions on Conora in Play Console.
+      # Production: full rollout, sent for review right away (managed publishing is off,
+      # so it goes live as soon as Google approves).
+      - name: Upload to Google Play
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          releaseFiles: mobile/android/app/build/outputs/bundle/release/app-release.aab
+          releaseName: ${{ env.VERSION_NAME }} (${{ env.VERSION_CODE }})
+          track: ${{ env.TRACK }}
+          status: completed
+          whatsNewDirectory: ${{ env.WHATSNEW_DIR }}
