@@ -1,9 +1,12 @@
 name: Android Google Play
 
-# Publication only, on request: scripts/publish-android.ps1 (or gh workflow run).
-# Always builds what is on main. Default track is production (Brasil, full rollout,
-# sent for review); internal is kept for a quick test build.
+# Runs when a develop -> main PR is merged (production), or on request:
+# scripts/publish-android.ps1 (or gh workflow run). Always builds what is on main.
+# Production = Brasil, full rollout, sent for review; internal is kept for a quick test build.
 on:
+  pull_request:
+    types: [closed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       track:
@@ -32,11 +35,12 @@ env:
 
 jobs:
   play:
+    if: github.event_name != 'pull_request' || (github.event.pull_request.merged == true && github.head_ref == 'develop')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.pull_request.merge_commit_sha || 'main' }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -60,7 +64,7 @@ jobs:
       # package.json is not rewritten and the bump is not committed.
       - name: Set version for this publication
         env:
-          TRACK: ${{ inputs.track }}
+          TRACK: ${{ inputs.track || 'production' }}
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           VERSION_NAME="$(node -p "require('./package.json').version")"
@@ -145,9 +149,9 @@ jobs:
           retention-days: 30
 
       - name: Write release notes
-        if: inputs.release_notes != ''
+        if: github.event_name == 'pull_request' || inputs.release_notes != ''
         env:
-          RELEASE_NOTES: ${{ inputs.release_notes }}
+          RELEASE_NOTES: ${{ inputs.release_notes || 'Melhorias e correções.' }}
         run: |
           mkdir -p "$RUNNER_TEMP/whatsnew"
           printf '%s' "$RELEASE_NOTES" > "$RUNNER_TEMP/whatsnew/whatsnew-pt-BR"
