@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { FEEDBACK_RATING_LABELS, feedbackRatingColor } from '../lib/feedbackRatingColors'
+import { getAppPlatform } from '../lib/platform'
 import { resolveModuloFromPath } from '../lib/resolveModuloFromPath'
 import { showSaveToast } from '../lib/saveToast'
 import { CADASTROS_ITEMS, NAV_ITEMS } from '../nav'
@@ -89,7 +90,13 @@ export function FeedbackOverlay({ open, onClose, pathnameSnapshot }: Props) {
     }
     if (
       await action.run(() =>
-        feedbackApi.submit({ modulo, rota, nota, comentario: texto }),
+        feedbackApi.submit({
+          modulo,
+          rota,
+          plataforma: getAppPlatform(),
+          nota,
+          comentario: texto,
+        }),
       )
     ) {
       showSaveToast('Feedback enviado. Obrigado!')
@@ -116,7 +123,9 @@ export function FeedbackOverlay({ open, onClose, pathnameSnapshot }: Props) {
           <span className={styles.label}>Módulo</span>
           <p className={styles.modulo}>{modulo}</p>
           <p className={styles.rota}>{rota}</p>
-          <p className={styles.hint}>Detectado automaticamente pela rota atual.</p>
+          <p className={styles.hint}>
+            Detectado automaticamente pela rota atual · {getAppPlatform()}
+          </p>
         </div>
         <div className={styles.meta}>
           <div>

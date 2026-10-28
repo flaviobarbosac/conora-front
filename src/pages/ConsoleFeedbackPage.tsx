@@ -269,7 +269,10 @@ export function ConsoleFeedbackPage() {
                     <h3>
                       {selected.usuarioNome} · {selected.modulo}
                     </h3>
-                    {selected.rota ? <p className={styles.metaLine}>{selected.rota}</p> : null}
+                    <p className={styles.metaLine}>
+                      {selected.plataforma || 'Web'}
+                      {selected.rota ? ` · ${selected.rota}` : ''}
+                    </p>
                     <p className={styles.rating} style={{ color: feedbackRatingColor(selected.nota) }}>
                       {selected.nota} ★ · {FEEDBACK_RATING_LABELS[selected.nota]}
                     </p>
@@ -359,6 +362,7 @@ function FeedbackRow({
       </span>
       <span className={styles.rowMeta}>
         <span className={statusClass(item.status)}>{statusLabel(item.status)}</span>
+        <span>{item.plataforma || 'Web'}</span>
         <span>{formatDate(item.createdAt)}</span>
         <span style={{ color: feedbackRatingColor(item.nota), fontWeight: 600 }}>{item.nota} ★</span>
       </span>
