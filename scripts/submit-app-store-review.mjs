@@ -93,6 +93,8 @@ const editableStates = [
   'REJECTED',
   'METADATA_REJECTED',
   'INVALID_BINARY',
+  // Still inside a rejected submission (checked below), but it is the app's only version.
+  'READY_FOR_REVIEW',
 ]
 const versions = await request(
   'GET',
