@@ -34,7 +34,9 @@ export function RequirePlanAccess() {
     return null
   }
   const phase = plan.data?.phase
-  const consoleOpen = pathname === '/console' && isConsoleOperator(session?.email)
+  const consoleOpen =
+    (pathname === '/console' || pathname.startsWith('/console/')) &&
+    isConsoleOperator(session?.email)
   if (!isPlansScreen(pathname) && !consoleOpen) {
     if (phase === 'Blocked') {
       return <Navigate to={PLANS_PATH} replace />

@@ -1,0 +1,119 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  overflow: auto;
+  background: #0d4f4a;
+}
+
+.badge {
+  margin: 0;
+  color: #b8f0e0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.title {
+  margin: var(--space-2) 0 0;
+  color: #fff;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  text-align: center;
+}
+
+.subtitle {
+  margin: var(--space-2) 0 var(--space-5);
+  color: rgb(255 255 255 / 75%);
+  font-size: var(--text-base);
+  text-align: center;
+  max-width: 28rem;
+}
+
+.card {
+  width: min(100%, 440px);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.label {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-1);
+}
+
+.modulo {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+.rota {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.hint {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.meta {
+  display: flex;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.meta strong {
+  display: block;
+  font-size: var(--text-base);
+}
+
+.stars {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.starBtn {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: var(--space-1);
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+.ratingLabel {
+  margin: var(--space-2) 0 0;
+  font-weight: var(--weight-semibold);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.escHint {
+  margin: var(--space-4) 0 0;
+  color: rgb(255 255 255 / 55%);
+  font-size: var(--text-sm);
+  text-align: center;
+}

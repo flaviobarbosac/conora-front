@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Google Sign-In (iOS). Bundle must match PRODUCT_BUNDLE_IDENTIFIER: br.com.conora.app.
+  CLIENT_ID / REVERSED_CLIENT_ID come from the iOS OAuth client in Google Cloud
+  (project conora-app / 943760588490). If you rotate the iOS client, update:
+  - this file
+  - Info.plist (CFBundleURLSchemes GoogleSignIn + GIDClientID)
+  - GitHub secret VITE_GOOGLE_IOS_CLIENT_ID
+  - .env.ios / .env.ios.example
+  Confirm in Google Cloud Console that the iOS client's Bundle ID is br.com.conora.app
+  (not com.conora.app).
+-->
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>943760588490-gv2tl2clpm3vfa7lajoj1armj9u4ubc5.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.943760588490-gv2tl2clpm3vfa7lajoj1armj9u4ubc5</string>
+	<key>BUNDLE_ID</key>
+	<string>br.com.conora.app</string>
+	<key>PROJECT_ID</key>
+	<string>conora-app</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+</dict>
+</plist>

@@ -10,7 +10,6 @@ import {
 } from '../lib/jornadaTimeline'
 import { maturityAgeFromAchievements } from '../lib/speakPt'
 import page from '../pages/page.module.css'
-import { Button } from './ui/Button'
 import { ErrorText, Loading } from './ui/Feedback'
 import styles from './JornadaTimeline.module.css'
 
@@ -22,12 +21,10 @@ function chipClass(kind: JourneyStepKind): string {
 }
 
 type Props = {
-  /** Home: close control. Full /jornada page: omit. */
-  onClose?: () => void
   showProgressHeader?: boolean
 }
 
-export function JornadaTimeline({ onClose, showProgressHeader = true }: Props) {
+export function JornadaTimeline({ showProgressHeader = true }: Props) {
   const journey = useLoad(() => gamificationApi.journey(), [])
   const achievements = useLoad(() => gamificationApi.achievements(), [])
 
@@ -57,15 +54,6 @@ export function JornadaTimeline({ onClose, showProgressHeader = true }: Props) {
 
   return (
     <div className={styles.wrap}>
-      {onClose ? (
-        <div className={styles.homeToolbar}>
-          <p className={styles.kicker}>Jornada Raio X</p>
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Fechar
-          </Button>
-        </div>
-      ) : null}
-
       <ErrorText message={journey.error ?? achievements.error} />
       {loading ? <Loading /> : null}
 

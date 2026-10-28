@@ -5,6 +5,7 @@ import { scanReceipt } from '../camera/scanReceipt'
 import { HomeLaunchO } from '../components/HomeLaunchO'
 import { JornadaTimeline } from '../components/JornadaTimeline'
 import { PageHeader } from '../components/PageHeader'
+import { Button } from '../components/ui/Button'
 import { ErrorText } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
@@ -15,7 +16,6 @@ import {
   readHomeJourneyTimeline,
   writeHomeJourneyTimeline,
 } from '../lib/preferences'
-import { speechRecognitionAvailable } from '../lib/voiceDraft'
 import styles from './page.module.css'
 
 function firstName(fullName: string | undefined): string {
@@ -57,12 +57,9 @@ export function HomePage() {
   }
 
   function openVoice() {
+    // Ian mic / voice-listen is disabled on all platforms; keep the entry point, do not open the session.
     setVoiceError(null)
-    if (!speechRecognitionAvailable()) {
-      setVoiceError('Este navegador não liberou o microfone para ditado.')
-      return
-    }
-    window.dispatchEvent(new Event('conora:open-voice'))
+    return
   }
 
   function closeJourney() {
@@ -89,7 +86,13 @@ export function HomePage() {
 
       {showJourney ? (
         <section className={styles.homeJourney} aria-label="Jornada Raio X">
-          <JornadaTimeline onClose={closeJourney} />
+          <p className={styles.homeJourneyKicker}>Jornada Raio X</p>
+          <JornadaTimeline />
+          <div className={styles.homeJourneyFooter}>
+            <Button type="button" variant="secondary" onClick={closeJourney}>
+              Fechar
+            </Button>
+          </div>
         </section>
       ) : null}
     </div>

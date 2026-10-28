@@ -2378,6 +2378,25 @@ button.compact {
   max-width: 40rem;
   margin-inline: auto;
   padding-bottom: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.homeJourneyKicker {
+  margin: 0;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: var(--weight-medium);
+}
+
+.homeJourneyFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-2);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
 }
 
 .homeLaunch {

@@ -28,6 +28,8 @@ npm run cap:open:ios
 
 No Xcode: Team, Archive, TestFlight. Incluir o target `ShareExtension` (arquivos em `mobile/ios/ShareExtension`) e o App Group `group.br.com.conora.app`.
 
+Google Sign-In: `Info.plist` precisa do URL scheme `REVERSED_CLIENT_ID` e `GIDClientID`; o script `scripts/sync-ios-google-auth.mjs` escreve isso a partir de `VITE_GOOGLE_IOS_CLIENT_ID`. O workflow **iOS TestFlight** falha se o secret estiver vazio. Em Google Cloud, o cliente iOS deve ter Bundle ID `br.com.conora.app`. Arquivo `mobile/ios/App/App/GoogleService-Info.plist` entra no target App.
+
 ## Share Target
 
 - Android/PWA: câmera → Compartilhar → Conora → confirmar lançamento.

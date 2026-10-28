@@ -24,6 +24,9 @@ const ARCS = {
   voice: { a0: 218, a1: 322 },
 } as const
 
+/** Ian / voice launch on the home O — code kept; hide mic only (leave the arc slot empty). */
+const SHOW_VOICE_LAUNCH = false
+
 function polar(r: number, degFromTopCw: number): [number, number] {
   const rad = (degFromTopCw * Math.PI) / 180
   return [CX + r * Math.sin(rad), CY - r * Math.cos(rad)]
@@ -83,17 +86,19 @@ export function HomeLaunchO({ listening = false, onScan, onVoice, onManual }: Pr
             onClick={listening ? undefined : onScan}
             onKeyDown={listening ? undefined : (e) => onActivate(e, onScan)}
           />
-          <path
-            className={styles.homeLaunchOArc}
-            d={annularSectorPath(ARCS.voice.a0, ARCS.voice.a1)}
-            role="button"
-            tabIndex={listening ? -1 : 0}
-            aria-label={listening ? 'Ouvindo…' : 'Lançar por voz'}
-            aria-busy={listening || undefined}
-            aria-disabled={listening || undefined}
-            onClick={listening ? undefined : onVoice}
-            onKeyDown={listening ? undefined : (e) => onActivate(e, onVoice)}
-          />
+          {SHOW_VOICE_LAUNCH ? (
+            <path
+              className={styles.homeLaunchOArc}
+              d={annularSectorPath(ARCS.voice.a0, ARCS.voice.a1)}
+              role="button"
+              tabIndex={listening ? -1 : 0}
+              aria-label={listening ? 'Ouvindo…' : 'Lançar por voz'}
+              aria-busy={listening || undefined}
+              aria-disabled={listening || undefined}
+              onClick={listening ? undefined : onVoice}
+              onKeyDown={listening ? undefined : (e) => onActivate(e, onVoice)}
+            />
+          ) : null}
           <path
             className={`${styles.homeLaunchOArc} ${listening ? styles.homeLaunchOHitDim : ''}`}
             d={annularSectorPath(ARCS.manual.a0, ARCS.manual.a1)}
@@ -113,13 +118,15 @@ export function HomeLaunchO({ listening = false, onScan, onVoice, onManual }: Pr
         >
           <Icon name="camera" size={24} />
         </span>
-        <span
-          className={`${styles.homeLaunchOIcon} ${styles.homeLaunchOIconVoice} ${listening ? styles.homeLaunchOIconPulse : ''}`}
-          style={{ left: `${voiceX}%`, top: `${voiceY}%` }}
-          aria-hidden
-        >
-          <Icon name="mic" size={24} />
-        </span>
+        {SHOW_VOICE_LAUNCH ? (
+          <span
+            className={`${styles.homeLaunchOIcon} ${styles.homeLaunchOIconVoice} ${listening ? styles.homeLaunchOIconPulse : ''}`}
+            style={{ left: `${voiceX}%`, top: `${voiceY}%` }}
+            aria-hidden
+          >
+            <Icon name="mic" size={24} />
+          </span>
+        ) : null}
         <span
           className={`${styles.homeLaunchOIcon} ${styles.homeLaunchOIconManual} ${listening ? styles.homeLaunchOHitDim : ''}`}
           style={{ left: `${manualX}%`, top: `${manualY}%` }}
