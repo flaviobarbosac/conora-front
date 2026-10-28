@@ -13,6 +13,8 @@ import { AccountForm } from '../components/finance/AccountForm'
 import { CardForm } from '../components/finance/CardForm'
 import { CategorySelect } from '../components/CategorySelect'
 import { PageHeader } from '../components/PageHeader'
+import { usePlanAccess } from '../hooks/usePlanAccess'
+import { hasFullAccess } from '../lib/freeTier'
 import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
@@ -57,6 +59,8 @@ export function AccountsPage() {
   const view = viewFromPath(pathname)
   const showAccounts = view === 'accounts'
   const showCards = view === 'cards'
+  const { plan } = usePlanAccess()
+  const fullAccess = hasFullAccess(plan)
 
   const lookups = useLookups()
   const accounts = useLoad(() => accountsApi.list(true), [])
@@ -86,6 +90,7 @@ export function AccountsPage() {
   const cardList = cards.data ?? []
   const accountsPage = useClientPagination(accountList, 10)
   const cardsPage = useClientPagination(cardList, 10)
+  const canAddAccount = fullAccess || activeAccounts.length < 1
 
   const pageTitle = showCards ? 'Cartões' : 'Contas'
   const pageKicker = showCards ? 'Crédito' : 'Dinheiro'
@@ -98,6 +103,11 @@ export function AccountsPage() {
         <>
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Contas</h2>
+            {!fullAccess ? (
+              <p className={styles.muted}>
+                No Conora grátis você cadastra uma conta — ela recebe os lançamentos de despesa.
+              </p>
+            ) : null}
             <ErrorText message={accounts.error ?? archive.error} />
             {accounts.loading && !accounts.data ? <Loading /> : null}
             {accounts.data && accounts.data.length === 0 ? <Empty>Nenhuma conta cadastrada.</Empty> : null}
@@ -140,7 +150,13 @@ export function AccountsPage() {
             ) : null}
           </section>
 
-          <AccountForm onSaved={refresh} />
+          {canAddAccount ? (
+            <AccountForm onSaved={refresh} />
+          ) : (
+            <p className={styles.muted}>
+              Limite de uma conta no plano grátis. Assine para cadastrar mais contas.
+            </p>
+          )}
         </>
       ) : null}
 

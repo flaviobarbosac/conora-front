@@ -13,11 +13,15 @@ import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import { categoryLabel } from '../lib/categoryLabel'
 import { acceptsAnalyticalChild, compareCategorySiblings } from '../lib/categoryOrder'
+import { FREE_TIER_CATEGORY_LABEL, hasFullAccess, isFreeCategoryCode } from '../lib/freeTier'
 import { groupAccountsByParent } from '../lib/raioX'
+import { usePlanAccess } from '../hooks/usePlanAccess'
 import styles from './page.module.css'
 
 export function CategoriesPage() {
   // Management screen keeps inactive rows so the owner can reactivate them.
+  const { plan } = usePlanAccess()
+  const fullAccess = hasFullAccess(plan)
   const accounts = useLoad(() => categoriesApi.list(undefined, true, false, true), [])
   const group = useLoad(() => familyApi.group(), [])
   const action = useAction()
@@ -144,6 +148,7 @@ export function CategoriesPage() {
       <ErrorText message={accounts.error ?? action.error} />
       {accounts.loading && !accounts.data ? <Loading /> : null}
       {!accounts.loading && roots.length === 0 ? <Empty>Nenhuma categoria.</Empty> : null}
+      {!fullAccess ? <p className={styles.muted}>{FREE_TIER_CATEGORY_LABEL}</p> : null}
       {inGroup ? (
         <p className={styles.muted}>
           {isBudgetOwner
@@ -173,6 +178,7 @@ export function CategoriesPage() {
               busy={action.busy}
               canEditChart={canEditChart}
               isBudgetOwner={isBudgetOwner}
+              freeLimited={!fullAccess}
               pendingAncestorIds={pendingAncestorIds}
               onToggle={toggle}
               onDraftParent={(parentId) => {
@@ -223,6 +229,7 @@ function CategoryTreeRow({
   busy,
   canEditChart,
   isBudgetOwner,
+  freeLimited,
   pendingAncestorIds,
   onToggle,
   onDraftParent,
@@ -250,6 +257,7 @@ function CategoryTreeRow({
   busy: boolean
   canEditChart: boolean
   isBudgetOwner: boolean
+  freeLimited: boolean
   pendingAncestorIds: Set<string>
   onToggle: (id: string) => void
   onDraftParent: (parentId: string) => void
@@ -266,15 +274,17 @@ function CategoryTreeRow({
   onReject: (account: Category) => void
 }) {
   const children = byParent.get(account.id) ?? []
+  const lockedLeaf =
+    freeLimited && account.level === 'Analytical' && !isFreeCategoryCode(account.code)
   const canAdd =
-    canEditChart && account.level !== 'Analytical' && acceptsAnalyticalChild(account.section)
+    canEditChart && !freeLimited && account.level !== 'Analytical' && acceptsAnalyticalChild(account.section)
   const drafting = draftParentId === account.id
   const renaming = renameId === account.id
   const expandable = children.length > 0 || canAdd
-  const canManage = canEditChart && !account.isSystem && !account.isPendingReview
+  const canManage = canEditChart && !lockedLeaf && !account.isSystem && !account.isPendingReview
   // Active toggle belongs on every analytical leaf (including system catalog accounts).
   const canToggleActive =
-    canEditChart && account.level === 'Analytical' && !account.isPendingReview
+    canEditChart && !lockedLeaf && account.level === 'Analytical' && !account.isPendingReview
   const canReview =
     isBudgetOwner && account.level === 'Analytical' && Boolean(account.isPendingReview)
   const expanded = open.has(account.id) || drafting || pendingAncestorIds.has(account.id)
@@ -296,8 +306,12 @@ function CategoryTreeRow({
   return (
     <>
       <div
-        className={`${styles.raioxRow} ${styles.categoriesRow} ${rowClass} ${pendingTrail ? styles.categoryPendingTrail : ''}`}
-        style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
+        className={`${styles.raioxRow} ${styles.categoriesRow} ${rowClass} ${pendingTrail ? styles.categoryPendingTrail : ''}${lockedLeaf ? ` ${styles.muted}` : ''}`}
+        style={{
+          paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)`,
+          opacity: lockedLeaf ? 0.55 : undefined,
+        }}
+        title={lockedLeaf ? 'Liberado nos planos pagos' : undefined}
       >
         <button
           type="button"
@@ -424,6 +438,7 @@ function CategoryTreeRow({
               busy={busy}
               canEditChart={canEditChart}
               isBudgetOwner={isBudgetOwner}
+              freeLimited={freeLimited}
               pendingAncestorIds={pendingAncestorIds}
               onToggle={onToggle}
               onDraftParent={onDraftParent}

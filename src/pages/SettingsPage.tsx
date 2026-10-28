@@ -146,7 +146,7 @@ export function SettingsPage() {
       {profile.loading && !profile.data ? <Loading /> : null}
 
       {draft ? (
-        <form className={styles.form} onSubmit={(event) => void onSave(event)}>
+        <form className={`${styles.form} ${styles.settingsForm}`} onSubmit={(event) => void onSave(event)}>
           <section className={styles.section} id="ritmo">
             <h2 className={styles.sectionTitle}>Ritmo</h2>
             <Select

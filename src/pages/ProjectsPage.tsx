@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { familyApi, projectsApi, type LifeProjectScope } from '../api/finance'
+import { PaidModuleBadge } from '../components/PaidModuleBadge'
 import { PageHeader } from '../components/PageHeader'
+import { usePlanAccess } from '../hooks/usePlanAccess'
+import { hasFullAccess } from '../lib/freeTier'
 import { Pager } from '../components/Pager'
 import { CategorySelect } from '../components/CategorySelect'
 import { Button } from '../components/ui/Button'
@@ -43,6 +46,8 @@ function isHorizon(value: string | null): value is HorizonKey {
 
 export function ProjectsPage() {
   const navigate = useNavigate()
+  const { plan } = usePlanAccess()
+  const canWrite = hasFullAccess(plan)
   const { confirmLeave } = useUnsavedChanges()
   const [searchParams, setSearchParams] = useSearchParams()
   const horizonte = isHorizon(searchParams.get('horizonte')) ? searchParams.get('horizonte') : null
@@ -115,11 +120,19 @@ export function ProjectsPage() {
         kicker="Metas"
         title="Projetos de vida"
         actions={
-          <Button onClick={() => void toggleForm()}>
-            {showForm ? 'Fechar cadastro' : 'Novo projeto'}
-          </Button>
+          <>
+            {!canWrite ? <PaidModuleBadge /> : null}
+            {canWrite ? (
+              <Button onClick={() => void toggleForm()}>
+                {showForm ? 'Fechar cadastro' : 'Novo projeto'}
+              </Button>
+            ) : null}
+          </>
         }
       />
+      {!canWrite ? (
+        <p className={styles.muted}>Você pode ver os projetos. Cadastro e edição ficam nos planos pagos.</p>
+      ) : null}
 
       <section className={styles.horizonBlock} aria-label="Resumo por horizonte">
         {LIFE_HORIZONS.map((horizon) => {
@@ -245,7 +258,7 @@ export function ProjectsPage() {
         onPageChange={pagination.setPage}
       />
 
-      {showForm ? (
+      {showForm && canWrite ? (
         <ProjectForm
           onDirtyChange={setFormDirty}
           onSaved={(id) => {

@@ -14,8 +14,9 @@ function isPlansScreen(pathname: string) {
 }
 
 /**
- * Applies the access lifecycle: after day 100 without a plan only the plans screen opens;
- * between days 90 and 100 the plans screen is shown once per app session (read-only access).
+ * Applies the access lifecycle: Blocked accounts only open the plans screen.
+ * After the student trial the product stays on free-tier limits (Expired), not app-wide lock.
+ * Grace (legacy) still opens the plans screen once per session.
  */
 export function RequirePlanAccess() {
   const plan = useLoad(() => planApi.get(), [])

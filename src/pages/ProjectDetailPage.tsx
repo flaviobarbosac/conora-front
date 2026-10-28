@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { familyApi, projectsApi, type LifeProject, type LifeProjectScope } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
+import { PaidModuleBadge } from '../components/PaidModuleBadge'
 import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { Badge, ErrorText, Loading } from '../components/ui/Feedback'
@@ -11,8 +12,10 @@ import { Select } from '../components/ui/Select'
 import { TextArea } from '../components/ui/TextArea'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
+import { usePlanAccess } from '../hooks/usePlanAccess'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
+import { hasFullAccess } from '../lib/freeTier'
 import { showSaveToast } from '../lib/saveToast'
 import {
   formatCompetence,
@@ -37,13 +40,15 @@ function ymFromIso(iso: string | null | undefined): string {
 export function ProjectDetailPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  const { plan } = usePlanAccess()
+  const canWrite = hasFullAccess(plan)
   const project = useLoad(() => projectsApi.get(id), [id])
   const remove = useAction()
   const data = project.data
   const horizonLabel = LIFE_HORIZONS.find((item) => item.key === data?.horizon)?.label
 
   async function removeProject() {
-    if (!data) {
+    if (!data || !canWrite) {
       return
     }
     if (!(await confirmDestructive(`Excluir o projeto "${data.name}"?`, { title: 'Excluir projeto' }))) {
@@ -61,10 +66,11 @@ export function ProjectDetailPage() {
         title={data?.name ?? 'Projeto'}
         actions={
           <>
+            {!canWrite ? <PaidModuleBadge /> : null}
             <Button variant="secondary" onClick={() => navigate('/projetos')}>
               Voltar ao dashboard
             </Button>
-            {data?.isOwner ? <DeleteIconButton onClick={() => void removeProject()} /> : null}
+            {canWrite && data?.isOwner ? <DeleteIconButton onClick={() => void removeProject()} /> : null}
           </>
         }
       />
@@ -103,10 +109,8 @@ export function ProjectDetailPage() {
             </span>
           </section>
 
-          {data.isOwner ? (
-            <>
-              <ProjectEditForm key={`${data.id}-${data.categoryId}`} data={data} onSaved={() => project.reload()} />
-            </>
+          {data.isOwner && canWrite ? (
+            <ProjectEditForm key={`${data.id}-${data.categoryId}`} data={data} onSaved={() => project.reload()} />
           ) : (
             <section className={styles.section}>
               <h2 className={styles.sectionTitle}>Descrição detalhada</h2>

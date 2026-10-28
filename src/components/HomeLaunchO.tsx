@@ -17,15 +17,23 @@ const CY = 50
 const R_OUT = 51
 const R_IN = 32.5
 
-/** Gaps in the O sit near 90°, 210°, 330° (from top, clockwise). */
-const ARCS = {
+/** Gaps in the O sit near 90°, 210°, 330° (from top, clockwise). Voice arc kept for a later revive. */
+const ARCS_WITH_VOICE = {
   scan: { a0: 338, a1: 82 },
   manual: { a0: 98, a1: 202 },
   voice: { a0: 218, a1: 322 },
 } as const
 
-/** Ian / voice launch on the home O — code kept; hide mic only (leave the arc slot empty). */
+/** Without voice: photo and pencil sit opposite with a wider dead zone against accidental taps. */
+const ARCS_NO_VOICE = {
+  scan: { a0: 310, a1: 50 },
+  manual: { a0: 130, a1: 230 },
+  voice: { a0: 218, a1: 322 },
+} as const
+
+/** Ian / voice launch on the home O — hidden for MVP 14/11. */
 const SHOW_VOICE_LAUNCH = false
+const ARCS = SHOW_VOICE_LAUNCH ? ARCS_WITH_VOICE : ARCS_NO_VOICE
 
 function polar(r: number, degFromTopCw: number): [number, number] {
   const rad = (degFromTopCw * Math.PI) / 180

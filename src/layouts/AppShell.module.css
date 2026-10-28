@@ -34,13 +34,13 @@
   gap: var(--space-6);
   position: fixed;
   top: 0;
-  left: 0;
+  right: 0;
   bottom: 0;
   width: min(17.5rem, 86vw);
   z-index: 40;
   padding: calc(var(--space-5) + env(safe-area-inset-top)) var(--space-4) var(--space-5);
   background: var(--surface);
-  border-right: 1px solid var(--border-subtle);
+  border-left: 1px solid var(--border-subtle);
   box-shadow: var(--shadow);
   overflow: auto;
 }

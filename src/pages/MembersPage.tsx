@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { familyApi, planApi, type FamilyInvite, type FamilyMemberUser, type FamilyNotice } from '../api/finance'
+import { PaidModuleBadge } from '../components/PaidModuleBadge'
 import { PageHeader } from '../components/PageHeader'
+import { usePlanAccess } from '../hooks/usePlanAccess'
+import { hasFullAccess } from '../lib/freeTier'
 import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
@@ -17,6 +20,8 @@ import styles from './page.module.css'
 
 export function MembersPage() {
   const navigate = useNavigate()
+  const { plan: accessPlan } = usePlanAccess()
+  const canWriteMembers = hasFullAccess(accessPlan)
   const profile = useLoad(() => familyApi.profile(), [])
   const group = useLoad(() => familyApi.group(), [])
   const plan = useLoad(() => planApi.get(), [])
@@ -266,12 +271,19 @@ export function MembersPage() {
   const occupiedExtra = Math.max(0, (groupData?.members.length ?? 1) - 1) + openInvites.length
   const seatFull = seat !== null && occupiedExtra >= seat.maxExtra
   const hasGroup = Boolean(groupData?.groupId)
-  const canInvite = !hasGroup || Boolean(groupData?.isBudgetOwner)
-  const canScan = !hasGroup
+  const canInvite = canWriteMembers && (!hasGroup || Boolean(groupData?.isBudgetOwner))
+  const canScan = canWriteMembers && !hasGroup
 
   return (
     <div className={styles.page}>
-      <PageHeader kicker="Família" title="Grupo e perfil" />
+      <PageHeader
+        kicker="Família"
+        title="Grupo e perfil"
+        actions={!canWriteMembers ? <PaidModuleBadge /> : undefined}
+      />
+      {!canWriteMembers ? (
+        <p className={styles.muted}>Você pode ver o grupo. Convites e alterações ficam nos planos pagos.</p>
+      ) : null}
       <ErrorText
         message={
           profile.error ??

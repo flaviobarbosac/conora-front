@@ -161,6 +161,16 @@
   font-weight: var(--weight-semibold);
 }
 
+.optionLocked {
+  opacity: 0.45;
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.optionLocked:hover {
+  background: transparent;
+}
+
 .emptyOption {
   display: block;
   width: 100%;

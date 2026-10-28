@@ -1,9 +1,9 @@
 import { Link, useLocation } from 'react-router-dom'
-import { formatDate } from '../lib/format'
 import { usePlanAccess } from '../hooks/usePlanAccess'
+import { hasFullAccess, isFreeLimited } from '../lib/freeTier'
 import styles from './PlanBanner.module.css'
 
-/** Days before the trial ends when the countdown banner starts showing. */
+/** Days before the student trial ends when the countdown banner starts showing. */
 const TRIAL_WARNING_DAYS = 15
 
 /** Thin banner above every page that nudges toward the plans screen near/after the trial end. */
@@ -17,20 +17,24 @@ export function PlanBanner() {
   let tone: 'info' | 'warning' = 'info'
   let text: string
   let cta: string
-  if (plan.phase === 'Trial' && plan.daysLeft <= TRIAL_WARNING_DAYS) {
+
+  if (plan.isTrainingStudent && plan.phase === 'Trial' && plan.daysLeft <= TRIAL_WARNING_DAYS) {
     text =
       plan.daysLeft <= 1
-        ? 'Seu acesso gratuito termina hoje. Assine para continuar lançando sem interrupção.'
-        : `Seu acesso gratuito termina em ${plan.daysLeft} dias. Escolha seu plano e continue sem interrupção.`
+        ? 'Seu acesso completo gratuito termina hoje. Assine para continuar com todas as categorias.'
+        : `Seu acesso completo gratuito termina em ${plan.daysLeft} dias. Escolha seu plano e continue sem interrupção.`
     cta = 'Ver planos'
-  } else if (plan.phase === 'Grace') {
+  } else if (isFreeLimited(plan) && !hasFullAccess(plan)) {
     tone = 'warning'
-    text = `Modo somente leitura: você pode consultar e exportar seus dados até ${formatDate(plan.blockAt)}.`
-    cta = 'Assinar agora'
-  } else if (plan.phase === 'Expired') {
-    tone = 'warning'
-    text = 'Seu plano venceu e o Conora está em modo somente leitura.'
-    cta = 'Renovar plano'
+    if (plan.everSubscribed) {
+      text =
+        'Seu plano venceu. Você continua no Conora grátis, com aluguel, luz, água e escola. Renove para voltar ao acesso completo.'
+      cta = 'Renovar plano'
+    } else {
+      text =
+        'Você está no Conora grátis. Lance aluguel, luz, água e a mensalidade da escola e acompanhe seu Raio-X. Assine para liberar todas as categorias.'
+      cta = 'Assinar plano'
+    }
   } else {
     return null
   }
