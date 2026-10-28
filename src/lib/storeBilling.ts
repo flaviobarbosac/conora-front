@@ -77,7 +77,13 @@ export async function buyInStore(kind: PlanKind, product?: Product): Promise<Pla
 
 /** "Restaurar compras": re-sends this login's active store subscriptions to the API. */
 export async function restoreStorePurchases(): Promise<Plan | null> {
-  await NativePurchases.restorePurchases()
+  try {
+    await NativePurchases.restorePurchases()
+  } catch (error) {
+    // App Store sync often fails on TestFlight ("Unable to Complete Request"); the device still
+    // holds the current entitlements, so read them anyway. Closing the sign-in prompt is a cancel.
+    if (isStoreCancel(error)) throw error
+  }
   const { purchases } = await NativePurchases.getPurchases({
     productType: PURCHASE_TYPE.SUBS,
     appAccountToken: accountToken(),
