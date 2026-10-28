@@ -203,6 +203,8 @@ export function OnboardingPage() {
               label="Telefone"
               name="phone"
               required
+              inputMode="numeric"
+              autoComplete="tel-national"
               value={phone}
               onChange={(event) => setPhone(formatPhone(event.target.value))}
               hint="Com DDD."
@@ -211,6 +213,8 @@ export function OnboardingPage() {
               label="CEP"
               name="cep"
               required
+              inputMode="numeric"
+              autoComplete="postal-code"
               value={cep}
               onChange={(event) => setCep(formatCep(event.target.value))}
             />

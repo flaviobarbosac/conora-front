@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core'
+import { markKnownAccount } from '../lib/deviceIdentity'
 
 const ACCESS_KEY = 'conora.accessToken'
 const REFRESH_KEY = 'conora.refreshToken'
@@ -75,6 +76,7 @@ export function persistSession(auth: AuthResponse): void {
   localStorage.removeItem(ACCESS_KEY)
   localStorage.removeItem(LEGACY_ACCESS_KEY)
   localStorage.removeItem(LEGACY_REFRESH_KEY)
+  markKnownAccount()
 }
 
 export function clearSession(): void {
