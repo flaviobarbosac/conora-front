@@ -25,5 +25,5 @@ Sempre por este roteiro. Nunca gerar AAB local nem enviar pelo Play Console.
 6. **Se falhar:** `gh run view <id> --repo flaviobarbosac/conora-front --log-failed` e explicar a causa.
    Erro "Version code ... has already been used": rodar de novo (o número da execução muda).
 
-Segredos usados (no GitHub, nunca no repositório): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+Segredos (gravados por `scripts/set-android-play-secrets.ps1`, no GitHub, nunca no repositório): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
 `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`, `VITE_GOOGLE_CLIENT_ID`.
