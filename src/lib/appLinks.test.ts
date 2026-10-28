@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appLinkRoute } from './appLinks'
+import { appLinkRoute, consumeAppLinkRoute } from './appLinks'
 
 describe('appLinkRoute', () => {
   it('maps e-mail links to in-app routes', () => {
@@ -12,5 +12,9 @@ describe('appLinkRoute', () => {
     expect(appLinkRoute('conora://compartilhar')).toBeNull()
     expect(appLinkRoute('conora://validar-email')).toBeNull()
     expect(appLinkRoute('not a url')).toBeNull()
+  })
+
+  it('records consumed routes without throwing', () => {
+    expect(() => consumeAppLinkRoute('/validar-email?token=ABC')).not.toThrow()
   })
 })

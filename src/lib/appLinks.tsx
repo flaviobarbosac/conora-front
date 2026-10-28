@@ -11,6 +11,9 @@ export type AppLinkPage = 'validar-email' | 'redefinir-senha'
 
 const APP_LINK_PAGES: readonly string[] = ['validar-email', 'redefinir-senha'] satisfies AppLinkPage[]
 
+/** Same cold-start URL must not re-route after Voltar ao login / second appUrlOpen. */
+const handledAppRoutes = new Set<string>()
+
 function appUrl(page: AppLinkPage, token: string): string {
   return `conora://${page}?token=${encodeURIComponent(token)}`
 }
@@ -27,17 +30,29 @@ export function appLinkRoute(url: string): string | null {
   }
 }
 
+/** Mark a deep-link route as consumed so getLaunchUrl will not send the user back. */
+export function consumeAppLinkRoute(route: string): void {
+  handledAppRoutes.add(route)
+}
+
 /** Native app: routes e-mail links opened through conora:// (cold start and while running). */
 export function listenAppLinks(onRoute: (route: string) => void): () => void {
   if (!isNativeApp()) return () => {}
   let cancelled = false
+
+  function deliver(rawUrl: string): void {
+    const route = appLinkRoute(rawUrl)
+    if (!route || cancelled) return
+    if (handledAppRoutes.has(route)) return
+    handledAppRoutes.add(route)
+    onRoute(route)
+  }
+
   void App.getLaunchUrl().then((launch) => {
-    const route = launch?.url ? appLinkRoute(launch.url) : null
-    if (!cancelled && route) onRoute(route)
+    if (launch?.url) deliver(launch.url)
   })
   const handle = App.addListener('appUrlOpen', (event) => {
-    const route = appLinkRoute(event.url)
-    if (!cancelled && route) onRoute(route)
+    deliver(event.url)
   })
   return () => {
     cancelled = true
