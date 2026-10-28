@@ -362,7 +362,7 @@ export function AppShell() {
                 setFeedbackOpen(true)
               }}
             >
-              <Icon name="pen" size={22} />
+              <Icon name="pen" size={20} />
             </button>
             <button
               type="button"
