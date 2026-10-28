@@ -1,9 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { familyApi, feedbackApi } from '../api/finance'
-import { useAuth } from '../auth/AuthProvider'
+import { feedbackApi } from '../api/finance'
 import { useAction } from '../hooks/useAction'
-import { useLoad } from '../hooks/useLoad'
 import { FEEDBACK_RATING_LABELS, feedbackRatingColor } from '../lib/feedbackRatingColors'
 import { getAppPlatform } from '../lib/platform'
 import { resolveModuloFromPath } from '../lib/resolveModuloFromPath'
@@ -45,8 +43,6 @@ const EXTRA_PATHS = [
 
 export function FeedbackOverlay({ open, onClose, pathnameSnapshot }: Props) {
   const location = useLocation()
-  const { session } = useAuth()
-  const profile = useLoad(() => familyApi.profile(), [session?.email])
   const action = useAction()
   const [nota, setNota] = useState(0)
   const [comentario, setComentario] = useState('')
@@ -65,7 +61,6 @@ export function FeedbackOverlay({ open, onClose, pathnameSnapshot }: Props) {
     [pathnameSnapshot, location.pathname, pathItems],
   )
 
-  const usuarioNome = profile.data?.name?.trim() || session?.email || 'Usuário'
   const agoraLocal = new Date().toLocaleString('pt-BR')
 
   function resetAndClose() {
@@ -123,15 +118,9 @@ export function FeedbackOverlay({ open, onClose, pathnameSnapshot }: Props) {
           <span className={styles.label}>Módulo</span>
           <p className={styles.modulo}>{modulo}</p>
           <p className={styles.rota}>{rota}</p>
-          <p className={styles.hint}>
-            Detectado automaticamente pela rota atual · {getAppPlatform()}
-          </p>
+          <p className={styles.hint}>Detectado automaticamente pela rota atual.</p>
         </div>
         <div className={styles.meta}>
-          <div>
-            <span className={styles.label}>Você</span>
-            <strong>{usuarioNome}</strong>
-          </div>
           <div>
             <span className={styles.label}>Data e hora</span>
             <strong>{agoraLocal}</strong>
