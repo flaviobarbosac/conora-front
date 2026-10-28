@@ -1,29 +1,30 @@
 ---
-description: Roteiro para publicar o Conora Android no Google Play. Use quando o usuário pedir "publicar no Android", "subir para a Play Store", "nova versão Android" ou similar.
+description: Publica o Conora Android no Google Play pela esteira (GitHub Actions). Use quando o Flavio pedir publicar no Android, subir para a Play Store, versão mobile, gerar o mobile, nova versão Android, AAB ou arquivo da Play Store.
 alwaysApply: false
 ---
 
-# Publicar Conora no Android (Google Play)
+# Publicar o Conora no Android (Google Play)
 
-Sempre por este roteiro. Nunca gerar AAB local nem enviar pelo Play Console.
+Executar o fluxo completo sem pedir confirmação de novo (vale a regra `producao-conora.mdc`).
+Não gerar AAB local nem enviar pelo Play Console: a esteira compila, assina e envia.
+AAB local (`npm run android:bundle`) só se o Flavio pedir explicitamente o arquivo.
 
-1. **Origem é a `main`.** O workflow `.github/workflows/android-play.yml` sempre compila a `main`.
-2. **Conferir o que falta na `main`:**
-   `gh api repos/flaviobarbosac/conora-front/compare/main...develop --jq '.commits[] | .sha[0:7] + " " + (.commit.message | split("\n")[0])'`
-   - Se houver commits, mostrar a lista ao usuário e perguntar se pode levar `develop` para `main`
-     (esse merge também publica o front web).
-3. **Versão.** O `versionName` vem do `package.json` da `main`; o `versionCode` é gerado pelo workflow
-   (fórmula do iOS + número da execução). Se o usuário quiser um número de versão novo, subir o
-   `version` do `package.json` em `develop` antes do passo 2 (Conventional Commit `chore: bump version to X`).
-4. **Publicar** (padrão = produção, Brasil, lançamento completo, enviado para revisão):
-   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-android.ps1`
-   - Com merge de develop aprovado: acrescentar `-MergeDevelop`.
-   - Notas da versão: `-Notes "texto em pt-BR"` (padrão "Melhorias e correções.").
-   - Só teste interno, se o usuário pedir: `-Track internal`.
-5. **Reportar** ao usuário: versão, versionCode, link da execução e que a versão entra no ar
-   sozinha quando o Google aprovar a revisão (publicação gerenciada desligada).
-6. **Se falhar:** `gh run view <id> --repo flaviobarbosac/conora-front --log-failed` e explicar a causa.
-   O versionCode é ajustado sozinho para ficar acima do maior já usado no Google Play.
+Repo: `Conora-frontEnd` (`flaviobarbosac/conora-front`). Rodar os comandos **dentro de `D:\Projetos\Onra\Conora-frontEnd`**.
+Workflow: `.github/workflows/android-play.yml` — compila sempre a `main`.
+Padrão: **produção** (Brasil, lançamento completo, enviado para revisão; entra no ar sozinho quando o Google aprova).
+Teste interno só se o Flavio pedir.
 
-Segredos (gravados por `scripts/set-android-play-secrets.ps1`, no GitHub, nunca no repositório): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
-`ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`, `VITE_GOOGLE_CLIENT_ID`.
+1. `git fetch origin` e `git checkout develop` + `git pull --ff-only`. Não descartar trabalho local; se precisar de árvore limpa, `git stash push -u -m "publicar-android"` e restaurar no fim. Não usar `reset --hard`.
+2. Commit e push das alterações locais para `develop` (mesmos cuidados de `producao-conora.mdc`: sem `.env`, segredo, gêmeos `.js` não versionados, cache nem diff só de fim de linha).
+3. **Versão:** subir o patch do `version` no `package.json` (ex.: 26.1.55 → 26.1.56) e **commitar** em `develop`: `chore: bump version to X`. O `versionName` da loja vem do `package.json` da `main`. O `versionCode` é calculado pela esteira e fica sempre acima do maior já usado no Play — não mexer em `build.gradle`.
+4. Publicar (leva `develop` para `main` pelo PR e dispara a esteira; o merge também publica o front web):
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-android.ps1 -MergeDevelop`
+   - Notas da versão em pt-BR: `-Notes "texto"` (padrão "Melhorias e correções.").
+   - Só teste interno: `-Track internal`.
+   - O script espera a execução terminar (alguns minutos). Não interromper.
+5. Reportar ao Flavio: versão, versionCode (aparece no log "Conora X (código) -> faixa"), link da execução e que a versão entra no ar quando o Google aprovar a revisão.
+6. Se falhar: `gh run view <id> --repo flaviobarbosac/conora-front --log-failed`, explicar a causa e corrigir. Rodar de novo com `-Track internal` antes de tentar produção outra vez, se a falha for no build.
+
+Referências: segredos do GitHub `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+`ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON` (regravar com `scripts/set-android-play-secrets.ps1`);
+conta de serviço `play-publisher@conora-app.iam.gserviceaccount.com` (admin do app Conora no Play Console).
