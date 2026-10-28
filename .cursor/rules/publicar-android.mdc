@@ -23,7 +23,7 @@ Sempre por este roteiro. Nunca gerar AAB local nem enviar pelo Play Console.
 5. **Reportar** ao usuário: versão, versionCode, link da execução e que a versão entra no ar
    sozinha quando o Google aprovar a revisão (publicação gerenciada desligada).
 6. **Se falhar:** `gh run view <id> --repo flaviobarbosac/conora-front --log-failed` e explicar a causa.
-   Erro "Version code ... has already been used": rodar de novo (o número da execução muda).
+   O versionCode é ajustado sozinho para ficar acima do maior já usado no Google Play.
 
 Segredos (gravados por `scripts/set-android-play-secrets.ps1`, no GitHub, nunca no repositório): `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
 `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`, `VITE_GOOGLE_CLIENT_ID`.

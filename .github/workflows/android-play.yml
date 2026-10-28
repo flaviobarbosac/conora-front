@@ -55,15 +55,41 @@ jobs:
 
       # Same formula as iOS: version from package.json, version code
       # = year * 100000 + minor * 1000 + patch + workflow run number.
+      # Play rejects a code that is not above every code already on its tracks
+      # (local builds may have used higher ones), so the result is raised to max + 1.
       # package.json is not rewritten and the bump is not committed.
       - name: Set version for this publication
         env:
           TRACK: ${{ inputs.track }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           VERSION_NAME="$(node -p "require('./package.json').version")"
           IFS='.' read -r YEAR MINOR PATCH <<< "$VERSION_NAME"
           BASE=$((YEAR * 100000 + MINOR * 1000 + PATCH))
           VERSION_CODE=$((BASE + GITHUB_RUN_NUMBER))
+
+          # Highest version code on any Play track (service-account JWT -> OAuth token).
+          SA="$RUNNER_TEMP/sa.json"
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$SA"
+          jq -r .private_key "$SA" > "$RUNNER_TEMP/sa.pem"
+          b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+          NOW=$(date +%s)
+          HEADER=$(printf '{"alg":"RS256","typ":"JWT"}' | b64url)
+          CLAIM=$(jq -cn --arg iss "$(jq -r .client_email "$SA")" --argjson now "$NOW" \
+            '{iss:$iss,scope:"https://www.googleapis.com/auth/androidpublisher",aud:"https://oauth2.googleapis.com/token",iat:$now,exp:($now+600)}' | b64url)
+          SIG=$(printf '%s.%s' "$HEADER" "$CLAIM" | openssl dgst -sha256 -sign "$RUNNER_TEMP/sa.pem" | b64url)
+          TOKEN=$(curl -sf https://oauth2.googleapis.com/token \
+            -d grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer -d "assertion=$HEADER.$CLAIM.$SIG" | jq -r .access_token)
+          rm -f "$SA" "$RUNNER_TEMP/sa.pem"
+          API="https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE_NAME/edits"
+          EDIT=$(curl -sf -X POST -H "Authorization: Bearer $TOKEN" "$API" | jq -r .id)
+          MAX=$(curl -sf -H "Authorization: Bearer $TOKEN" "$API/$EDIT/tracks" \
+            | jq '[.tracks[]?.releases[]?.versionCodes[]? | tonumber] | max // 0')
+          curl -sf -X DELETE -H "Authorization: Bearer $TOKEN" "$API/$EDIT" > /dev/null || true
+          if [ "$VERSION_CODE" -le "$MAX" ]; then
+            echo "Version code $VERSION_CODE is not above $MAX on Google Play; using $((MAX + 1))."
+            VERSION_CODE=$((MAX + 1))
+          fi
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "TRACK=$TRACK" >> "$GITHUB_ENV"
