@@ -9,6 +9,11 @@ if (keystorePropertiesFile.exists()) {
 def packageJson = new groovy.json.JsonSlurper().parse(rootProject.file("../../package.json"))
 def versionParts = packageJson.version.toString().split('\\.')
 def computedVersionCode = versionParts[0].toInteger() * 100000 + versionParts[1].toInteger() * 1000 + versionParts[2].toInteger()
+// CI passes -PconoraVersionCode so every Play publication gets a new version code.
+def versionCodeOverride = project.findProperty('conoraVersionCode')
+if (versionCodeOverride) {
+    computedVersionCode = versionCodeOverride.toString().toInteger()
+}
 
 android {
     namespace = "br.com.conora.app"
