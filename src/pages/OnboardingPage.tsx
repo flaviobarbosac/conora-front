@@ -1,8 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { accountsApi, cardsApi, familyApi } from '../api/finance'
+import { accountsApi, familyApi } from '../api/finance'
 import { AccountForm } from '../components/finance/AccountForm'
-import { CardForm } from '../components/finance/CardForm'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
@@ -23,8 +22,7 @@ type Step = OnboardingStep
 
 const STEPS: { id: Step; title: string; hint: string }[] = [
   { id: 'profile', title: 'Seus dados', hint: 'Nome, telefone, e-mail e CEP.' },
-  { id: 'account', title: 'Conta bancária', hint: 'A mesma conta da tela Contas.' },
-  { id: 'card', title: 'Cartão de crédito', hint: 'O mesmo cadastro da tela Cartões.' },
+  { id: 'account', title: 'Conta bancária', hint: 'Uma conta para receber os lançamentos.' },
   { id: 'video', title: 'Vídeo rápido', hint: 'Um vídeo curto para começar.' },
 ]
 
@@ -46,7 +44,6 @@ export function OnboardingPage() {
   const navigate = useNavigate()
   const profile = useLoad(() => familyApi.profile(), [])
   const accounts = useLoad(() => accountsApi.list(true), [])
-  const cards = useLoad(() => cardsApi.list(), [])
   const saveProfile = useAction()
   const complete = useAction()
 
@@ -60,7 +57,6 @@ export function OnboardingPage() {
 
   const activeAccounts = (accounts.data ?? []).filter((a) => !a.isArchived)
   const hasAccount = activeAccounts.length > 0
-  const hasCard = (cards.data ?? []).length > 0
 
   useEffect(() => {
     if (!profile.data) return
@@ -79,10 +75,9 @@ export function OnboardingPage() {
         phone: profile.data.phone,
         cep: profile.data.cep,
         hasAccount,
-        hasCard,
       }),
     )
-  }, [profile.data, hasAccount, hasCard])
+  }, [profile.data, hasAccount])
 
   const dirtyProfile =
     name.trim() !== savedName.trim() ||
@@ -107,7 +102,7 @@ export function OnboardingPage() {
       showSaveToast('Dados salvos.')
       window.dispatchEvent(new Event('conora:profile-changed'))
       profile.reload()
-      setStep(hasAccount ? (hasCard ? 'video' : 'card') : 'account')
+      setStep(hasAccount ? 'video' : 'account')
     }
   }
 
@@ -116,15 +111,14 @@ export function OnboardingPage() {
       phone: profile.data?.phone ?? phone,
       cep: profile.data?.cep ?? cep,
       hasAccount,
-      hasCard,
     })
     if (!gate.ok) {
       complete.setError(
-        gate.missing.includes('account') || gate.missing.includes('card')
-          ? 'Corrija a conta ou o cartão e tente de novo. Você não fica preso fora do app.'
+        gate.missing.includes('account')
+          ? 'Cadastre uma conta para receber os lançamentos e tente de novo.'
           : 'Complete telefone e CEP antes de entrar.',
       )
-      setStep(resumeOnboardingStep({ phone: profile.data?.phone ?? phone, cep: profile.data?.cep ?? cep, hasAccount, hasCard }))
+      setStep(resumeOnboardingStep({ phone: profile.data?.phone ?? phone, cep: profile.data?.cep ?? cep, hasAccount }))
       return
     }
     if (!(await complete.run(() => familyApi.completeOnboarding()))) {
@@ -141,7 +135,9 @@ export function OnboardingPage() {
     <div className={`${styles.page} ${styles.onboarding}`}>
       <PageHeader title="Bem-vindo ao Conora" kicker="Onboard obrigatório" />
       <p className={styles.muted}>
-        Preencha uma vez. Os mesmos dados aparecem no perfil, em Contas e em Cartões. Se fechar no meio, volta daqui.
+        No Conora grátis você começa com Aluguel, Energia elétrica, Água e esgoto e Escola. Cadastre uma conta para
+        lançar nessas categorias. As outras ficam visíveis em cinza até a assinatura. Cartão é opcional e fica em
+        Contas depois.
       </p>
 
       <div className={styles.journeyProgress}>
@@ -167,7 +163,6 @@ export function OnboardingPage() {
           const done =
             (item.id === 'profile' && Boolean(profile.data?.phone && profile.data?.cep)) ||
             (item.id === 'account' && hasAccount) ||
-            (item.id === 'card' && hasCard) ||
             (item.id === 'video' && false)
           const tone =
             item.id === step ? styles.journeyNext : done ? styles.journeyDone : styles.journeyItem
@@ -187,7 +182,7 @@ export function OnboardingPage() {
         })}
       </ol>
 
-      <ErrorText message={profile.error ?? accounts.error ?? cards.error ?? saveProfile.error ?? complete.error} />
+      <ErrorText message={profile.error ?? accounts.error ?? saveProfile.error ?? complete.error} />
       {profile.loading && !profile.data ? <Loading /> : null}
 
       {step === 'profile' && profile.data ? (
@@ -243,7 +238,7 @@ export function OnboardingPage() {
                 ))}
               </ul>
               <div className={styles.formActions}>
-                <Button onClick={() => setStep('card')}>Continuar</Button>
+                <Button onClick={() => setStep('video')}>Continuar</Button>
               </div>
             </section>
           ) : (
@@ -252,40 +247,6 @@ export function OnboardingPage() {
               submitLabel="Salvar conta e continuar"
               onSaved={() => {
                 accounts.reload()
-                setStep('card')
-              }}
-            />
-          )}
-        </>
-      ) : null}
-
-      {step === 'card' ? (
-        <>
-          {!hasAccount ? (
-            <Empty>Cadastre a conta bancária antes do cartão.</Empty>
-          ) : hasCard ? (
-            <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>Cartão cadastrado</h2>
-              <ul className={styles.list}>
-                {(cards.data ?? []).map((card) => (
-                  <li key={card.id} className={styles.row}>
-                    <span className={styles.rowMain}>
-                      <strong>{card.name}</strong>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <div className={styles.formActions}>
-                <Button onClick={() => setStep('video')}>Continuar</Button>
-              </div>
-            </section>
-          ) : (
-            <CardForm
-              accounts={activeAccounts}
-              title="Cartão de crédito"
-              submitLabel="Salvar cartão e continuar"
-              onSaved={() => {
-                cards.reload()
                 setStep('video')
               }}
             />
@@ -306,10 +267,10 @@ export function OnboardingPage() {
             />
           </div>
           <div className={styles.formActions}>
-            <Button variant="secondary" onClick={() => setStep('card')}>
+            <Button variant="secondary" onClick={() => setStep('account')}>
               Voltar
             </Button>
-            <Button disabled={complete.busy || !hasAccount || !hasCard} onClick={() => void finish()}>
+            <Button disabled={complete.busy || !hasAccount} onClick={() => void finish()}>
               Concluir e entrar
             </Button>
           </div>

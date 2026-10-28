@@ -39,11 +39,13 @@ import {
   parseMoney,
   todayInput,
 } from '../lib/format'
+import { isCategoryWritable } from '../lib/freeTier'
 import { isNativeApp } from '../lib/platform'
 import { readSharingView } from '../lib/sharingView'
 import { takeVoiceDraft, subscribeVoiceFill } from '../lib/voiceDraft'
 import { matchByName, resolveSpokenDate } from '../lib/voiceEntry'
 import { peekPendingShare, setPendingShare, takePendingShare } from '../share/pendingShare'
+import { usePlanAccess } from '../hooks/usePlanAccess'
 import {
   peekPendingIntakeId,
   pickReceiptMedia,
@@ -683,6 +685,7 @@ function EntryForm({
   onCancel,
   onSaved,
 }: FormProps) {
+  const { plan } = usePlanAccess()
   const editing = initial !== null
   const [type, setType] = useState<FormType>(() =>
     initial && isEditableType(initial.type) ? initial.type : 'Expense',
@@ -926,6 +929,7 @@ function EntryForm({
           options={kindCategories}
           tree={tree}
           emptyLabel="Sem conta"
+          isOptionDisabled={(account) => !isCategoryWritable(plan, account)}
         />
         <Select label="Conta bancária" name="accountId" required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
           <option value="">Selecione</option>

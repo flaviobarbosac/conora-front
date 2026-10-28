@@ -15,6 +15,8 @@ type Props = {
   emptyLabel?: string
   required?: boolean
   disabled?: boolean
+  /** When true the option stays visible but cannot be chosen (free-tier locked categories). */
+  isOptionDisabled?: (account: Category) => boolean
   id?: string
 }
 
@@ -32,6 +34,7 @@ export function CategorySelect({
   emptyLabel,
   required,
   disabled,
+  isOptionDisabled,
   id,
 }: Props) {
   const inputId = id ?? name
@@ -124,6 +127,9 @@ export function CategorySelect({
       event.preventDefault()
       const item = flatItems[activeIndex]
       if (!item) {
+        return
+      }
+      if (item.kind === 'account' && isOptionDisabled?.(item.account)) {
         return
       }
       selectValue(item.kind === 'empty' ? '' : item.account.id)
@@ -224,19 +230,25 @@ export function CategorySelect({
                     )
                     const selectedOption = account.id === value
                     const active = index === activeIndex
+                    const locked = Boolean(isOptionDisabled?.(account))
                     return (
-                      <li key={account.id} role="option" aria-selected={selectedOption}>
+                      <li key={account.id} role="option" aria-selected={selectedOption} aria-disabled={locked}>
                         <button
                           type="button"
+                          disabled={locked}
+                          title={locked ? 'Liberado nos planos pagos' : undefined}
                           className={[
                             styles.option,
                             selectedOption ? styles.optionSelected : '',
                             active ? styles.optionActive : '',
+                            locked ? styles.optionLocked : '',
                           ]
                             .filter(Boolean)
                             .join(' ')}
                           onMouseEnter={() => setActiveIndex(index)}
-                          onClick={() => selectValue(account.id)}
+                          onClick={() => {
+                            if (!locked) selectValue(account.id)
+                          }}
                         >
                           {account.name}
                         </button>

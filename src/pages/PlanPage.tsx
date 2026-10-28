@@ -7,11 +7,11 @@ import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { usePlanAccess } from '../hooks/usePlanAccess'
+import { hasFullAccess, planCtaLabel } from '../lib/freeTier'
 import { downloadBlob, formatDate, formatMoney } from '../lib/format'
 import {
   markGraceScreenShown,
   PLAN_CHANGED,
-  READ_ONLY_UNTIL_DAY,
   TIER_INFO,
   tierOfKind,
   TRIAL_DAYS,
@@ -26,6 +26,7 @@ import {
   STORE_PRODUCT_IDS,
   storeCheckoutAvailable,
   storeName,
+  storePriceLabel,
   storeProducts,
 } from '../lib/storeBilling'
 import styles from './PlanPage.module.css'
@@ -47,11 +48,11 @@ const INCLUDED = [
 const FAQ: ReadonlyArray<{ q: string; a: string }> = [
   {
     q: 'Sou aluno do treinamento. Preciso pagar agora?',
-    a: `Não. Alunos do treinamento financeiro do Leomar Campos têm ${TRIAL_DAYS} dias de acesso completo e gratuito ao Conora. Você só escolhe um plano quando quiser continuar depois desse período.`,
+    a: `Não. Alunos do treinamento financeiro do Leomar Campos têm ${TRIAL_DAYS} dias de acesso completo e gratuito ao Conora. A cobrança só entra depois desse período; até lá nenhuma tela existente fica trancada.`,
   },
   {
     q: `O que acontece depois dos ${TRIAL_DAYS} dias se eu não assinar?`,
-    a: `A conta fica em modo somente leitura: você consulta e exporta seus dados até o dia ${READ_ONLY_UNTIL_DAY}. A partir do dia ${READ_ONLY_UNTIL_DAY + 1} a conta é bloqueada e o acesso aos dados passa a ser só por chamado no suporte.`,
+    a: 'Você continua no Conora grátis: lança em aluguel, luz, água e escola, com uma conta. Patrimônio, membros, projeto de vida e marcos ficam só para consulta. Assine para liberar o acesso completo.',
   },
   {
     q: 'Meus lançamentos ficam guardados?',
@@ -280,7 +281,9 @@ export function PlanPage() {
               const recommended = tier === RECOMMENDED
               const savings = monthly.price * 12 - offer.price
               const productId = STORE_PRODUCT_IDS[offer.kind]
-              const storePrice = productId ? products[productId]?.priceString : undefined
+              const product = productId ? products[productId] : undefined
+              const storePrice = product ? storePriceLabel(product, offer.price, formatMoney) : formatMoney(offer.price)
+              const usedStoreLabel = Boolean(product?.priceString) && storePrice === product?.priceString
               // Google Play cannot swap separate subscription products in place: cancel first, then buy the new one.
               const androidSwitch = isAndroidApp() && currentTier(data) !== null && !isCurrent
               return (
@@ -300,18 +303,18 @@ export function PlanPage() {
                   </div>
                   {/* The billed amount is the most prominent price (App Store guideline 3.1.2). */}
                   <div className={styles.price}>
-                    <strong>{storePrice ?? formatMoney(offer.price)}</strong>
+                    <strong>{storePrice}</strong>
                     <span>/{offer.yearly ? 'ano' : 'mês'}</span>
                   </div>
                   <p className={styles.priceNote}>
                     {offer.yearly ? (
                       <>
-                        Cobrança anual{storePrice ? ` na ${storeName()}` : ''} · equivale a{' '}
+                        Cobrança anual{usedStoreLabel ? ` na ${storeName()}` : ''} · equivale a{' '}
                         {formatMoney(offer.monthlyEquivalent)}/mês ·{' '}
                         <span className={styles.save}>economize {formatMoney(savings)}</span>
                       </>
                     ) : (
-                      `Cobrança mensal${storePrice ? ` na ${storeName()}` : ''}`
+                      `Cobrança mensal${usedStoreLabel ? ` na ${storeName()}` : ''}`
                     )}
                   </p>
                   <p className={styles.people}>{info.people}</p>
@@ -432,50 +435,22 @@ function StatusHero({ plan, exporting, onExport }: HeroProps) {
     )
   }
 
-  if (plan.phase === 'Expired') {
+  if (!hasFullAccess(plan) && (plan.phase === 'Expired' || plan.phase === 'Grace' || plan.phase === 'Blocked')) {
+    const renew = plan.everSubscribed
     return (
       <section className={`${styles.hero} ${styles.heroWarn}`}>
-        <strong>Seu plano venceu</strong>
+        <strong>{renew ? 'Seu plano venceu' : 'Você está no Conora grátis'}</strong>
         <span>
-          O Conora está em modo somente leitura.
-          {' Renove para voltar a lançar — seus dados continuam guardados.'}
-        </span>
-      </section>
-    )
-  }
-
-  if (plan.phase === 'Blocked') {
-    return (
-      <section className={`${styles.hero} ${styles.heroDanger}`}>
-        <strong>Sua conta está bloqueada</strong>
-        <span>
-          O acesso gratuito terminou em {formatDate(plan.trialEndsAt)} e o prazo de consulta em{' '}
-          {formatDate(plan.blockAt)}.
-          {' Assine um plano para reativar na hora: seus dados continuam guardados.'}
-        </span>
-        <span>
-          Precisa só dos seus dados? <Link to="/ajuda">Abra um chamado no suporte</Link>.
-        </span>
-        <Timeline plan={plan} />
-      </section>
-    )
-  }
-
-  if (plan.phase === 'Grace') {
-    return (
-      <section className={`${styles.hero} ${styles.heroWarn}`}>
-        <strong>Seu acesso gratuito de {TRIAL_DAYS} dias terminou</strong>
-        <span>
-          Agora o Conora está em modo somente leitura. Até {formatDate(plan.blockAt)} ({plan.daysLeft}{' '}
-          {plan.daysLeft === 1 ? 'dia' : 'dias'}) você pode consultar e exportar seus dados. Depois disso, a conta é
-          bloqueada.
+          {renew
+            ? 'Você continua no Conora grátis, com aluguel, luz, água e escola. Renove para voltar ao acesso completo.'
+            : 'Lance aluguel, luz, água e a mensalidade da escola e acompanhe seu Raio-X. Assine para liberar todas as categorias.'}
         </span>
         <div className={styles.heroActions}>
           <Button variant="secondary" disabled={exporting} onClick={onExport}>
             Exportar meus dados
           </Button>
         </div>
-        <Timeline plan={plan} />
+        <span>{planCtaLabel(plan)} abaixo.</span>
       </section>
     )
   }
@@ -483,11 +458,14 @@ function StatusHero({ plan, exporting, onExport }: HeroProps) {
   return (
     <section className={styles.hero}>
       <strong>
-        Você é aluno: {plan.daysLeft} {plan.daysLeft === 1 ? 'dia' : 'dias'} de acesso completo e gratuito
+        {plan.isTrainingStudent
+          ? `Você é aluno: ${plan.daysLeft} ${plan.daysLeft === 1 ? 'dia' : 'dias'} de acesso completo e gratuito`
+          : `${plan.daysLeft} ${plan.daysLeft === 1 ? 'dia' : 'dias'} de acesso gratuito`}
       </strong>
       <span>
-        Cortesia do treinamento financeiro do Leomar Campos, até {formatDate(plan.trialEndsAt)}.
-        {' Assine antes e continue sem nenhuma interrupção.'}
+        {plan.isTrainingStudent
+          ? `Cortesia do treinamento financeiro do Leomar Campos, até ${formatDate(plan.trialEndsAt)}. Assine antes e continue sem nenhuma interrupção.`
+          : `Até ${formatDate(plan.trialEndsAt)}. Depois você continua no Conora grátis com as quatro categorias liberadas, ou assina para o acesso completo.`}
       </span>
       <Timeline plan={plan} />
     </section>
@@ -496,9 +474,8 @@ function StatusHero({ plan, exporting, onExport }: HeroProps) {
 
 function Timeline({ plan }: { plan: Plan }) {
   const steps = [
-    { key: 'Trial', day: 'Dia 1', title: 'Acesso completo', text: 'Grátis para alunos' },
-    { key: 'Grace', day: `Dia ${TRIAL_DAYS}`, title: 'Somente leitura', text: 'Consulta e exportação' },
-    { key: 'Blocked', day: `Dia ${READ_ONLY_UNTIL_DAY + 1}`, title: 'Conta bloqueada', text: 'Dados só via suporte' },
+    { key: 'Trial', day: 'Dia 1', title: 'Acesso completo', text: plan.isTrainingStudent ? 'Grátis para alunos' : 'Período inicial' },
+    { key: 'Expired', day: `Dia ${TRIAL_DAYS}`, title: 'Conora grátis', text: 'Quatro categorias + consulta' },
   ] as const
   const progress =
     plan.phase === 'Trial' ? Math.min(100, Math.max(4, ((TRIAL_DAYS - plan.daysLeft) / TRIAL_DAYS) * 100)) : 100

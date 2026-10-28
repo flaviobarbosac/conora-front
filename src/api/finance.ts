@@ -858,6 +858,12 @@ export type Plan = {
   daysLeft: number
   coveredByFamily: boolean
   offers: PlanOffer[]
+  /** Hotmart / training student (90-day full trial). */
+  isTrainingStudent?: boolean
+  /** Student trial or paid plan — not free-tier limits. */
+  hasFullAccess?: boolean
+  /** Had a workspace subscription row at least once (drives Renovar vs Assinar). */
+  everSubscribed?: boolean
 }
 
 export const planApi = {
@@ -1270,6 +1276,25 @@ export type ConsoleKpis = {
   months: ConsoleMonth[]
 }
 
+export type JourneyAbandonmentRow = {
+  usuarioId: string
+  email: string
+  name: string
+  firstLoginAt: string | null
+  lastSeenAt: string | null
+  firstPath: string | null
+  lastPath: string | null
+  hasEntry: boolean
+  onboardingCompleted: boolean
+  pathTrail: string[]
+}
+
 export const consoleApi = {
   kpis: () => apiFetch<ConsoleKpis>('/console/kpis'),
+  abandonment: () => apiFetch<JourneyAbandonmentRow[]>('/console/abandonment'),
+}
+
+export const journeyApi = {
+  track: (path: string, kind: 'Login' | 'Navigate' | 'Register' = 'Navigate') =>
+    apiFetch<void>('/journey', json('POST', { path, kind })),
 }

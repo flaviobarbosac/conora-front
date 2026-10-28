@@ -116,7 +116,12 @@ function matchCategoryOption(spoken: string, names: string[]): string | null {
 /** When false, Ian voice listen / mic stays in code but is unreachable on web, iOS, and Android. */
 const IAN_MIC_ENABLED = false
 
+/** Voice UI removed from the product surface (plan MVP 14/11). Keep the module for a later revive. */
 export function IanFloatingChat() {
+  return null
+}
+
+function IanFloatingChatDisabled() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)

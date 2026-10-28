@@ -72,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (usuario: string, password: string) => {
       applyAuth(await authApi.login(usuario, password))
+      void import('../lib/journeyTrack').then(({ trackJourney }) => trackJourney('/', 'Login'))
     },
     [applyAuth],
   )
@@ -79,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (name: string, email: string, cpf: string, password: string) => {
       applyAuth(await authApi.register(name, email, cpf, password))
+      void import('../lib/journeyTrack').then(({ trackJourney }) => trackJourney('/', 'Register'))
     },
     [applyAuth],
   )
@@ -86,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginGoogle = useCallback(
     async (idToken: string) => {
       applyAuth(await authApi.google(idToken))
+      void import('../lib/journeyTrack').then(({ trackJourney }) => trackJourney('/', 'Login'))
     },
     [applyAuth],
   )
@@ -93,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginApple = useCallback(
     async (identityToken: string, name?: string | null, email?: string | null) => {
       applyAuth(await authApi.apple(identityToken, name, email))
+      void import('../lib/journeyTrack').then(({ trackJourney }) => trackJourney('/', 'Login'))
     },
     [applyAuth],
   )

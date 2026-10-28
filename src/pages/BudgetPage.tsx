@@ -37,7 +37,9 @@ import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
+import { hasFullAccess, isFreeCategoryCode } from '../lib/freeTier'
 import { showSaveToast } from '../lib/saveToast'
+import { usePlanAccess } from '../hooks/usePlanAccess'
 import { categoryLabel } from '../lib/categoryLabel'
 import { CASH_FLOW_SECTIONS, EXPENSE_SECTIONS, compareCategorySiblings } from '../lib/categoryOrder'
 import {
@@ -303,6 +305,8 @@ function BudgetTreeEditor({
   focusCategoryId,
   onSaved,
 }: EditorProps) {
+  const { plan } = usePlanAccess()
+  const fullAccess = hasFullAccess(plan)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const [drafts, setDrafts] = useState<Record<string, string>>({})
@@ -320,8 +324,15 @@ function BudgetTreeEditor({
         ids.add(project.categoryId)
       }
     }
+    if (!fullAccess) {
+      for (const account of categories) {
+        if (account.level === 'Analytical' && !isFreeCategoryCode(account.code)) {
+          ids.add(account.id)
+        }
+      }
+    }
     return ids
-  }, [projects])
+  }, [projects, categories, fullAccess])
 
   useEffect(() => {
     if (!focusCategoryId || categories.length === 0) {

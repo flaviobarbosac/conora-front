@@ -7,11 +7,11 @@ import { AlertsBell } from '../components/AlertsBell'
 import { BrandLockup } from '../components/BrandLockup'
 import { FeedbackOverlay } from '../components/FeedbackOverlay'
 import { FeedbackReplyListener } from '../components/FeedbackReplyListener'
-import { IanFloatingChat } from '../components/IanFloatingChat'
 import { PlanBanner } from '../components/PlanBanner'
 import { Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
+import { trackJourney } from '../lib/journeyTrack'
 import { PREFERENCES_CHANGED, readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
 import { applyIanMaturity, maturityAgeFromAchievements } from '../lib/speakPt'
 import { CADASTROS_ITEMS, NAV_ITEMS } from '../nav'
@@ -135,6 +135,11 @@ export function AppShell() {
     setThemesMenuOpen(false)
     setMobileNavOpen(false)
   }, [pathname])
+
+  useEffect(() => {
+    if (!session) return
+    trackJourney(pathname, 'Navigate')
+  }, [pathname, session])
 
   async function applyTheme(themeId: ThemeId) {
     setTheme(themeId)
@@ -553,7 +558,6 @@ export function AppShell() {
           <span>Menu</span>
         </button>
       </nav>
-      <IanFloatingChat />
       <FeedbackReplyListener />
       <FeedbackOverlay
         open={feedbackOpen}

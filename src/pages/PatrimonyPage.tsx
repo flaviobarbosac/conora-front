@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { patrimonyApi, type PatrimonyItem } from '../api/finance'
 import { CategorySelect } from '../components/CategorySelect'
+import { PaidModuleBadge } from '../components/PaidModuleBadge'
 import { PageHeader } from '../components/PageHeader'
+import { usePlanAccess } from '../hooks/usePlanAccess'
+import { hasFullAccess } from '../lib/freeTier'
 import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
@@ -20,6 +23,8 @@ import { formatMoney, formatMoneyInput, parseMoney } from '../lib/format'
 import styles from './page.module.css'
 
 export function PatrimonyPage() {
+  const { plan } = usePlanAccess()
+  const canWrite = hasFullAccess(plan)
   const [searchParams, setSearchParams] = useSearchParams()
   const filterAccountId = searchParams.get('categoryId')
   const summary = useLoad(() => patrimonyApi.get(), [])
@@ -82,7 +87,14 @@ export function PatrimonyPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="Patrimônio" />
+      <PageHeader
+        secondary
+        title="Patrimônio"
+        actions={!canWrite ? <PaidModuleBadge /> : undefined}
+      />
+      {!canWrite ? (
+        <p className={styles.muted}>Você pode ver o patrimônio. Cadastro e edição ficam nos planos pagos.</p>
+      ) : null}
       <ErrorText message={summary.error ?? remove.error} />
       {summary.loading && !data ? <Loading /> : null}
       {data ? (
@@ -123,7 +135,14 @@ export function PatrimonyPage() {
             <ul className={styles.list}>
               {pagination.pageItems.map((item) => (
                 <li key={item.id} className={styles.row}>
-                  <button type="button" className={styles.rowMain} onClick={() => loadItem(item)}>
+                  <button
+                    type="button"
+                    className={styles.rowMain}
+                    onClick={() => {
+                      if (canWrite) loadItem(item)
+                    }}
+                    disabled={!canWrite}
+                  >
                     <strong>{item.name}</strong>
                     <span className={styles.rowSub}>
                       {item.categoryName} · {item.groupName}
@@ -134,7 +153,9 @@ export function PatrimonyPage() {
                       {item.section === 'Asset' ? 'Ativo' : 'Passivo'}
                     </Badge>
                     <span className={`${styles.amount} ${styles.moneyValue}`}>{formatMoney(item.amount)}</span>
-                    <DeleteIconButton disabled={remove.busy} onClick={() => void removeItem(item)} />
+                    {canWrite ? (
+                      <DeleteIconButton disabled={remove.busy} onClick={() => void removeItem(item)} />
+                    ) : null}
                   </span>
                 </li>
               ))}
@@ -149,16 +170,18 @@ export function PatrimonyPage() {
           </section>
         </>
       ) : null}
-      <ItemForm
-        key={editing?.id ?? 'new'}
-        editing={editing}
-        initialCategoryId={filterAccountId}
-        onCancel={() => setEditing(null)}
-        onSaved={() => {
-          setEditing(null)
-          summary.reload()
-        }}
-      />
+      {canWrite ? (
+        <ItemForm
+          key={editing?.id ?? 'new'}
+          editing={editing}
+          initialCategoryId={filterAccountId}
+          onCancel={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null)
+            summary.reload()
+          }}
+        />
+      ) : null}
     </div>
   )
 }

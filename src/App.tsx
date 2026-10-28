@@ -13,6 +13,7 @@ import { UnsavedChangesProvider } from './hooks/useUnsavedChanges'
 import { AppShell } from './layouts/AppShell'
 import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { AdminPage } from './pages/AdminPage'
+import { ConsoleAbandonmentPage } from './pages/ConsoleAbandonmentPage'
 import { ConsoleFeedbackPage } from './pages/ConsoleFeedbackPage'
 import { ConsolePage } from './pages/ConsolePage'
 import { FeedbackRespostaPage } from './pages/FeedbackRespostaPage'
@@ -188,6 +189,7 @@ export default function App() {
                     <Route path="tendencias" element={<ConsolePage section="tendencias" />} />
                     <Route path="saude" element={<ConsolePage section="saude" />} />
                     <Route path="feedback" element={<ConsoleFeedbackPage />} />
+                    <Route path="abandonamento" element={<ConsoleAbandonmentPage />} />
                   </Route>
                 </Route>
                 <Route path="/whatsapp" element={<WhatsAppPage />} />

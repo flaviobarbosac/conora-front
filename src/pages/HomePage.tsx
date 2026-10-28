@@ -4,12 +4,15 @@ import { dashboardApi, familyApi } from '../api/finance'
 import { scanReceipt } from '../camera/scanReceipt'
 import { HomeLaunchO } from '../components/HomeLaunchO'
 import { JornadaTimeline } from '../components/JornadaTimeline'
+import { PaidModuleBadge } from '../components/PaidModuleBadge'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { ErrorText } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
+import { usePlanAccess } from '../hooks/usePlanAccess'
 import { currentCompetence } from '../lib/format'
+import { hasFullAccess, isFreeLimited } from '../lib/freeTier'
 import {
   PREFERENCES_CHANGED,
   PREF_KEYS,
@@ -28,12 +31,14 @@ function firstName(fullName: string | undefined): string {
 
 export function HomePage() {
   const navigate = useNavigate()
+  const { plan } = usePlanAccess()
   const profile = useLoad(() => familyApi.profile(), [])
   const dashboard = useLoad(() => dashboardApi.get(currentCompetence()), [])
   const [voiceError, setVoiceError] = useState<string | null>(null)
   const [showJourney, setShowJourney] = useState(readHomeJourneyTimeline)
   const name = firstName(profile.data?.name)
   const pendingCategories = dashboard.data?.alerts.find((alert) => alert.code === 'CATEGORY_PENDING_REVIEW')
+  const showPaidModulesTag = isFreeLimited(plan) && !hasFullAccess(plan)
 
   useEffect(() => {
     function onPrefs(event: Event) {
@@ -69,9 +74,19 @@ export function HomePage() {
 
   return (
     <div className={`${styles.page} ${styles.homePage}`}>
-      <PageHeader kicker="Início" title={name ? `Olá, ${name}` : 'Olá'} />
+      <PageHeader
+        kicker="Início"
+        title={name ? `Olá, ${name}` : 'Olá'}
+        actions={showPaidModulesTag ? <PaidModuleBadge /> : undefined}
+      />
 
       <ErrorText message={dashboard.error ?? profile.error ?? voiceError} />
+      {showPaidModulesTag ? (
+        <p className={styles.muted}>
+          Patrimônio, membros, projeto de vida e marcos abrem para consulta. Cadastro e edição ficam nos planos
+          pagos.
+        </p>
+      ) : null}
 
       {pendingCategories ? (
         <Link className={styles.homeUrgent} to="/categorias">

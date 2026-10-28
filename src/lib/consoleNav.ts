@@ -1,4 +1,4 @@
-export type ConsoleSectionId = 'metodo' | 'engajamento' | 'tendencias' | 'saude' | 'feedback'
+export type ConsoleSectionId = 'metodo' | 'engajamento' | 'tendencias' | 'saude' | 'feedback' | 'abandonamento'
 
 export type ConsoleNavItem = {
   id: ConsoleSectionId
@@ -38,5 +38,11 @@ export const CONSOLE_NAV: ReadonlyArray<ConsoleNavItem> = [
     to: '/console/feedback',
     label: 'Feedback',
     purpose: 'Ouvir e responder usuários.',
+  },
+  {
+    id: 'abandonamento',
+    to: '/console/abandonamento',
+    label: 'Abandono',
+    purpose: 'Quem entra no grátis, onde para e se registra.',
   },
 ]

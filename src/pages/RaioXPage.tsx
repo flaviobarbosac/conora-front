@@ -44,6 +44,8 @@ import {
   type RaioXFocus,
   type RaioXTotals,
 } from '../lib/raioX'
+import { hasFullAccess, isFreeCategoryCode, isFreeLimited } from '../lib/freeTier'
+import { usePlanAccess } from '../hooks/usePlanAccess'
 import { readSharingView } from '../lib/sharingView'
 import styles from './page.module.css'
 
@@ -88,10 +90,12 @@ function TotalsCell({
   totals,
   stock = false,
   onUnbudgetedClick,
+  onActualClick,
 }: {
   totals: RaioXTotals
   stock?: boolean
   onUnbudgetedClick?: () => void
+  onActualClick?: () => void
 }) {
   if (stock) {
     const has = Math.abs(totals.actual) > 0.001
@@ -110,10 +114,25 @@ function TotalsCell({
   const tone = progressTone(percent, totals)
   const shown = percent === null ? 0 : percent
   const percentClass = `${styles.raioxPercent} ${toneClass(tone)}`
+  const actualClass = `${styles.raioxAmount} ${styles.moneyValue}${tone === 'over' ? ` ${styles.negative}` : ''}`
   return (
     <span className={styles.raioxTotals}>
       <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.planned)}</span>
-      <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.actual)}</span>
+      {onActualClick && Math.abs(totals.actual) > 0.001 ? (
+        <button
+          type="button"
+          className={`${actualClass} ${styles.raioxPercentLink}`}
+          title="Abrir lançamentos"
+          onClick={(event) => {
+            event.stopPropagation()
+            onActualClick()
+          }}
+        >
+          {formatMoney(totals.actual)}
+        </button>
+      ) : (
+        <span className={actualClass}>{formatMoney(totals.actual)}</span>
+      )}
       {tone === 'unbudgeted' && onUnbudgetedClick ? (
         <button
           type="button"
@@ -200,6 +219,9 @@ function ancestorIds(accountId: string, list: Category[]): string[] {
 
 export function RaioXPage() {
   const navigate = useNavigate()
+  const { plan } = usePlanAccess()
+  const freeLimited = isFreeLimited(plan)
+  const fullAccess = hasFullAccess(plan)
   const [searchParams, setSearchParams] = useSearchParams()
   const focusSection = parseSectionParam(searchParams.get('section'))
   const [ym, setYm] = useState(() => searchParams.get('competenceYm') || currentCompetence())
@@ -425,10 +447,16 @@ export function RaioXPage() {
     return () => window.clearTimeout(timer)
   }, [searchParams, list])
 
-  function openEntry(entry: Entry) {
-    if (entry.canEdit === false) {
-      return
+  function categoryUnlocked(account: Category): boolean {
+    if (fullAccess) return true
+    if (account.level !== 'Analytical') {
+      // Groups stay expandable so the user sees locked children in gray.
+      return true
     }
+    return isFreeCategoryCode(account.code)
+  }
+
+  function openEntry(entry: Entry) {
     if (entry.type === 'ProjectContribution' || entry.type === 'Contribution') {
       const params = new URLSearchParams()
       if (entry.description) {
@@ -438,10 +466,23 @@ export function RaioXPage() {
       return
     }
     const params = new URLSearchParams({
+      entry: entry.id,
       competenceYm: entry.competenceYm || ym,
-      search: entry.description || '',
     })
     navigate(`/lancamentos?${params.toString()}`)
+  }
+
+  function openActualForAccount(account: Category, launchEntries: Entry[]) {
+    if (!categoryUnlocked(account)) return
+    if (launchEntries.length === 1) {
+      openEntry(launchEntries[0])
+      return
+    }
+    if (launchEntries.length > 1) {
+      setOpen((prev) => new Set(prev).add(account.id))
+      return
+    }
+    setOpen((prev) => new Set(prev).add(account.id))
   }
 
   const data = budget.data
@@ -609,8 +650,11 @@ export function RaioXPage() {
               categoryNameById={categoryNameById}
               bankNameById={bankNameById}
               leakageOnly={leakageOnly}
+              freeLimited={freeLimited}
+              categoryUnlocked={categoryUnlocked}
               onToggle={toggle}
               onOpenEntry={openEntry}
+              onOpenActual={openActualForAccount}
               onUnbudgetedClick={openBudgetForAccount}
             />
           ))}
@@ -633,7 +677,6 @@ function EntrySubRow({
   accountName: string | null
   onOpen: (entry: Entry) => void
 }) {
-  const editable = entry.canEdit !== false
   const headline = [categoryName, accountName, formatDate(entry.occurredAt)].filter(Boolean).join(' · ')
   return (
     <button
@@ -641,14 +684,8 @@ function EntrySubRow({
       className={`${styles.raioxRow} ${styles.raioxEntry}`}
       style={{
         paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)`,
-        cursor: editable ? undefined : 'default',
       }}
-      aria-disabled={!editable}
-      onClick={() => {
-        if (editable) {
-          onOpen(entry)
-        }
-      }}
+      onClick={() => onOpen(entry)}
     >
       <span />
       <span className={styles.rowMain}>
@@ -695,8 +732,11 @@ function RaioXAccountBlock({
   categoryNameById,
   bankNameById,
   leakageOnly,
+  freeLimited,
+  categoryUnlocked,
   onToggle,
   onOpenEntry,
+  onOpenActual,
   onUnbudgetedClick,
 }: {
   account: Category
@@ -710,8 +750,11 @@ function RaioXAccountBlock({
   categoryNameById: Map<string, string>
   bankNameById: Map<string, string>
   leakageOnly: boolean
+  freeLimited: boolean
+  categoryUnlocked: (account: Category) => boolean
   onToggle: (id: string) => void
   onOpenEntry: (entry: Entry) => void
+  onOpenActual: (account: Category, launchEntries: Entry[]) => void
   onUnbudgetedClick: (accountId: string) => void
 }) {
   if (leakageOnly && !branchHasLeakage(account.id, byParent, planned, actual)) {
@@ -723,7 +766,10 @@ function RaioXAccountBlock({
   const launchEntries =
     account.level === 'Analytical' ? (entriesByAccount.get(account.id) ?? []) : []
   const leafActual = account.level === 'Analytical' ? (actual.get(account.id) ?? 0) : 0
-  const expandable = children.length > 0 || launchEntries.length > 0 || leafActual !== 0
+  const unlocked = categoryUnlocked(account)
+  const lockedLeaf = freeLimited && account.level === 'Analytical' && !unlocked
+  const expandable =
+    !lockedLeaf && (children.length > 0 || launchEntries.length > 0 || leafActual !== 0)
   const expanded = open.has(account.id)
   const totals = sumBranch(account.id, byParent, planned, actual)
   const focused = focusClass(account.section, highlighted)
@@ -742,8 +788,12 @@ function RaioXAccountBlock({
       <button
         type="button"
         id={`raiox-account-${account.id}`}
-        className={`${styles.raioxRow} ${rowClass} ${focused}`}
-        style={{ paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)` }}
+        className={`${styles.raioxRow} ${rowClass} ${focused}${lockedLeaf ? ` ${styles.muted}` : ''}`}
+        style={{
+          paddingLeft: `calc(var(--space-4) + ${depth} * 1rem)`,
+          opacity: lockedLeaf ? 0.55 : undefined,
+          cursor: lockedLeaf ? 'default' : undefined,
+        }}
         onClick={(event) => {
           event.stopPropagation()
           if (expandable) {
@@ -751,12 +801,24 @@ function RaioXAccountBlock({
           }
         }}
         aria-expanded={expandable ? expanded : undefined}
+        aria-disabled={lockedLeaf || undefined}
+        title={lockedLeaf ? 'Liberado nos planos pagos' : undefined}
       >
         <span className={styles.raioxToggle} aria-hidden>
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
         <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
-        <TotalsCell totals={totals} onUnbudgetedClick={() => onUnbudgetedClick(account.id)} />
+        <TotalsCell
+          totals={totals}
+          onUnbudgetedClick={
+            unlocked && account.level === 'Analytical' ? () => onUnbudgetedClick(account.id) : undefined
+          }
+          onActualClick={
+            unlocked && account.level === 'Analytical'
+              ? () => onOpenActual(account, launchEntries)
+              : undefined
+          }
+        />
       </button>
       {expanded
         ? children.map((child) => (
@@ -773,13 +835,16 @@ function RaioXAccountBlock({
               categoryNameById={categoryNameById}
               bankNameById={bankNameById}
               leakageOnly={leakageOnly}
+              freeLimited={freeLimited}
+              categoryUnlocked={categoryUnlocked}
               onToggle={onToggle}
               onOpenEntry={onOpenEntry}
+              onOpenActual={onOpenActual}
               onUnbudgetedClick={onUnbudgetedClick}
             />
           ))
         : null}
-      {expanded
+      {expanded && unlocked
         ? launchEntries.map((entry) => (
             <EntrySubRow
               key={entry.id}

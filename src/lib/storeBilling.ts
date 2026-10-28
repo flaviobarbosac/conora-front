@@ -37,6 +37,20 @@ export function isStoreCancel(error: unknown): boolean {
   return code.includes('cancel') || text.includes('cancel')
 }
 
+/**
+ * Prefer the App Store / Play localized string only when it is clearly BRL (or unlabeled).
+ * Price points must be set in App Store Connect for Brazil; a bare US$ string must not look
+ * like another Conora offer next to the BRL catalog table.
+ */
+export function storePriceLabel(product: Product | undefined, catalogPrice: number, formatCatalog: (n: number) => string): string {
+  if (!product?.priceString) return formatCatalog(catalogPrice)
+  const raw = product.priceString.trim()
+  const currency = String((product as { currencyCode?: string }).currencyCode ?? '').toUpperCase()
+  if (currency && currency !== 'BRL') return formatCatalog(catalogPrice)
+  if (/(US\$|USD|\$)\s*\d/i.test(raw) && !/R\$|BRL/i.test(raw)) return formatCatalog(catalogPrice)
+  return raw
+}
+
 /** Localized store prices by Conora product id (empty when the store is unreachable). */
 export async function storeProducts(): Promise<Record<string, Product>> {
   try {
