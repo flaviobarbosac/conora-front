@@ -5,6 +5,8 @@ import { useAuth } from '../auth/AuthProvider'
 import { isConsoleOperator } from '../auth/consoleAccess'
 import { AlertsBell } from '../components/AlertsBell'
 import { BrandLockup } from '../components/BrandLockup'
+import { FeedbackOverlay } from '../components/FeedbackOverlay'
+import { FeedbackReplyListener } from '../components/FeedbackReplyListener'
 import { IanFloatingChat } from '../components/IanFloatingChat'
 import { PlanBanner } from '../components/PlanBanner'
 import { Skeleton } from '../components/ui/Feedback'
@@ -13,6 +15,7 @@ import { useLoad } from '../hooks/useLoad'
 import { PREFERENCES_CHANGED, readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
 import { applyIanMaturity, maturityAgeFromAchievements } from '../lib/speakPt'
 import { CADASTROS_ITEMS, NAV_ITEMS } from '../nav'
+import { isIosApp } from '../lib/platform'
 import { ALL_THEMES, type ThemeId } from '../theme/themes'
 import { useTheme } from '../theme/ThemeProvider'
 import styles from './AppShell.module.css'
@@ -75,10 +78,20 @@ export function AppShell() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [themesMenuOpen, setThemesMenuOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [feedbackPath, setFeedbackPath] = useState<string | undefined>()
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed)
   const [railViewport, setRailViewport] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1199px)').matches,
+  )
+  // iOS native always; in local Vite, phone-width preview so Flavio can check the sheet + X on localhost.
+  const [themesSheet, setThemesSheet] = useState(
+    () =>
+      isIosApp() ||
+      (import.meta.env.DEV &&
+        typeof window !== 'undefined' &&
+        window.matchMedia('(max-width: 767px)').matches),
   )
 
   useEffect(() => {
@@ -96,6 +109,22 @@ export function AppShell() {
   useEffect(() => {
     const media = window.matchMedia('(max-width: 1199px)')
     const apply = () => setRailViewport(media.matches)
+    apply()
+    media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
+  }, [])
+
+  useEffect(() => {
+    if (isIosApp()) {
+      setThemesSheet(true)
+      return
+    }
+    if (!import.meta.env.DEV) {
+      setThemesSheet(false)
+      return
+    }
+    const media = window.matchMedia('(max-width: 767px)')
+    const apply = () => setThemesSheet(media.matches)
     apply()
     media.addEventListener('change', apply)
     return () => media.removeEventListener('change', apply)
@@ -286,7 +315,7 @@ export function AppShell() {
         <div className={styles.sidebarFoot}>
           {isConsoleOperator(email) ? (
             <NavLink
-              to="/console"
+              to="/console/metodo"
               className={({ isActive }) => (isActive ? styles.settingsLinkActive : styles.settingsLink)}
               title={sidebarCollapsed && !mobileNavOpen ? 'Console' : undefined}
             >
@@ -323,6 +352,18 @@ export function AppShell() {
           ) : null}
           <div className={styles.appHeaderUser} ref={profileMenuRef}>
             <AlertsBell peerOpen={profileMenuOpen} onOpen={() => setProfileMenuOpen(false)} />
+            <button
+              type="button"
+              className={styles.avatarBtn}
+              aria-label="Enviar feedback"
+              title="Feedback"
+              onClick={() => {
+                setFeedbackPath(pathname)
+                setFeedbackOpen(true)
+              }}
+            >
+              <Icon name="pen" size={22} />
+            </button>
             <button
               type="button"
               className={styles.avatarBtn}
@@ -370,7 +411,22 @@ export function AppShell() {
                     <Icon name="chevron" size={16} className={styles.themesChevron} />
                   </button>
                   {themesMenuOpen ? (
-                    <div className={styles.themesMenu} role="menu" aria-label="Temas">
+                    <div
+                      className={themesSheet ? `${styles.themesMenu} ${styles.themesMenuIos}` : styles.themesMenu}
+                      role="menu"
+                      aria-label="Temas"
+                    >
+                      <div className={styles.themesMenuHeader}>
+                        <span className={styles.themesMenuTitle}>Temas</span>
+                        <button
+                          type="button"
+                          className={styles.themesMenuClose}
+                          aria-label="Fechar temas"
+                          onClick={() => setThemesMenuOpen(false)}
+                        >
+                          ×
+                        </button>
+                      </div>
                       {ALL_THEMES.map((item) => (
                         <button
                           key={item.id}
@@ -408,6 +464,19 @@ export function AppShell() {
                   <Icon name="help" size={20} />
                   Central de ajuda
                 </Link>
+                <button
+                  type="button"
+                  className={styles.profileMenuItem}
+                  role="menuitem"
+                  onClick={() => {
+                    setProfileMenuOpen(false)
+                    setFeedbackPath(pathname)
+                    setFeedbackOpen(true)
+                  }}
+                >
+                  <Icon name="pen" size={20} />
+                  Feedback
+                </button>
                 <button
                   type="button"
                   className={styles.profileMenuItemDanger}
@@ -485,6 +554,15 @@ export function AppShell() {
         </button>
       </nav>
       <IanFloatingChat />
+      <FeedbackReplyListener />
+      <FeedbackOverlay
+        open={feedbackOpen}
+        pathnameSnapshot={feedbackPath}
+        onClose={() => {
+          setFeedbackOpen(false)
+          setFeedbackPath(undefined)
+        }}
+      />
     </div>
   )
 }

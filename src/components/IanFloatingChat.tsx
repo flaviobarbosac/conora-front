@@ -113,6 +113,9 @@ function matchCategoryOption(spoken: string, names: string[]): string | null {
   return partial.length === 1 ? partial[0] : null
 }
 
+/** When false, Ian voice listen / mic stays in code but is unreachable on web, iOS, and Android. */
+const IAN_MIC_ENABLED = false
+
 export function IanFloatingChat() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -358,6 +361,9 @@ export function IanFloatingChat() {
   }
 
   function startMic() {
+    if (!IAN_MIC_ENABLED) {
+      return
+    }
     if (!speechOk) {
       void speakPt('Este navegador não liberou o microfone.')
       return
@@ -713,6 +719,9 @@ export function IanFloatingChat() {
   }
 
   function openListening() {
+    if (!IAN_MIC_ENABLED) {
+      return
+    }
     if (activeRef.current && micOnRef.current) {
       return
     }
@@ -789,14 +798,23 @@ export function IanFloatingChat() {
       <button
         type="button"
         className={active ? styles.agentOn : styles.agent}
-        aria-label="Falar com o Ian"
+        aria-label={IAN_MIC_ENABLED ? 'Falar com o Ian' : 'Modo de voz do Ian indisponível'}
         aria-pressed={active}
+        aria-disabled={!IAN_MIC_ENABLED}
+        disabled={!IAN_MIC_ENABLED}
+        title={IAN_MIC_ENABLED ? undefined : 'Modo de voz do Ian indisponível'}
         onClick={(event) => {
+          if (!IAN_MIC_ENABLED) {
+            return
+          }
           if (compact || event.detail === 0) {
             openListening()
           }
         }}
         onDoubleClick={() => {
+          if (!IAN_MIC_ENABLED) {
+            return
+          }
           if (!compact) {
             openListening()
           }

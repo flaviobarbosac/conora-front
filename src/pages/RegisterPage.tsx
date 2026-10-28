@@ -102,6 +102,7 @@ export function RegisterPage() {
           minLength={8}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
+          hint="Mínimo de 8 caracteres."
         />
         {error ? (
           <p className={styles.error} role="alert">

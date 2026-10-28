@@ -11,8 +11,11 @@ import { Splash } from './components/Splash'
 import { RequirePlanAccess } from './components/PlanAccessGate'
 import { UnsavedChangesProvider } from './hooks/useUnsavedChanges'
 import { AppShell } from './layouts/AppShell'
+import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { AdminPage } from './pages/AdminPage'
+import { ConsoleFeedbackPage } from './pages/ConsoleFeedbackPage'
 import { ConsolePage } from './pages/ConsolePage'
+import { FeedbackRespostaPage } from './pages/FeedbackRespostaPage'
 import { ApresentacaoPage } from './pages/ApresentacaoPage'
 import { ApresentacaoVariantesPage } from './pages/apresentacao/ApresentacaoVariantesPage'
 import { DiagnosisPage } from './pages/DiagnosisPage'
@@ -76,7 +79,7 @@ function RequireConsole() {
   if (!isConsoleOperator(session?.email)) {
     return <Navigate to="/" replace />
   }
-  return <ConsolePage />
+  return <Outlet />
 }
 
 function RequireOnboarding() {
@@ -176,7 +179,17 @@ export default function App() {
                 <Route path="/ajuda" element={<HelpPage />} />
                 <Route path="/perfil" element={<ProfilePage />} />
                 <Route path="/configuracoes" element={<SettingsPage />} />
-                <Route path="/console" element={<RequireConsole />} />
+                <Route path="/feedbacks/:id" element={<FeedbackRespostaPage />} />
+                <Route element={<RequireConsole />}>
+                  <Route path="/console" element={<ConsoleLayout />}>
+                    <Route index element={<Navigate to="metodo" replace />} />
+                    <Route path="metodo" element={<ConsolePage section="metodo" />} />
+                    <Route path="engajamento" element={<ConsolePage section="engajamento" />} />
+                    <Route path="tendencias" element={<ConsolePage section="tendencias" />} />
+                    <Route path="saude" element={<ConsolePage section="saude" />} />
+                    <Route path="feedback" element={<ConsoleFeedbackPage />} />
+                  </Route>
+                </Route>
                 <Route path="/whatsapp" element={<WhatsAppPage />} />
                 <Route path="/importar" element={<ImportPage />} />
                 <Route path="/mes" element={<MonthPage />} />

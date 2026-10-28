@@ -8,24 +8,36 @@ import {
   type ConsoleWeek,
 } from '../api/finance'
 import { KpiBarChart, KpiLineChart, KpiMultiLineChart, KpiPieChart, type KpiPoint, type KpiSeries } from '../components/charts/KpiCharts'
-import { PageHeader } from '../components/PageHeader'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
+import type { ConsoleSectionId } from '../lib/consoleNav'
 import layout from './page.module.css'
 import styles from './ConsolePage.module.css'
 
 const MONTHS_MIN = 1
 const MONTHS_MAX = 24
 
-const TABS = [
-  { id: 'metodo', label: 'Método' },
-  { id: 'uso', label: 'Uso' },
-  { id: 'evolucao', label: 'Evolução' },
-  { id: 'erros', label: 'Erros' },
-] as const
-
-type TabId = (typeof TABS)[number]['id']
+type MetricsSection = Exclude<ConsoleSectionId, 'feedback'>
 type Cell = string | { text: string; hint?: string }
+
+const SECTION_INTRO: Record<MetricsSection, { title: string; text: string }> = {
+  metodo: {
+    title: 'Método',
+    text: 'Adesão ao caminho do Conora: orçamento, teto e conquistas. Usuário é quem tem cadastro.',
+  },
+  engajamento: {
+    title: 'Engajamento',
+    text: 'Quem está ativo e o que toca no app. Conta alteração de registro, não clique.',
+  },
+  tendencias: {
+    title: 'Tendências',
+    text: 'Como o método evolui mês a mês. Ajuste a janela no controle abaixo.',
+  },
+  saude: {
+    title: 'Saúde',
+    text: 'Falhas da API sem nome de usuário e sem a mensagem original.',
+  },
+}
 
 const SERIES = [
   { key: 'signups', label: 'Novos usuários', color: '#375984', pick: (week: ConsoleWeek) => week.signups },
@@ -162,49 +174,31 @@ function cellText(cell: Cell): string {
   return typeof cell === 'string' ? cell : cell.text
 }
 
-export function ConsolePage() {
+export function ConsolePage({ section }: { section: MetricsSection }) {
   const report = useLoad(() => consoleApi.kpis(), [])
   const data = report.data
-  const [tab, setTab] = useState<TabId>('metodo')
   const [months, setMonths] = useState(6)
+  const intro = SECTION_INTRO[section]
 
   return (
-    <div className={`${layout.page} ${styles.stage}`}>
-      <PageHeader
-        kicker="Console"
-        title="Acompanhamento do método"
-        actions={data ? <span className={layout.muted}>Competência {data.competenceYm}</span> : null}
-      />
-      <p className={layout.muted}>
-        Usuário é quem tem cadastro. Conta bancária é onde está o dinheiro. Plano de contas é a categoria do método.
-        Passe o mouse no indicador para ver como o número foi calculado. Nenhum nome aparece aqui.
-      </p>
+    <div className={styles.stage}>
+      <div className={styles.sectionHead}>
+        <div>
+          <h2 className={styles.sectionTitle}>{intro.title}</h2>
+          <p className={layout.muted}>{intro.text}</p>
+        </div>
+        {data ? <span className={styles.competence}>Competência {data.competenceYm}</span> : null}
+      </div>
       <ErrorText message={report.error} />
       {report.loading && !data ? <Loading /> : null}
       {data ? (
         <>
-          <div className={styles.tabs} role="tablist" aria-label="Grupos do console">
-            {TABS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                id={`console-tab-${item.id}`}
-                aria-selected={tab === item.id}
-                aria-controls={`console-panel-${item.id}`}
-                className={tab === item.id ? styles.tabActive : styles.tab}
-                onClick={() => setTab(item.id)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <div role="tabpanel" id={`console-panel-${tab}`} aria-labelledby={`console-tab-${tab}`}>
-            {tab === 'metodo' ? <MethodTab data={data} /> : null}
-            {tab === 'uso' ? <UsageTab data={data} /> : null}
-            {tab === 'evolucao' ? <EvolutionTab data={data} months={months} onMonths={setMonths} /> : null}
-            {tab === 'erros' ? <ErrorsTab data={data} /> : null}
-          </div>
+          {section === 'metodo' ? <MethodTab data={data} /> : null}
+          {section === 'engajamento' ? <UsageTab data={data} /> : null}
+          {section === 'tendencias' ? (
+            <EvolutionTab data={data} months={months} onMonths={setMonths} />
+          ) : null}
+          {section === 'saude' ? <ErrorsTab data={data} /> : null}
         </>
       ) : null}
     </div>

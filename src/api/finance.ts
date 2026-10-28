@@ -878,9 +878,66 @@ export type StorePurchase = {
   purchaseToken?: string
 }
 
+export type FeedbackStatus = 'Novo' | 'Lido' | 'Respondido'
+
+export type FeedbackItem = {
+  id: string
+  usuarioId: string
+  usuarioNome: string
+  modulo: string
+  rota?: string | null
+  nota: number
+  comentario: string
+  createdAt: string
+  resposta?: string | null
+  respondidoEm?: string | null
+  respostaLidaEm?: string | null
+}
+
+export type ConsoleFeedbackItem = FeedbackItem & {
+  status: FeedbackStatus
+  lidoPorUsuarioId?: string | null
+  lidoPorUsuarioNome?: string | null
+  lidoEm?: string | null
+  respondidoPorUsuarioId?: string | null
+  respondidoPorUsuarioNome?: string | null
+}
+
+export type ConsoleFeedbackUsuarioOption = {
+  usuarioId: string
+  usuarioNome: string
+}
+
 export const feedbackApi = {
-  submit: (tried: string, blocked: string) =>
-    apiFetch<void>('/feedback', json('POST', { tried, blocked })),
+  listMine: () => apiFetch<FeedbackItem[]>('/feedback'),
+  getMine: (id: string) => apiFetch<FeedbackItem>(`/feedback/${id}`),
+  submit: (payload: { modulo: string; rota?: string | null; nota: number; comentario: string }) =>
+    apiFetch<FeedbackItem>('/feedback', json('POST', payload)),
+  markReplyRead: (id: string) => apiFetch<void>(`/feedback/${id}/leitura`, json('POST')),
+  listConsole: (params: {
+    usuarioId?: string
+    status?: FeedbackStatus | number | ''
+    from?: string
+    to?: string
+    modulo?: string
+    nota?: number | ''
+    take?: number
+  }) =>
+    apiFetch<ConsoleFeedbackItem[]>(
+      `/console/feedback${query({
+        usuarioId: params.usuarioId || undefined,
+        status: params.status === '' || params.status === undefined ? undefined : params.status,
+        from: params.from,
+        to: params.to,
+        modulo: params.modulo || undefined,
+        nota: params.nota === '' || params.nota === undefined ? undefined : params.nota,
+        take: params.take ?? 200,
+      })}`,
+    ),
+  listConsoleUsuarios: () => apiFetch<ConsoleFeedbackUsuarioOption[]>('/console/feedback/usuarios'),
+  getConsole: (id: string) => apiFetch<ConsoleFeedbackItem>(`/console/feedback/${id}`),
+  replyConsole: (id: string, resposta: string) =>
+    apiFetch<ConsoleFeedbackItem>(`/console/feedback/${id}/resposta`, json('PUT', { resposta })),
 }
 
 /* ---------- Help / AI ---------- */

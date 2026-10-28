@@ -64,9 +64,24 @@ jobs:
           VITE_APPLE_CLIENT_ID: br.com.conora.app
           VITE_APPLE_SERVICES_ID: br.com.conora.web
         run: |
+          if [ -z "$VITE_GOOGLE_CLIENT_ID" ] || [ -z "$VITE_GOOGLE_IOS_CLIENT_ID" ]; then
+            echo "Missing GitHub secrets VITE_GOOGLE_CLIENT_ID and/or VITE_GOOGLE_IOS_CLIENT_ID."
+            echo "VITE_GOOGLE_IOS_CLIENT_ID must be the iOS OAuth client (*.apps.googleusercontent.com)."
+            echo "The pipeline derives REVERSED_CLIENT_ID and writes it to Info.plist URL schemes."
+            exit 1
+          fi
           npx tsc -b
           npx vite build --mode ios
-          node scripts/sync-ios-google-auth.mjs
+          node scripts/sync-ios-google-auth.mjs --require
+          PLIST="mobile/ios/App/App/Info.plist"
+          if ! grep -q "GoogleSignIn" "$PLIST" || ! grep -q "com.googleusercontent.apps." "$PLIST" || ! grep -q "GIDClientID" "$PLIST"; then
+            echo "Info.plist missing GoogleSignIn URL scheme / REVERSED_CLIENT_ID / GIDClientID after sync."
+            exit 1
+          fi
+          if [ ! -f "mobile/ios/App/App/GoogleService-Info.plist" ]; then
+            echo "GoogleService-Info.plist missing from iOS App target folder."
+            exit 1
+          fi
           npx cap sync ios
 
       - name: Apply version to the share extension
