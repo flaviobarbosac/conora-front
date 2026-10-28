@@ -14,13 +14,15 @@ import { formatDate } from '../lib/format'
 import { showSaveToast } from '../lib/saveToast'
 import styles from './ConsoleFeedbackPage.module.css'
 
-const REPLY_TEMPLATES = [
+type FeedbackRating = 1 | 2 | 3 | 4 | 5
+
+const REPLY_TEMPLATES: { id: string; ratings: readonly FeedbackRating[]; label: string }[] = [
   { id: 'thanks', ratings: [4, 5], label: 'Agradecimento' },
   { id: 'neutral', ratings: [3], label: 'Neutro' },
   { id: 'sorry', ratings: [1, 2], label: 'Desculpas' },
   { id: 'investigating', ratings: [1, 2, 3, 4, 5], label: 'Investigando' },
   { id: 'details', ratings: [1, 2, 3, 4, 5], label: 'Pedir detalhes' },
-] as const
+]
 
 function templateText(id: string, name: string, module: string): string {
   switch (id) {
@@ -122,7 +124,7 @@ export function ConsoleFeedbackPage() {
   const respondedInView = items.filter((i) => i.status === 'Respondido').length
 
   const visibleTemplates = REPLY_TEMPLATES.filter((template) =>
-    selected ? template.ratings.includes(selected.nota as 1 | 2 | 3 | 4 | 5) : true,
+    selected ? template.ratings.includes(selected.nota as FeedbackRating) : true,
   )
 
   function applyTemplate(id: string) {
