@@ -93,6 +93,8 @@ const editableStates = [
   'REJECTED',
   'METADATA_REJECTED',
   'INVALID_BINARY',
+  // Still inside a rejected submission (checked below), but it is the app's only version.
+  'READY_FOR_REVIEW',
 ]
 const versions = await request(
   'GET',
@@ -103,6 +105,28 @@ if (!version) {
   version = versions.data?.find((v) => editableStates.includes(v.attributes.appStoreState))
 }
 let versionId = version?.id
+
+async function itemsOf(submissionId) {
+  const page = await request('GET', `/v1/reviewSubmissions/${submissionId}/items?include=appStoreVersion&limit=50`)
+  return page.data ?? []
+}
+
+// A version still inside a rejected submission cannot join another one.
+const unresolved = await request(
+  'GET',
+  `/v1/reviewSubmissions?filter[app]=${appId}&filter[platform]=IOS&filter[state]=UNRESOLVED_ISSUES&limit=10`,
+)
+for (const s of versionId ? unresolved.data ?? [] : []) {
+  const items = await itemsOf(s.id)
+  if (items.some((i) => i.relationships?.appStoreVersion?.data?.id === versionId)) {
+    console.error(
+      `Version ${marketingVersion} is still in rejected submission ${s.id}. ` +
+        'Resolve it in App Store Connect (App Review): reply to Apple or remove the version from it, then re-run.',
+    )
+    process.exit(1)
+  }
+}
+
 if (versionId) {
   // Production: goes live by itself once Apple approves.
   await request('PATCH', `/v1/appStoreVersions/${versionId}`, {
@@ -138,12 +162,20 @@ for (const loc of localizations?.data ?? []) {
   }
 }
 
-// Reuse an open draft submission (it may already hold subscriptions), else create one.
+// Reuse the open draft submission with the most items (it may already hold subscriptions), else create one.
 const open = await request(
   'GET',
-  `/v1/reviewSubmissions?filter[app]=${appId}&filter[platform]=IOS&filter[state]=READY_FOR_REVIEW&limit=1`,
+  `/v1/reviewSubmissions?filter[app]=${appId}&filter[platform]=IOS&filter[state]=READY_FOR_REVIEW&limit=10`,
 )
-let submissionId = open.data?.[0]?.id
+let submissionId = null
+let mostItems = -1
+for (const s of open.data ?? []) {
+  const count = (await itemsOf(s.id)).length
+  if (count > mostItems) {
+    mostItems = count
+    submissionId = s.id
+  }
+}
 if (!submissionId) {
   const submission = await request('POST', '/v1/reviewSubmissions', {
     data: {
@@ -155,8 +187,7 @@ if (!submissionId) {
   submissionId = submission.data.id
 }
 
-const items = await request('GET', `/v1/reviewSubmissions/${submissionId}/items?include=appStoreVersion&limit=50`)
-const hasVersion = items.data?.some((i) => i.relationships?.appStoreVersion?.data?.id === versionId)
+const hasVersion = (await itemsOf(submissionId)).some((i) => i.relationships?.appStoreVersion?.data?.id === versionId)
 if (!hasVersion) {
   await request('POST', '/v1/reviewSubmissionItems', {
     data: {
