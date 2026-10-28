@@ -1,7 +1,11 @@
 name: iOS TestFlight
 
-# Publication only. Does not run on push to main or develop.
+# Runs when a develop -> main PR is merged (production release, sent to App Store
+# review and released automatically after approval), or manually / on v* tags.
 on:
+  pull_request:
+    types: [closed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       submit_for_review:
@@ -22,9 +26,12 @@ permissions:
 
 jobs:
   testflight:
+    if: github.event_name != 'pull_request' || (github.event.pull_request.merged == true && github.head_ref == 'develop')
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -164,7 +171,7 @@ jobs:
 
       # API key role must be App Manager or Admin. No Apple ID password is used.
       - name: Submit for App Store review
-        if: github.event_name == 'push' || inputs.submit_for_review
+        if: github.event_name != 'workflow_dispatch' || inputs.submit_for_review
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
