@@ -7,6 +7,7 @@ import { AlertsBell } from '../components/AlertsBell'
 import { BrandLockup } from '../components/BrandLockup'
 import { FeedbackOverlay } from '../components/FeedbackOverlay'
 import { FeedbackReplyListener } from '../components/FeedbackReplyListener'
+import { IanFloatingChat } from '../components/IanFloatingChat'
 import { PlanBanner } from '../components/PlanBanner'
 import { Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
@@ -558,6 +559,7 @@ export function AppShell() {
           <span>Menu</span>
         </button>
       </nav>
+      <IanFloatingChat />
       <FeedbackReplyListener />
       <FeedbackOverlay
         open={feedbackOpen}

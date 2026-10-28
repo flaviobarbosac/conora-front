@@ -439,11 +439,11 @@ function StatusHero({ plan, exporting, onExport }: HeroProps) {
     const renew = plan.everSubscribed
     return (
       <section className={`${styles.hero} ${styles.heroWarn}`}>
-        <strong>{renew ? 'Seu plano venceu' : 'Você está no Conora grátis'}</strong>
+        <strong>{renew ? 'Seu plano venceu' : 'Você está no plano gratuito'}</strong>
         <span>
           {renew
             ? 'Você continua no Conora grátis, com aluguel, luz, água e escola. Renove para voltar ao acesso completo.'
-            : 'Lance aluguel, luz, água e a mensalidade da escola e acompanhe seu Raio-X. Assine para liberar todas as categorias.'}
+            : 'Assine e libere o Conora completo.'}
         </span>
         <div className={styles.heroActions}>
           <Button variant="secondary" disabled={exporting} onClick={onExport}>

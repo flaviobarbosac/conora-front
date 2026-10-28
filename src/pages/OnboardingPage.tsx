@@ -138,10 +138,7 @@ export function OnboardingPage() {
   return (
     <div className={`${styles.page} ${styles.onboarding}`}>
       <PageHeader title="Bem-vindo ao Conora" kicker="Onboard obrigatório" />
-      <p className={styles.muted}>
-        No Conora grátis você começa com Aluguel, Energia elétrica, Água e esgoto e Escola. Cadastre uma conta para
-        lançar nessas categorias. As outras ficam visíveis em cinza até a assinatura.
-      </p>
+      <p className={styles.muted}>Cadastre seus dados e uma conta. Depois é só começar.</p>
 
       <div className={styles.journeyProgress}>
         <div className={styles.journeyProgressLabel}>
