@@ -6,6 +6,7 @@ import { errorMessage, currentCompetence, dateToApi, formatDate, formatMoney } f
 import {
   IAN_MATURITY_CHANGED,
   IAN_VOICES,
+  getIanAge,
   getIanVoice,
   ianPortrait,
   setIanVoice,
@@ -116,12 +117,48 @@ function matchCategoryOption(spoken: string, names: string[]): string | null {
 /** When false, Ian voice listen / mic stays in code but is unreachable on web, iOS, and Android. */
 const IAN_MIC_ENABLED = false
 
-/** Voice UI removed from the product surface (plan MVP 14/11). Keep the module for a later revive. */
+/**
+ * Portrait only: aging stays visible on home (and header on other routes).
+ * Mic / listen stays off — full voice UI lives in IanFloatingChatDisabled for a later revive.
+ */
 export function IanFloatingChat() {
-  return null
+  const { pathname } = useLocation()
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  const [, setMaturityTick] = useState(0)
+  const voiceId = getIanVoice().id
+
+  useEffect(() => {
+    setAnchor(document.getElementById('conora-voice-center') ?? document.getElementById('conora-voice-header'))
+  }, [pathname])
+
+  useEffect(() => {
+    const onMaturity = () => setMaturityTick((n) => n + 1)
+    window.addEventListener(IAN_MATURITY_CHANGED, onMaturity)
+    return () => window.removeEventListener(IAN_MATURITY_CHANGED, onMaturity)
+  }, [])
+
+  if (!anchor) {
+    return null
+  }
+
+  const age = getIanAge()
+  const compact = anchor.id === 'conora-voice-header'
+
+  return createPortal(
+    <div className={`${styles.dock}${compact ? ` ${styles.dockCompact}` : ''}`}>
+      <div
+        className={styles.agent}
+        role="img"
+        aria-label={age === null ? 'Ian' : `Ian · ${age === 0 ? 'bebê' : `${age} anos`}`}
+      >
+        <img className={styles.agentFace} src={ianPortrait(voiceId)} alt="" />
+      </div>
+    </div>,
+    anchor,
+  )
 }
 
-/** Kept unmounted for a later revive (TS: exported so the body stays reachable). */
+/** Full voice session UI — kept for a later revive (exported so the body stays reachable). */
 export function IanFloatingChatDisabled() {
   const navigate = useNavigate()
   const { pathname } = useLocation()

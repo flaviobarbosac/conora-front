@@ -32,7 +32,7 @@ export function PlanBanner() {
       cta = 'Renovar plano'
     } else {
       text =
-        'Você está no Conora grátis. Lance aluguel, luz, água e a mensalidade da escola e acompanhe seu Raio-X. Assine para liberar todas as categorias.'
+        'Você está no plano gratuito. Assine e libere o Conora completo.'
       cta = 'Assinar plano'
     }
   } else {
