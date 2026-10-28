@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { accountsApi, familyApi } from '../api/finance'
 import { AccountForm } from '../components/finance/AccountForm'
 import { PageHeader } from '../components/PageHeader'
@@ -131,13 +131,16 @@ export function OnboardingPage() {
 
   const stepIndex = STEPS.findIndex((s) => s.id === step)
 
+  if (profile.data?.onboardingCompleted) {
+    return <Navigate to="/" replace />
+  }
+
   return (
     <div className={`${styles.page} ${styles.onboarding}`}>
       <PageHeader title="Bem-vindo ao Conora" kicker="Onboard obrigatório" />
       <p className={styles.muted}>
         No Conora grátis você começa com Aluguel, Energia elétrica, Água e esgoto e Escola. Cadastre uma conta para
-        lançar nessas categorias. As outras ficam visíveis em cinza até a assinatura. Cartão é opcional e fica em
-        Contas depois.
+        lançar nessas categorias. As outras ficam visíveis em cinza até a assinatura.
       </p>
 
       <div className={styles.journeyProgress}>

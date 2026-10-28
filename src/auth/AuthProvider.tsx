@@ -18,6 +18,8 @@ type Session = {
 type AuthContextValue = {
   session: Session | null
   authReady: boolean
+  /** Persist tokens and set session without a full page reload (e-mail validation handoff). */
+  acceptSession: (auth: AuthResponse) => void
   login: (usuario: string, password: string) => Promise<void>
   register: (name: string, email: string, cpf: string, password: string) => Promise<void>
   loginGoogle: (idToken: string) => Promise<void>
@@ -112,8 +114,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ session, authReady, login, register, loginGoogle, loginApple, logout }),
-    [session, authReady, login, register, loginGoogle, loginApple, logout],
+    () => ({ session, authReady, acceptSession: applyAuth, login, register, loginGoogle, loginApple, logout }),
+    [session, authReady, applyAuth, login, register, loginGoogle, loginApple, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
