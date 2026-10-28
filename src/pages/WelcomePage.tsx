@@ -5,17 +5,20 @@ import { AuthLayout } from '../layouts/AuthLayout'
 import { Button } from '../components/ui/Button'
 import styles from './auth.module.css'
 
-/** Shown right after Conora e-mail validation (product copy from the PDF). */
+/** Shown right after Conora e-mail validation; then first onboard step (Seus dados). */
 export function WelcomePage() {
-  const { session } = useAuth()
+  const { session, authReady } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!session) return
-    const timer = window.setTimeout(() => navigate('/', { replace: true }), 4000)
+    if (!authReady || !session) return
+    const timer = window.setTimeout(() => navigate('/onboarding', { replace: true }), 4000)
     return () => window.clearTimeout(timer)
-  }, [session, navigate])
+  }, [authReady, session, navigate])
 
+  if (!authReady) {
+    return null
+  }
   if (!session) {
     return <Navigate to="/login" replace />
   }
@@ -27,11 +30,11 @@ export function WelcomePage() {
       footer={null}
     >
       <p className={styles.notice} role="status">
-        Sua conta está validada. Em instantes você segue para o painel inicial, no plano gratuito.
+        Sua conta está validada. Em instantes você começa o cadastro inicial.
       </p>
       <div className={styles.actions}>
-        <Button type="button" onClick={() => navigate('/', { replace: true })}>
-          Ir para o painel
+        <Button type="button" onClick={() => navigate('/onboarding', { replace: true })}>
+          Continuar
         </Button>
       </div>
     </AuthLayout>

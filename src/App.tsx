@@ -84,14 +84,18 @@ function RequireConsole() {
 }
 
 function RequireOnboarding() {
-  const { session } = useAuth()
+  const { session, authReady } = useAuth()
   const [ready, setReady] = useState(false)
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
 
   useEffect(() => {
+    if (!authReady) {
+      return
+    }
     let cancelled = false
     async function check() {
       if (!session) {
+        setNeedsOnboarding(false)
         setReady(true)
         return
       }
@@ -102,13 +106,16 @@ function RequireOnboarding() {
           setReady(true)
         }
       } catch {
+        // Do not open the app shell until we know onboard status (avoids skipping onboard on flaky network).
         if (!cancelled) {
+          setNeedsOnboarding(true)
           setReady(true)
         }
       }
     }
     void check()
     function onChanged() {
+      setReady(false)
       void check()
     }
     window.addEventListener('conora:profile-changed', onChanged)
@@ -116,9 +123,9 @@ function RequireOnboarding() {
       cancelled = true
       window.removeEventListener('conora:profile-changed', onChanged)
     }
-  }, [session])
+  }, [session, authReady])
 
-  if (!ready) {
+  if (!authReady || !ready) {
     return null
   }
   if (needsOnboarding) {
