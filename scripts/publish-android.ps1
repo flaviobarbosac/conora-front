@@ -3,12 +3,11 @@
   Publishes the Conora Android app to Google Play from what is on main.
 
 .DESCRIPTION
-  Every merged develop -> main PR already publishes Android and iOS to production by itself.
-  This script is for publishing on request: it triggers the "Android Google Play" workflow
-  (.github/workflows/android-play.yml) on main and waits for it. Default track is production
-  (Brasil, full rollout, sent for review). If develop has commits that are not on main, it
-  stops and lists them, unless -MergeDevelop is passed: then it opens/merges the
-  develop -> main PR (which publishes web, Android and iOS) and watches the Android run.
+  Mobile publish is manual only (develop -> main does not publish stores).
+  Triggers the "Android Google Play" workflow on main and waits for it. Default track is
+  production (Brasil, full rollout, sent for review). If develop has commits that are not
+  on main, it stops and lists them, unless -MergeDevelop is passed: then it merges
+  develop -> main (web deploy only) and then starts the Android workflow.
 
 .EXAMPLE
   .\scripts\publish-android.ps1
@@ -57,14 +56,13 @@ $version = gh api "repos/$Repo/contents/package.json?ref=main" --jq '.content' |
     ConvertFrom-Json | Select-Object -ExpandProperty version
 
 if ($merged) {
-    # The develop -> main merge itself starts the production publication (Android and iOS).
     $Track = 'production'
-    Write-Host "Merge started the production publication of Conora $version (Android and iOS)." -ForegroundColor Cyan
-} else {
-    Write-Host "Publishing Conora $version (main) to Google Play track '$Track'..." -ForegroundColor Cyan
-    gh workflow run $Workflow --repo $Repo --ref main -f "track=$Track" -f "release_notes=$Notes"
-    if ($LASTEXITCODE -ne 0) { throw 'Could not start the workflow.' }
+    Write-Host "Merged develop -> main (web deploy). Starting Android publication of Conora $version..." -ForegroundColor Cyan
 }
+
+Write-Host "Publishing Conora $version (main) to Google Play track '$Track'..." -ForegroundColor Cyan
+gh workflow run $Workflow --repo $Repo --ref main -f "track=$Track" -f "release_notes=$Notes"
+if ($LASTEXITCODE -ne 0) { throw 'Could not start the workflow.' }
 
 # Wait for the new run to show up.
 $runId = $null

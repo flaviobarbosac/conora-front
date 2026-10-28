@@ -5,23 +5,21 @@ alwaysApply: false
 
 # Publicar o Conora mobile (Android e iOS)
 
-**Regra da esteira:** todo PR de `develop` para `main` que é mergeado publica **Android e iOS em produção**
-automaticamente, pelo GitHub Actions do `Conora-frontEnd` (`flaviobarbosac/conora-front`):
-- **Android Google Play** (`.github/workflows/android-play.yml`): produção, Brasil, lançamento completo, enviado para revisão; entra no ar quando o Google aprova.
-- **iOS TestFlight** (`.github/workflows/ios-testflight.yml`): TestFlight + envio para revisão da App Store com lançamento automático após a aprovação.
+**Regra:** mobile **só** sob pedido explícito do Flavio. Merge `develop` → `main` publica o **web** (Deploy Production Front); **não** dispara Android nem iOS.
 
-Então publicar mobile = **seguir `producao-conora.mdc`** (bump de versão, commit/push em `develop`, PR `develop` → `main`, merge) e acompanhar as execuções. Executar sem pedir confirmação de novo.
-Não gerar AAB/IPA local nem enviar pelo Play Console / App Store Connect. AAB local (`npm run android:bundle`) só se o Flavio pedir o arquivo.
+Quando pedir versão mobile / Play Store / TestFlight / App Store, executar sem pedir confirmação de novo. Não gerar AAB/IPA local nem enviar pelo Play Console / App Store Connect, salvo se pedir o arquivo (`npm run android:bundle`).
 
 1. Em `D:\Projetos\Onra\Conora-frontEnd`: `git fetch origin`, `git checkout develop`, `git pull --ff-only`. Não descartar trabalho local (se preciso, `git stash push -u -m "publicar-mobile"` e restaurar no fim; nunca `reset --hard`).
-2. **Versão (obrigatório):** subir o patch do `version` no `package.json` e commitar em `develop` (`chore: bump version to X`). O CI (`version-bump`) recusa o PR para `main` se a versão não for maior que a da `main`. `versionCode`/build number são calculados pela esteira — não mexer em `build.gradle` nem no Xcode.
-3. Commit/push do resto, PR `develop` → `main`, merge (`gh pr merge --merge`). Atalho que faz isso e acompanha o Android: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-android.ps1 -MergeDevelop`.
-4. Acompanhar: `gh run list --repo flaviobarbosac/conora-front --limit 6` e `gh run watch <id> --repo flaviobarbosac/conora-front --exit-status` para **Android Google Play** e **iOS TestFlight** (o iOS leva mais: espera o build processar na Apple).
-5. Reportar ao Flavio: versão, versionCode/build, links das execuções e que as lojas publicam quando Google e Apple aprovarem.
-6. Se falhar: `gh run view <id> --repo flaviobarbosac/conora-front --log-failed`, explicar e corrigir. Republicar sem novo merge: Android `scripts/publish-android.ps1` (ou `-Track internal` para teste); iOS `gh workflow run ios-testflight.yml --repo flaviobarbosac/conora-front --ref main`.
+2. Garantir que `main` tem o código desejado (merge `develop` → `main` se faltar). Bump de `version` no `package.json` só se for release nova e o CI exigir.
+3. Disparar o workflow pedido a partir de `main`:
+   - **Android:** `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-android.ps1` (produção) ou `-Track internal` para teste.
+   - **iOS:** `gh workflow run ios-testflight.yml --repo flaviobarbosac/conora-front --ref main` (opcional `-f submit_for_review=false` só TestFlight).
+4. Acompanhar: `gh run watch <id> --repo flaviobarbosac/conora-front --exit-status`.
+5. Reportar: versão, versionCode/build, link da execução.
+6. Se falhar: `gh run view <id> --repo flaviobarbosac/conora-front --log-failed`, corrigir e republicar.
 
-Limites conhecidos: a revisão das lojas é humana (podem recusar); a Apple só aceita uma versão em revisão por vez — se houver uma submissão recusada pendente de resposta, o envio do iOS falha até ela ser resolvida no App Store Connect.
+Limites: revisão das lojas é humana; a Apple só aceita uma versão em revisão por vez.
 
 Segredos do GitHub: Android `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`,
-`PLAY_SERVICE_ACCOUNT_JSON` (regravar com `scripts/set-android-play-secrets.ps1`; conta `play-publisher@conora-app.iam.gserviceaccount.com`, admin do app no Play Console);
+`PLAY_SERVICE_ACCOUNT_JSON` (regravar com `scripts/set-android-play-secrets.ps1`);
 iOS `IOS_CERTIFICATE_BASE64`, `IOS_PROVISION_PROFILE_BASE64`, `IOS_KEYCHAIN_PASSWORD`, `APP_STORE_CONNECT_API_KEY_*`, `APP_STORE_CONNECT_ISSUER_ID`.
