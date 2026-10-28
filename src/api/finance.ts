@@ -886,6 +886,7 @@ export type FeedbackItem = {
   usuarioNome: string
   modulo: string
   rota?: string | null
+  plataforma: 'Web' | 'iOS' | 'Android' | string
   nota: number
   comentario: string
   createdAt: string
@@ -911,8 +912,13 @@ export type ConsoleFeedbackUsuarioOption = {
 export const feedbackApi = {
   listMine: () => apiFetch<FeedbackItem[]>('/feedback'),
   getMine: (id: string) => apiFetch<FeedbackItem>(`/feedback/${id}`),
-  submit: (payload: { modulo: string; rota?: string | null; nota: number; comentario: string }) =>
-    apiFetch<FeedbackItem>('/feedback', json('POST', payload)),
+  submit: (payload: {
+    modulo: string
+    rota?: string | null
+    plataforma: 'Web' | 'iOS' | 'Android'
+    nota: number
+    comentario: string
+  }) => apiFetch<FeedbackItem>('/feedback', json('POST', payload)),
   markReplyRead: (id: string) => apiFetch<void>(`/feedback/${id}/leitura`, json('POST')),
   listConsole: (params: {
     usuarioId?: string
