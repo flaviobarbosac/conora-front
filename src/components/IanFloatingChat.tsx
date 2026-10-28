@@ -121,7 +121,8 @@ export function IanFloatingChat() {
   return null
 }
 
-function IanFloatingChatDisabled() {
+/** Kept unmounted for a later revive (TS: exported so the body stays reachable). */
+export function IanFloatingChatDisabled() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)

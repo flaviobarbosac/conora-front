@@ -1,7 +1,7 @@
 {
   "name": "conora-frontend",
   "private": true,
-  "version": "26.1.61",
+  "version": "26.1.62",
   "type": "module",
   "scripts": {
     "dev": "vite --port 5175 --strictPort",
