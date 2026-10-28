@@ -1,7 +1,8 @@
 name: Android Google Play
 
-# Publication only. Does not run on push to main or develop.
-# Manual runs choose the track; v* tags publish to internal testing.
+# Publication only, on request: scripts/publish-android.ps1 (or gh workflow run).
+# Always builds what is on main. Default track is production (Brasil, full rollout,
+# sent for review); internal is kept for a quick test build.
 on:
   workflow_dispatch:
     inputs:
@@ -10,16 +11,14 @@ on:
         required: true
         type: choice
         options:
-          - internal
           - production
-        default: internal
+          - internal
+        default: production
       release_notes:
-        description: Release notes (pt-BR). Leave empty to keep Play's default.
+        description: Release notes (pt-BR)
         required: false
         type: string
-  push:
-    tags:
-      - "v*"
+        default: Melhorias e correções.
 
 concurrency:
   group: conora-android-play
@@ -36,6 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -52,23 +53,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Same formula as iOS: version from package.json (or the v* tag), version code
+      # Same formula as iOS: version from package.json, version code
       # = year * 100000 + minor * 1000 + patch + workflow run number.
       # package.json is not rewritten and the bump is not committed.
       - name: Set version for this publication
+        env:
+          TRACK: ${{ inputs.track }}
         run: |
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            VERSION_NAME="${GITHUB_REF_NAME#v}"
-            TRACK="internal"
-          else
-            VERSION_NAME="$(node -p "require('./package.json').version")"
-            TRACK="${{ inputs.track }}"
-          fi
+          VERSION_NAME="$(node -p "require('./package.json').version")"
           IFS='.' read -r YEAR MINOR PATCH <<< "$VERSION_NAME"
           BASE=$((YEAR * 100000 + MINOR * 1000 + PATCH))
           VERSION_CODE=$((BASE + GITHUB_RUN_NUMBER))
-          # build.gradle reads versionName from package.json; align it for tag builds.
-          node -e "const f='package.json',p=require('./'+f);p.version='$VERSION_NAME';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "TRACK=$TRACK" >> "$GITHUB_ENV"
