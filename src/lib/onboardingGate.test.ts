@@ -3,19 +3,19 @@ import { describe, expect, it } from 'vitest'
 import { canCompleteOnboarding } from './onboardingFlow'
 
 describe('onboarding completion gate', () => {
-  it('blocks when phone, cep, account or card is missing', () => {
+  it('blocks when phone, cep or account is missing (card is optional)', () => {
     expect(
       canCompleteOnboarding({ phone: null, cep: null, hasAccount: false, hasCard: false }).missing,
-    ).toEqual(['phone', 'cep', 'account', 'card'])
+    ).toEqual(['phone', 'cep', 'account'])
   })
 
-  it('allows when contact, account and card are present', () => {
+  it('allows when contact and account are present without a card', () => {
     expect(
       canCompleteOnboarding({
         phone: '27999999999',
         cep: '29000-000',
         hasAccount: true,
-        hasCard: true,
+        hasCard: false,
       }).ok,
     ).toBe(true)
   })
