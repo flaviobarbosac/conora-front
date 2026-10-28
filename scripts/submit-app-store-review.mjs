@@ -70,16 +70,53 @@ async function waitForBuild() {
 
 const buildId = await waitForBuild()
 
+// Like request(), but returns null instead of exiting (for optional steps).
+async function tryRequest(method, path, body) {
+  const response = await fetch(`${api}${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  const text = await response.text()
+  if (!response.ok) {
+    console.warn(`${method} ${path} skipped: ${response.status} ${text}`)
+    return null
+  }
+  return text ? JSON.parse(text) : {}
+}
+
+// App Store allows a single editable version. Reuse the one with this version string,
+// else rename the editable one (e.g. a rejected version), else create a new version.
+const editableStates = [
+  'PREPARE_FOR_SUBMISSION',
+  'DEVELOPER_REJECTED',
+  'REJECTED',
+  'METADATA_REJECTED',
+  'INVALID_BINARY',
+]
 const versions = await request(
   'GET',
-  `/v1/apps/${appId}/appStoreVersions?filter[platform]=IOS&filter[versionString]=${encodeURIComponent(marketingVersion)}&limit=1`,
+  `/v1/apps/${appId}/appStoreVersions?filter[platform]=IOS&limit=20`,
 )
-let versionId = versions.data?.[0]?.id
-if (!versionId) {
+let version = versions.data?.find((v) => v.attributes.versionString === marketingVersion)
+if (!version) {
+  version = versions.data?.find((v) => editableStates.includes(v.attributes.appStoreState))
+}
+let versionId = version?.id
+if (versionId) {
+  // Production: goes live by itself once Apple approves.
+  await request('PATCH', `/v1/appStoreVersions/${versionId}`, {
+    data: {
+      type: 'appStoreVersions',
+      id: versionId,
+      attributes: { versionString: marketingVersion, releaseType: 'AFTER_APPROVAL' },
+    },
+  })
+} else {
   const created = await request('POST', '/v1/appStoreVersions', {
     data: {
       type: 'appStoreVersions',
-      attributes: { platform: 'IOS', versionString: marketingVersion },
+      attributes: { platform: 'IOS', versionString: marketingVersion, releaseType: 'AFTER_APPROVAL' },
       relationships: { app: { data: { type: 'apps', id: appId } } },
     },
   })
@@ -90,24 +127,47 @@ await request('PATCH', `/v1/appStoreVersions/${versionId}/relationships/build`, 
   data: { type: 'builds', id: buildId },
 })
 
-const submission = await request('POST', '/v1/reviewSubmissions', {
-  data: {
-    type: 'reviewSubmissions',
-    attributes: { platform: 'IOS' },
-    relationships: { app: { data: { type: 'apps', id: appId } } },
-  },
-})
-const submissionId = submission.data.id
+// "What's New" is required on updates once a version is live; Apple refuses it before that.
+const whatsNew = process.env.WHATS_NEW || 'Melhorias e correções.'
+const localizations = await tryRequest('GET', `/v1/appStoreVersions/${versionId}/appStoreVersionLocalizations`)
+for (const loc of localizations?.data ?? []) {
+  if (!loc.attributes.whatsNew) {
+    await tryRequest('PATCH', `/v1/appStoreVersionLocalizations/${loc.id}`, {
+      data: { type: 'appStoreVersionLocalizations', id: loc.id, attributes: { whatsNew } },
+    })
+  }
+}
 
-await request('POST', '/v1/reviewSubmissionItems', {
-  data: {
-    type: 'reviewSubmissionItems',
-    relationships: {
-      reviewSubmission: { data: { type: 'reviewSubmissions', id: submissionId } },
-      appStoreVersion: { data: { type: 'appStoreVersions', id: versionId } },
+// Reuse an open draft submission (it may already hold subscriptions), else create one.
+const open = await request(
+  'GET',
+  `/v1/reviewSubmissions?filter[app]=${appId}&filter[platform]=IOS&filter[state]=READY_FOR_REVIEW&limit=1`,
+)
+let submissionId = open.data?.[0]?.id
+if (!submissionId) {
+  const submission = await request('POST', '/v1/reviewSubmissions', {
+    data: {
+      type: 'reviewSubmissions',
+      attributes: { platform: 'IOS' },
+      relationships: { app: { data: { type: 'apps', id: appId } } },
     },
-  },
-})
+  })
+  submissionId = submission.data.id
+}
+
+const items = await request('GET', `/v1/reviewSubmissions/${submissionId}/items?include=appStoreVersion&limit=50`)
+const hasVersion = items.data?.some((i) => i.relationships?.appStoreVersion?.data?.id === versionId)
+if (!hasVersion) {
+  await request('POST', '/v1/reviewSubmissionItems', {
+    data: {
+      type: 'reviewSubmissionItems',
+      relationships: {
+        reviewSubmission: { data: { type: 'reviewSubmissions', id: submissionId } },
+        appStoreVersion: { data: { type: 'appStoreVersions', id: versionId } },
+      },
+    },
+  })
+}
 
 await request('PATCH', `/v1/reviewSubmissions/${submissionId}`, {
   data: {
@@ -117,4 +177,4 @@ await request('PATCH', `/v1/reviewSubmissions/${submissionId}`, {
   },
 })
 
-console.log(`Submitted ${marketingVersion} (${buildNumber}) for App Store review.`)
+console.log(`Submitted ${marketingVersion} (${buildNumber}) for App Store review; releases automatically after approval.`)

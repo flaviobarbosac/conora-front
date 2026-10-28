@@ -29,3 +29,24 @@ jobs:
           npm run lint
           npm run test
           npm run build
+
+  # Every develop -> main merge publishes iOS and Android to production, and both
+  # stores refuse a version that is not newer, so the PR must bump package.json.
+  version-bump:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require a newer version than main
+        run: |
+          HEAD_VERSION="$(node -p "require('./package.json').version")"
+          MAIN_VERSION="$(git show origin/main:package.json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")"
+          code() { IFS='.' read -r Y M P <<< "$1"; echo $((Y * 100000 + M * 1000 + P)); }
+          echo "main: $MAIN_VERSION  ->  PR: $HEAD_VERSION"
+          if [ "$(code "$HEAD_VERSION")" -le "$(code "$MAIN_VERSION")" ]; then
+            echo "::error file=package.json::Bump \"version\" in package.json above $MAIN_VERSION (e.g. chore: bump version to ...). Merging into main publishes iOS and Android to production."
+            exit 1
+          fi

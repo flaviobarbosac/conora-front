@@ -3,11 +3,12 @@
   Publishes the Conora Android app to Google Play from what is on main.
 
 .DESCRIPTION
-  Triggers the "Android Google Play" workflow (.github/workflows/android-play.yml) on main
-  and waits for it. Default track is production (Brasil, full rollout, sent for review).
-  If develop has commits that are not on main, it stops and lists them, unless
-  -MergeDevelop is passed: then it opens/merges the develop -> main PR first
-  (that merge also deploys the web front, like any merge into main).
+  Every merged develop -> main PR already publishes Android and iOS to production by itself.
+  This script is for publishing on request: it triggers the "Android Google Play" workflow
+  (.github/workflows/android-play.yml) on main and waits for it. Default track is production
+  (Brasil, full rollout, sent for review). If develop has commits that are not on main, it
+  stops and lists them, unless -MergeDevelop is passed: then it opens/merges the
+  develop -> main PR (which publishes web, Android and iOS) and watches the Android run.
 
 .EXAMPLE
   .\scripts\publish-android.ps1
@@ -29,6 +30,9 @@ $Workflow = 'android-play.yml'
 gh auth status *> $null
 if ($LASTEXITCODE -ne 0) { throw 'GitHub CLI is not logged in. Run: gh auth login' }
 
+$before = gh run list --repo $Repo --workflow $Workflow --limit 1 --json databaseId --jq '.[0].databaseId'
+$merged = $false
+
 # Commits on develop that main does not have yet.
 $ahead = gh api "repos/$Repo/compare/main...develop" --jq '.commits[] | .sha[0:7] + " " + (.commit.message | split("\n")[0])'
 if ($ahead) {
@@ -44,17 +48,23 @@ if ($ahead) {
     }
     Write-Host "Merging PR #$pr (develop -> main)..." -ForegroundColor Cyan
     gh pr merge $pr --repo $Repo --merge
-    if ($LASTEXITCODE -ne 0) { throw "Could not merge PR #$pr. Check required checks/conflicts." }
+    if ($LASTEXITCODE -ne 0) { throw "Could not merge PR #$pr. Check required checks/conflicts (package.json version must be above main)." }
+    $merged = $true
 }
 
 $version = gh api "repos/$Repo/contents/package.json?ref=main" --jq '.content' |
     ForEach-Object { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(($_ -replace '\s', ''))) } |
     ConvertFrom-Json | Select-Object -ExpandProperty version
-Write-Host "Publishing Conora $version (main) to Google Play track '$Track'..." -ForegroundColor Cyan
 
-$before = gh run list --repo $Repo --workflow $Workflow --limit 1 --json databaseId --jq '.[0].databaseId'
-gh workflow run $Workflow --repo $Repo --ref main -f "track=$Track" -f "release_notes=$Notes"
-if ($LASTEXITCODE -ne 0) { throw 'Could not start the workflow.' }
+if ($merged) {
+    # The develop -> main merge itself starts the production publication (Android and iOS).
+    $Track = 'production'
+    Write-Host "Merge started the production publication of Conora $version (Android and iOS)." -ForegroundColor Cyan
+} else {
+    Write-Host "Publishing Conora $version (main) to Google Play track '$Track'..." -ForegroundColor Cyan
+    gh workflow run $Workflow --repo $Repo --ref main -f "track=$Track" -f "release_notes=$Notes"
+    if ($LASTEXITCODE -ne 0) { throw 'Could not start the workflow.' }
+}
 
 # Wait for the new run to show up.
 $runId = $null
