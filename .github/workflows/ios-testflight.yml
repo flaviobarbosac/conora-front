@@ -1,11 +1,8 @@
 name: iOS TestFlight
 
-# Runs when a develop -> main PR is merged (production release, sent to App Store
-# review and released automatically after approval), or manually / on v* tags.
+# Manual only (gh workflow run / Cursor when Flavio asks) or on v* tags.
+# Does NOT run on develop -> main merge (web deploy stays separate).
 on:
-  pull_request:
-    types: [closed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       submit_for_review:
@@ -26,12 +23,11 @@ permissions:
 
 jobs:
   testflight:
-    if: github.event_name != 'pull_request' || (github.event.pull_request.merged == true && github.head_ref == 'develop')
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+          ref: ${{ github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
