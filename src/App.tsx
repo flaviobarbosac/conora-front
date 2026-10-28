@@ -3,6 +3,7 @@ import { lazy, useEffect, useState } from 'react'
 import { familyApi } from './api/finance'
 import { listenNativeShare } from './share/receiveShare'
 import { listenAppLinks } from './lib/appLinks'
+import { guestAuthPath } from './lib/deviceIdentity'
 import { useAuth } from './auth/AuthProvider'
 import { isConsoleOperator } from './auth/consoleAccess'
 import { ConfirmDialogHost } from './components/ConfirmDialog'
@@ -70,7 +71,7 @@ function RequireAuth() {
     return null
   }
   if (!session) {
-    return <Navigate to="/login" replace />
+    return <Navigate to={guestAuthPath()} replace />
   }
   return <Outlet />
 }

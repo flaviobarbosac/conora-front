@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
+import { guestAuthPath } from '../lib/deviceIdentity'
 import { AuthLayout } from '../layouts/AuthLayout'
 import { Button } from '../components/ui/Button'
 import styles from './auth.module.css'
@@ -20,7 +21,7 @@ export function WelcomePage() {
     return null
   }
   if (!session) {
-    return <Navigate to="/login" replace />
+    return <Navigate to={guestAuthPath()} replace />
   }
 
   return (

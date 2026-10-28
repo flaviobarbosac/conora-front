@@ -32,7 +32,7 @@ export function AccountForm({ onSaved, title = 'Nova conta', submitLabel = 'Cria
   const banks = useLoad(() => accountsApi.banks(), [])
   const [name, setName] = useState('')
   const [kind, setKind] = useState<AccountKind>('Checking')
-  const [bankCode, setBankCode] = useState('021')
+  const [bankCode, setBankCode] = useState('')
   const [agency, setAgency] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
   const [checkDigit, setCheckDigit] = useState('')
@@ -42,7 +42,7 @@ export function AccountForm({ onSaved, title = 'Nova conta', submitLabel = 'Cria
     'account-form',
     name.trim() !== '' ||
       kind !== 'Checking' ||
-      bankCode !== '021' ||
+      bankCode !== '' ||
       agency.trim() !== '' ||
       accountNumber.trim() !== '' ||
       checkDigit.trim() !== '',
@@ -50,6 +50,10 @@ export function AccountForm({ onSaved, title = 'Nova conta', submitLabel = 'Cria
 
   async function submit(event: FormEvent) {
     event.preventDefault()
+    if (needsBank && !bankCode) {
+      action.setError('Selecione o banco.')
+      return
+    }
     if (
       await action.run(() =>
         accountsApi.create({
@@ -65,7 +69,7 @@ export function AccountForm({ onSaved, title = 'Nova conta', submitLabel = 'Cria
       showSaveToast('Conta criada.')
       setName('')
       setKind('Checking')
-      setBankCode('021')
+      setBankCode('')
       setAgency('')
       setAccountNumber('')
       setCheckDigit('')
@@ -114,6 +118,8 @@ export function AccountForm({ onSaved, title = 'Nova conta', submitLabel = 'Cria
               label="Agência"
               name="agency"
               required
+              inputMode="numeric"
+              autoComplete="off"
               value={agency}
               onChange={(event) => setAgency(event.target.value.replace(/[^\d-]/g, ''))}
             />
@@ -121,6 +127,8 @@ export function AccountForm({ onSaved, title = 'Nova conta', submitLabel = 'Cria
               label="Número da conta"
               name="accountNumber"
               required
+              inputMode="numeric"
+              autoComplete="off"
               value={accountNumber}
               onChange={(event) => setAccountNumber(event.target.value.replace(/[^\d]/g, ''))}
             />
@@ -138,7 +146,10 @@ export function AccountForm({ onSaved, title = 'Nova conta', submitLabel = 'Cria
           <ErrorText message={action.error ?? banks.error} />
         </div>
         <div className={styles.formActions}>
-          <Button type="submit" disabled={action.busy || (needsBank && banks.loading)}>
+          <Button
+            type="submit"
+            disabled={action.busy || (needsBank && (banks.loading || !bankCode))}
+          >
             {submitLabel}
           </Button>
         </div>

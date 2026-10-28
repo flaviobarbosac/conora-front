@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
+import { hasKnownAccount, markKnownAccount } from '../lib/deviceIdentity'
 import { isDarkTheme } from '../theme/themes'
 import { useTheme } from '../theme/ThemeProvider'
 import { Button } from './ui/Button'
@@ -9,23 +10,18 @@ const MIN_MS_FIRST = 2240
 const MIN_MS_RETURN = 800
 const SLOW_MS = 8400
 const FAIL_MS = 22400
-const SEEN_KEY = 'conora.seenHome'
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-function hasSeenHome(): boolean {
-  return Boolean(localStorage.getItem(SEEN_KEY) ?? localStorage.getItem('onra.seenHome'))
-}
-
 type Phase = 'loading' | 'slow' | 'error' | 'leaving' | 'done'
 
 export function Splash({ onFinished }: { onFinished: () => void }) {
-  const { session } = useAuth()
+  const { session, authReady } = useAuth()
   const { theme } = useTheme()
   const reduced = prefersReducedMotion()
-  const firstVisit = !hasSeenHome()
+  const firstVisit = !hasKnownAccount()
   const minMs = firstVisit ? MIN_MS_FIRST : MIN_MS_RETURN
   const [phase, setPhase] = useState<Phase>('loading')
   const [progress, setProgress] = useState(reduced ? 1 : 0)
@@ -67,17 +63,18 @@ export function Splash({ onFinished }: { onFinished: () => void }) {
     if (phase === 'error' || phase === 'leaving' || phase === 'done') {
       return
     }
-    if (animationDone) {
+    // Wait for session restore so the next screen is already the right one (app / login / register).
+    if (animationDone && authReady) {
       setPhase('leaving')
     }
-  }, [animationDone, phase])
+  }, [animationDone, authReady, phase])
 
   useEffect(() => {
     if (phase !== 'leaving') {
       return
     }
     if (session) {
-      localStorage.setItem(SEEN_KEY, '1')
+      markKnownAccount()
     }
     const hold = reduced ? 0 : firstVisit ? 1232 : 320
     const timer = window.setTimeout(() => {

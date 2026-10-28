@@ -9,8 +9,6 @@ import {
   restoreSession,
   type AuthResponse,
 } from '../api/client'
-import { isNativeApp } from '../lib/platform'
-
 type Session = {
   email: string
 }
@@ -33,8 +31,9 @@ function sessionFromAuth(auth: AuthResponse): Session {
   return { email: auth.email }
 }
 
-function needsNativeRestore(): boolean {
-  return isNativeApp() && !getAccessToken() && Boolean(getRefreshToken())
+/** Web and native: rebuild access from refresh before the splash ends. */
+function needsSessionRestore(): boolean {
+  return !getAccessToken() && Boolean(getRefreshToken())
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -42,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = getAccessToken()
     return token ? { email: emailFromAccessToken(token) } : null
   })
-  const [authReady, setAuthReady] = useState(() => !needsNativeRestore())
+  const [authReady, setAuthReady] = useState(() => !needsSessionRestore())
 
   useEffect(() => {
     if (authReady) {
