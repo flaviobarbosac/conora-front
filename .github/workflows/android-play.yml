@@ -1,12 +1,9 @@
 name: Android Google Play
 
-# Runs when a develop -> main PR is merged (production), or on request:
-# scripts/publish-android.ps1 (or gh workflow run). Always builds what is on main.
-# Production = Brasil, full rollout, sent for review; internal is kept for a quick test build.
+# Manual only: scripts/publish-android.ps1 or gh workflow run. Always builds main.
+# Production = Brasil, full rollout, sent for review; internal is for a quick test build.
+# Does NOT run on develop -> main merge (web deploy stays separate).
 on:
-  pull_request:
-    types: [closed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       track:
@@ -35,12 +32,11 @@ env:
 
 jobs:
   play:
-    if: github.event_name != 'pull_request' || (github.event.pull_request.merged == true && github.head_ref == 'develop')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha || 'main' }}
+          ref: main
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -149,7 +145,7 @@ jobs:
           retention-days: 30
 
       - name: Write release notes
-        if: github.event_name == 'pull_request' || inputs.release_notes != ''
+        if: inputs.release_notes != ''
         env:
           RELEASE_NOTES: ${{ inputs.release_notes || 'Melhorias e correções.' }}
         run: |
