@@ -1,10 +1,24 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { authApi } from '../api/client'
+import { authApi, getAccessToken, type AuthResponse } from '../api/client'
 import { useAuth } from '../auth/AuthProvider'
 import { AuthLayout } from '../layouts/AuthLayout'
-import { AppHandoff, useAppHandoff } from '../lib/appLinks'
+import { AppHandoff, consumeAppLinkRoute, useAppHandoff } from '../lib/appLinks'
 import styles from './auth.module.css'
+
+/** One in-flight/completed verify per token (Strict Mode + double deep-link). */
+const verifyByToken = new Map<string, Promise<AuthResponse>>()
+
+function verifyEmailOnce(token: string): Promise<AuthResponse> {
+  const existing = verifyByToken.get(token)
+  if (existing) return existing
+  const pending = authApi.verifyEmail(token)
+  verifyByToken.set(token, pending)
+  pending.catch(() => {
+    // Allow a later retry only after a hard failure (network); invalid token stays cached.
+  })
+  return pending
+}
 
 export function VerifyEmailPage() {
   const navigate = useNavigate()
@@ -14,34 +28,46 @@ export function VerifyEmailPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(true)
   const { handoff, url, continueInBrowser } = useAppHandoff('validar-email')
-  const started = useRef(false)
+
+  function goLogin(event?: { preventDefault: () => void }) {
+    event?.preventDefault()
+    if (token) {
+      consumeAppLinkRoute(`/validar-email?token=${encodeURIComponent(token)}`)
+    }
+    navigate('/login', { replace: true })
+  }
 
   useEffect(() => {
-    // The token is single-use: keep it for the app until the user picks the browser.
+    // Keep the token for the app until the user picks Continuar no navegador.
     if (handoff) return
-    if (started.current) return
-    started.current = true
     let cancelled = false
+
     async function run() {
       if (!token) {
         setError('Link inválido. Peça outro ao tentar entrar.')
         setBusy(false)
         return
       }
+
+      consumeAppLinkRoute(`/validar-email?token=${encodeURIComponent(token)}`)
+
       try {
-        const auth = await authApi.verifyEmail(token)
+        const auth = await verifyEmailOnce(token)
         if (cancelled) return
-        // SPA navigation keeps the session in memory — critical on iOS TestFlight where a full
-        // reload can race authReady and drop the user on /login instead of bem-vindo.
         acceptSession(auth)
         navigate('/bem-vindo', { replace: true })
       } catch (caught) {
-        if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : 'Não foi possível validar o e-mail.')
-          setBusy(false)
+        if (cancelled) return
+        // First open may have already logged the person in (double deep-link / Strict Mode).
+        if (getAccessToken()) {
+          navigate('/bem-vindo', { replace: true })
+          return
         }
+        setError(caught instanceof Error ? caught.message : 'Não foi possível validar o e-mail.')
+        setBusy(false)
       }
     }
+
     void run()
     return () => {
       cancelled = true
@@ -56,7 +82,9 @@ export function VerifyEmailPage() {
       subtitle={busy ? 'Confirmando seu endereço…' : 'Não foi possível concluir a validação.'}
       footer={
         <>
-          <Link to="/login">Voltar ao login</Link>
+          <Link to="/login" replace onClick={goLogin}>
+            Voltar ao login
+          </Link>
         </>
       }
     >
