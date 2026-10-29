@@ -90,7 +90,7 @@ export function useAppHandoff(page: AppLinkPage) {
   const token = (searchParams.get('token') ?? '').trim()
   // Caddy serves a static handoff for these URLs unless ?web=1 (explicit browser).
   const forceWeb = searchParams.get('web') === '1'
-  const [handoff, setHandoff] = useState(() => !isNativeApp() && !!token && !forceWeb)
+  const [handoff] = useState(() => !isNativeApp() && !!token && !forceWeb)
   const url = appUrl(page, token)
 
   useEffect(() => {
