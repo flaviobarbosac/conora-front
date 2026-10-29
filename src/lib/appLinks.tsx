@@ -6,10 +6,11 @@ import { AuthLayout } from '../layouts/AuthLayout'
 import styles from '../pages/auth.module.css'
 import { isNativeApp } from './platform'
 
-/** E-mail link pages the app can open through the conora:// scheme. */
+/** E-mail link pages the app can open through HTTPS App/Universal Links or conora://. */
 export type AppLinkPage = 'validar-email' | 'redefinir-senha'
 
 const APP_LINK_PAGES: readonly string[] = ['validar-email', 'redefinir-senha'] satisfies AppLinkPage[]
+const APP_LINK_HOSTS = new Set(['conora.com.br', 'www.conora.com.br'])
 
 /** Same cold-start URL must not re-route after Voltar ao login / second appUrlOpen. */
 const handledAppRoutes = new Set<string>()
@@ -18,13 +19,32 @@ function appUrl(page: AppLinkPage, token: string): string {
   return `conora://${page}?token=${encodeURIComponent(token)}`
 }
 
-/** Maps conora://validar-email?token=… to the in-app route, or null for other URLs. */
+function pageFromPath(pathname: string): AppLinkPage | null {
+  const trimmed = pathname.replace(/\/+$/, '')
+  const match = trimmed.match(/^\/app\/([^/]+)$/)
+  const page = match?.[1]
+  return page && APP_LINK_PAGES.includes(page) ? (page as AppLinkPage) : null
+}
+
+/** Maps conora://… or https://conora.com.br/app/…?token=… to the in-app route. */
 export function appLinkRoute(url: string): string | null {
   try {
     const parsed = new URL(url)
-    if (parsed.protocol !== 'conora:' || !APP_LINK_PAGES.includes(parsed.host)) return null
     const token = parsed.searchParams.get('token')
-    return token ? `/${parsed.host}?token=${encodeURIComponent(token)}` : null
+    if (!token) return null
+
+    if (parsed.protocol === 'conora:') {
+      if (!APP_LINK_PAGES.includes(parsed.host)) return null
+      return `/${parsed.host}?token=${encodeURIComponent(token)}`
+    }
+
+    if (parsed.protocol === 'https:' && APP_LINK_HOSTS.has(parsed.hostname)) {
+      const page = pageFromPath(parsed.pathname)
+      if (!page) return null
+      return `/${page}?token=${encodeURIComponent(token)}`
+    }
+
+    return null
   } catch {
     return null
   }
@@ -35,7 +55,7 @@ export function consumeAppLinkRoute(route: string): void {
   handledAppRoutes.add(route)
 }
 
-/** Native app: routes e-mail links opened through conora:// (cold start and while running). */
+/** Native app: routes e-mail links (HTTPS + conora://) on cold start and while running. */
 export function listenAppLinks(onRoute: (route: string) => void): () => void {
   if (!isNativeApp()) return () => {}
   let cancelled = false
@@ -61,8 +81,8 @@ export function listenAppLinks(onRoute: (route: string) => void): () => void {
 }
 
 /**
- * The API adds app=1 to links for accounts that asked from the app. In a browser, offer
- * the app first so the token is used there; the user can still continue on the web.
+ * Fallback when a HTTPS e-mail link opens in the browser instead of the app
+ * (App/Universal Link not claimed yet). Offers conora:// handoff.
  */
 export function useAppHandoff(page: AppLinkPage) {
   const [searchParams] = useSearchParams()
