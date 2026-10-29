@@ -5,7 +5,7 @@ import { Field } from '../components/ui/Field'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
 import help from './HelpPage.module.css'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 const FEATURED_MODULE_KEY = 'membros'
 

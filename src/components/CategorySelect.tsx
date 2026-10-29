@@ -250,7 +250,10 @@ export function CategorySelect({
                             if (!locked) selectValue(account.id)
                           }}
                         >
-                          {account.name}
+                          <span>{account.name}</span>
+                          {locked ? (
+                            <span className={styles.optionLockHint}>Liberado nos planos pagos</span>
+                          ) : null}
                         </button>
                       </li>
                     )

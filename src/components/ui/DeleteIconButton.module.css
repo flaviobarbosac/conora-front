@@ -1,3 +1,18 @@
 .button {
   color: var(--danger);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+:global(.actions) .button {
+  flex: 0 0 auto;
+  margin-left: auto;
 }

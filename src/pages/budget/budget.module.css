@@ -1,0 +1,356 @@
+.budgetTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-md);
+}
+
+.budgetTable th,
+.budgetTable td {
+  padding: 8px 6px;
+  border-top: 1px solid var(--border-subtle);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.budgetTable th {
+  color: var(--text-muted);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.budgetTable .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.budgetRowActual {
+  background: color-mix(in srgb, var(--color-ok, #2f9e44) 10%, transparent);
+}
+
+.budgetRowPlanned {
+  background: color-mix(in srgb, var(--color-info, #385387) 8%, transparent);
+}
+
+.budgetAccountLink {
+  color: inherit;
+  text-decoration: none;
+  font-weight: var(--weight-semibold);
+}
+
+.budgetAccountLink:hover {
+  text-decoration: underline;
+}
+
+.budgetRowFocus {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.budgetSaveBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.budgetSaveBar p {
+  margin: 0;
+}
+
+.budgetSaveActions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.budgetSpread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.budgetSpreadBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+}
+
+.budgetSpreadBlock p {
+  margin: var(--space-1) 0 0;
+}
+
+.budgetSpreadTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.budgetSpreadBlock :global(button) {
+  align-self: flex-start;
+}
+
+.budgetSheet {
+  width: min(100%, 32rem);
+  max-height: min(92vh, 48rem);
+  padding: var(--space-5);
+}
+
+.budgetSheet .budgetSpreadBlock {
+  padding: var(--space-3);
+  gap: var(--space-2);
+}
+
+.budgetSheet .sectionTitle {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.budgetSheet :global(input[inputmode='numeric']),
+.budgetSheet :global(input[inputmode='decimal']) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 44px;
+}
+
+.budgetResult {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.budgetResult li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.budgetResult li span:last-child {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.budgetRow {
+  grid-template-columns:
+    2rem
+    minmax(8rem, 1fr)
+    calc(var(--money-field-w) + 2.5rem + var(--space-2) + 4.5rem + var(--space-4));
+  min-width: calc(
+    2rem + 8rem + var(--money-field-w) + 2.5rem + var(--space-2) + 4.5rem + 2 * var(--space-4) + var(--space-3)
+  );
+}
+
+.budgetRow .budgetTotals {
+  grid-template-columns: calc(var(--money-field-w) + 2.5rem + var(--space-2)) 4.5rem;
+  gap: var(--space-4);
+  align-items: center;
+  justify-items: end;
+}
+
+.budgetPlannedCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.budgetSpreadIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.budgetSpreadIcon:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.budgetDayField {
+  width: 4.5rem;
+  min-width: 4.5rem;
+  max-width: 4.5rem;
+  flex: 0 0 4.5rem;
+}
+
+.budgetDayField :global(input[inputmode='numeric']) {
+  width: 4.5rem;
+  min-width: 4.5rem;
+  max-width: 4.5rem;
+  padding-inline: var(--space-2);
+  text-align: center;
+}
+
+.budgetValueTrigger,
+.budgetDayTrigger {
+  display: block;
+  width: 100%;
+  height: 1.5rem;
+  min-height: 1.5rem;
+  margin: 0;
+  padding-inline: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  line-height: 1.5rem;
+}
+
+.budgetDayTrigger {
+  padding-inline: 0;
+  text-align: center;
+}
+
+.budgetValueTrigger:disabled,
+.budgetDayTrigger:disabled {
+  opacity: 0.6;
+}
+
+@media (max-width: 379px) {
+  .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxTotals,
+  .raioxHead:not(.budgetRow) .raioxTotals {
+    grid-template-columns: 4.15rem 4.15rem 1.9rem;
+    font-size: 0.5625rem;
+    gap: 1px;
+  }
+
+  .budgetRow {
+    grid-template-columns: 1.35rem minmax(0, 1fr) max-content;
+    gap: 4px;
+  }
+
+  .budgetRow .budgetTotals,
+  .budgetRow .budgetTotalsHead {
+    grid-template-columns: 4.15rem 1.9rem;
+    font-size: 0.5625rem;
+    gap: 1px;
+  }
+}
+
+@media (pointer: coarse) {
+  .categoriesIconBtn,
+  .budgetSpreadIcon {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  @media (max-width: 719px) {
+    .budgetRow .budgetSpreadIcon {
+      width: 1.5rem;
+      height: 1.5rem;
+      min-width: 1.5rem;
+      min-height: 1.5rem;
+    }
+  }
+}
+
+.budgetGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.budgetGroupToggle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) 0;
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.budgetGroupToggle:hover strong {
+  color: var(--primary);
+}
+
+.budgetGroupChevron {
+  flex-shrink: 0;
+  width: 1.25rem;
+  font-weight: var(--weight-semibold);
+  color: var(--text-muted);
+}
+
+.budgetGroupMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.budgetGroupBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: var(--space-2);
+}
+
+.budgetAccountName {
+  display: block;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.budgetAccountName:hover strong {
+  color: var(--primary);
+}
+
+.budgetAccountCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.budgetAccountCell :global(button) {
+  padding: 0;
+  height: auto;
+  min-height: 0;
+  font-size: var(--text-sm);
+}
+
+.budgetAmountWrap {
+  width: 14.5rem;
+  flex-shrink: 0;
+}
+
+.budgetAmountWrap :global(input) {
+  width: 100%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

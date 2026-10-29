@@ -4,7 +4,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
 import { formatDate } from '../lib/format'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 export function AdminPage() {
   const events = useLoad(() => auditApi.list(undefined, undefined, 0, 50), [])
@@ -12,7 +12,7 @@ export function AdminPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="Operação" />
+      <PageHeader title="Operação" kicker="Console" />
       <p className={styles.muted}>
         Eventos de auditoria do workspace e saúde da API. Feedback dos usuários fica no console
         administrativo.

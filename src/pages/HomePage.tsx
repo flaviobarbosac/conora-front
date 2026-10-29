@@ -19,7 +19,10 @@ import {
   readHomeJourneyTimeline,
   writeHomeJourneyTimeline,
 } from '../lib/preferences'
-import styles from './page.module.css'
+import { isVoiceMicActive } from '../lib/voiceLaunch'
+import pageStyles from './pageStyles'
+import homeStyles from './home/home.module.css'
+const styles = { ...pageStyles, ...homeStyles }
 
 function firstName(fullName: string | undefined): string {
   const trimmed = fullName?.trim()
@@ -62,9 +65,11 @@ export function HomePage() {
   }
 
   function openVoice() {
-    // Ian mic / voice-listen is disabled on all platforms; keep the entry point, do not open the session.
     setVoiceError(null)
-    return
+    if (!isVoiceMicActive(profile.data?.voiceEntryConfirm)) {
+      return
+    }
+    window.dispatchEvent(new Event('conora:open-voice'))
   }
 
   function closeJourney() {
@@ -96,7 +101,13 @@ export function HomePage() {
       ) : null}
 
       <section className={styles.homeLaunch} aria-label="Lançamento">
-        <HomeLaunchO listening={false} onScan={openScan} onVoice={openVoice} onManual={openManual} />
+        <HomeLaunchO
+          listening={false}
+          voiceEnabled={isVoiceMicActive(profile.data?.voiceEntryConfirm)}
+          onScan={openScan}
+          onVoice={openVoice}
+          onManual={openManual}
+        />
       </section>
 
       {showJourney ? (

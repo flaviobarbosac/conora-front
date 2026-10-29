@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { Button } from '../components/ui/Button'
 import { consumeIncomingShare } from '../share/receiveShare'
 import { peekPendingShare, setPendingShare, takePendingShare, type PendingShare } from '../share/pendingShare'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 export function ShareTargetPage() {
   const navigate = useNavigate()

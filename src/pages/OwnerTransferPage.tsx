@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useAction } from '../hooks/useAction'
 import { showSaveToast } from '../lib/saveToast'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 export function OwnerTransferPage() {
   const { token = '' } = useParams()
@@ -24,7 +24,7 @@ export function OwnerTransferPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="Assumir orçamento familiar" />
+      <PageHeader title="Assumir orçamento familiar" backTo={{ to: '/membros', label: '← Membros' }} />
       <ErrorText message={action.error} />
       {action.busy ? <Loading /> : null}
       <section className={styles.section}>

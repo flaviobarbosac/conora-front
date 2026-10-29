@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { Tone } from '../../lib/severity'
-import styles from '../../pages/page.module.css'
+import styles from '../../pages/pageStyles'
 
 export function ErrorText({ message }: { message: string | null }) {
   return message ? (

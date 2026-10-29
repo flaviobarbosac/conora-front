@@ -1,0 +1,256 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+  max-width: 1040px;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.header h1 {
+  font-size: var(--text-h1);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+.kicker {
+  display: block;
+  font-size: var(--text-base);
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.quickActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.quickChip {
+  height: 40px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-md);
+  gap: var(--space-2);
+}
+
+.emptyCard {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-7) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.emptyCard h2 {
+  margin: 0;
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+}
+
+.alertList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.alertRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+}
+
+.alertRow:last-child {
+  margin-bottom: 0;
+}
+
+.alertIcon {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: inherit;
+}
+
+.skeleton {
+  border-radius: var(--radius-xl);
+  background: linear-gradient(90deg, var(--border-subtle) 0%, var(--surface) 50%, var(--border-subtle) 100%);
+  background-size: 200% 100%;
+  animation: skeletonPulse 1.2s ease-in-out infinite;
+}
+
+.grid2,
+.grid3 {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.grid2,
+.grid3 {
+  grid-template-columns: 1fr;
+}
+
+.stat {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 22px var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stat span {
+  font-size: var(--text-md);
+  color: var(--text-muted);
+}
+
+.stat strong {
+  font-size: clamp(1rem, 3vw + 0.45rem, var(--text-h2));
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.rowLink {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.rowLink:last-child {
+  border-bottom: 0;
+}
+
+.rowLink:hover strong {
+  color: var(--primary);
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.rowMain:disabled {
+  cursor: default;
+}
+
+.rowMain strong {
+  font-weight: var(--weight-medium);
+}
+
+.rowSub {
+  font-size: var(--text-md);
+  color: var(--text-muted);
+}
+
+.rowEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.amount {
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.moneyValue {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(0.85rem, 2.8vw + 0.35rem, 1em);
+  line-height: 1.2;
+}
+
+.header {
+  align-items: flex-start;
+}
+
+.actions {
+  width: 100%;
+}
+
+.actions :global(button),
+.actions :global(select) {
+  flex: 1 1 auto;
+}
+
+.row {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.rowEnd {
+  justify-content: flex-start;
+}

@@ -12,7 +12,7 @@ import { useLoad } from '../hooks/useLoad'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import { currentCompetence, formatMoney, parseMoney } from '../lib/format'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 function amountOrZero(text: string): number {
   return text.trim() ? parseMoney(text) : 0
@@ -35,7 +35,11 @@ export function DiagnosisPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="Diagnóstico" actions={<CompetencePicker value={ym} onChange={setYm} />} />
+      <PageHeader
+        title="Diagnóstico"
+        backTo={{ to: '/relatorios', label: '← Relatórios' }}
+        actions={<CompetencePicker value={ym} onChange={setYm} />}
+      />
       <ErrorText message={diagnosis.error ?? remove.error} />
       {diagnosis.loading && !data ? <Loading /> : null}
       {data ? (

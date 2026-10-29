@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   horizonBadgeClass,
+  horizonCodeOf,
   horizonFillClass,
+  horizonLabelOf,
   isProjectExtrapolated,
   projectFillClass,
 } from './lifeHorizon'
+import type { Category } from '../api/finance'
 
 const styles = {
   progressFill_ok: 'green',
@@ -42,5 +45,29 @@ describe('life project horizon colors', () => {
     expect(isProjectExtrapolated({ accumulatedAmount: 10, goalAmount: 0 })).toBe(false)
     expect(projectFillClass(styles, { horizon: 'short', accumulatedAmount: 150, goalAmount: 100 })).toBe('alert-red')
     expect(projectFillClass(styles, { horizon: 'long', accumulatedAmount: 150, goalAmount: 100 })).toBe('alert-red')
+    expect(projectFillClass(styles, { horizon: null, accumulatedAmount: 10, goalAmount: 100 })).toBe('')
+  })
+
+  it('resolves horizon code/label walking parents', () => {
+    const short = {
+      id: 's',
+      parentId: null,
+      name: 'Curto',
+      code: 'LIFE_SHORT',
+      level: 'Group',
+      section: 'LifeProject',
+    } as Category
+    const child = {
+      id: 'c',
+      parentId: 's',
+      name: 'Viagem',
+      code: null,
+      level: 'Analytical',
+      section: 'LifeProject',
+    } as Category
+    expect(horizonCodeOf(null, [short, child])).toBeNull()
+    expect(horizonCodeOf('c', [short, child])).toBe('LIFE_SHORT')
+    expect(horizonLabelOf('c', [short, child])).toMatch(/curto|Curto|prazo/i)
+    expect(horizonCodeOf('missing', [short, child])).toBeNull()
   })
 })

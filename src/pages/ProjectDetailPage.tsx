@@ -31,7 +31,9 @@ import {
   LIFE_HORIZONS,
   projectFillClass,
 } from '../lib/lifeHorizon'
-import styles from './page.module.css'
+import pageStyles from './pageStyles'
+import cadastroStyles from './cadastros/cadastros.module.css'
+const styles = { ...pageStyles, ...cadastroStyles }
 
 function ymFromIso(iso: string | null | undefined): string {
   return iso?.slice(0, 7) ?? ''
@@ -62,16 +64,15 @@ export function ProjectDetailPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        kicker="Metas"
+        kicker="Cadastros"
         title={data?.name ?? 'Projeto'}
         actions={
-          <>
+          <div className={styles.cadastroDetailActions}>
             {!canWrite ? <PaidModuleBadge /> : null}
-            <Button variant="secondary" onClick={() => navigate('/projetos')}>
-              Voltar ao dashboard
-            </Button>
-            {canWrite && data?.isOwner ? <DeleteIconButton onClick={() => void removeProject()} /> : null}
-          </>
+            {canWrite && data?.isOwner ? (
+              <DeleteIconButton className={styles.cadastroDetailDelete} onClick={() => void removeProject()} />
+            ) : null}
+          </div>
         }
       />
       <ErrorText message={project.error ?? remove.error} />
@@ -81,8 +82,7 @@ export function ProjectDetailPage() {
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <span className={styles.rowMain}>
-                <strong>
-                  {data.name}{' '}
+                <span className={styles.cadastroBadgeRow}>
                   <Badge tone={data.scope === 'Group' ? 'info' : 'ok'}>
                     {data.scope === 'Group' ? 'Família' : 'Pessoal'}
                   </Badge>
@@ -92,10 +92,10 @@ export function ProjectDetailPage() {
                   {isProjectExtrapolated(data) ? (
                     <span className={`${styles.badge} ${styles.badge_danger}`}>Acima da meta</span>
                   ) : null}
-                </strong>
+                </span>
                 <span className={styles.rowSub}>
-                  {`Valor original ${formatMoney(data.goalAmount)} · Valor atualizado ${formatMoney(Math.max(0, data.goalAmount - data.accumulatedAmount))}`}
-                  {` · prazo ${formatDate(data.dueDate)}`}
+                  {`Meta ${formatMoney(data.goalAmount)} · Restante ${formatMoney(Math.max(0, data.goalAmount - data.accumulatedAmount))}`}
+                  {` · até ${formatDate(data.dueDate)}`}
                   {data.categoryName ? ` · ${data.categoryName}` : ''}
                 </span>
               </span>
@@ -113,13 +113,15 @@ export function ProjectDetailPage() {
             <ProjectEditForm key={`${data.id}-${data.categoryId}`} data={data} onSaved={() => project.reload()} />
           ) : (
             <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>Descrição detalhada</h2>
-              {data.detailedDescription ? <p>{data.detailedDescription}</p> : <p className={styles.muted}>Sem descrição detalhada.</p>}
+              <h2 className={styles.sectionTitle}>Descrição</h2>
+              {data.detailedDescription ? <p>{data.detailedDescription}</p> : <p className={styles.muted}>Sem descrição.</p>}
             </section>
           )}
 
           <p className={styles.muted}>
-            <Link to="/projetos">← Ver todos os projetos</Link>
+            <Link to="/projetos" className={styles.cadastroDetailBack}>
+              ← Voltar aos projetos
+            </Link>
           </p>
         </>
       ) : null}
@@ -171,7 +173,8 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
     <section className={styles.section}>
       <h2 className={styles.sectionTitle}>Editar projeto</h2>
       <p className={styles.muted}>
-        Meta, prazo, início e conta ficam fixos depois da criação. O previsto no orçamento vem do rateio automático.
+        Meta, prazo, início das parcelas e categoria não podem ser alterados depois da criação. O valor previsto no
+        orçamento vem do rateio automático mensal.
       </p>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
         <div className={styles.formWide}>
@@ -179,7 +182,7 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
         </div>
         <div className={styles.formWide}>
           <TextArea
-            label="Descrição detalhada"
+            label="Descrição"
             name="projectDescription"
             rows={5}
             value={detailedDescription}
@@ -188,21 +191,21 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
           />
         </div>
         <Select
-          label="Escopo"
+          label="Quem vê este projeto"
           name="projectScope"
           value={scope}
           onChange={(event) => setScope(event.target.value as LifeProjectScope)}
         >
-          <option value="Personal">Pessoal</option>
+          <option value="Personal">Só eu (pessoal)</option>
           <option value="Group" disabled={!hasFamilyGroup}>
-            Família{hasFamilyGroup ? '' : ' (entre no grupo primeiro)'}
+            Família{hasFamilyGroup ? '' : ' (entre no grupo familiar primeiro)'}
           </option>
         </Select>
         <Field label="Categoria" name="projectCategoryLocked" value={data.categoryName ?? '—'} disabled readOnly />
         <MoneyField label="Meta (R$)" name="projectGoal" value={formatMoneyInput(data.goalAmount)} disabled onChange={() => undefined} />
         <Field label="Prazo" name="projectDue" type="month" value={ymFromIso(data.dueDate)} disabled readOnly />
         <Field
-          label="Início do rateio"
+          label="Início das parcelas"
           name="projectStart"
           type="month"
           value={data.contributionStartYm}
@@ -211,7 +214,7 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
         />
         {parcel !== null ? (
           <p className={`${styles.muted} ${styles.formWide}`}>
-            Parcela no orçamento: {formatMoney(parcel)}/mês · {months.length}{' '}
+            Parcela prevista no orçamento: {formatMoney(parcel)}/mês · {months.length}{' '}
             {months.length === 1 ? 'mês' : 'meses'} (de {formatCompetence(months[0])} até{' '}
             {formatCompetence(months[months.length - 1])})
           </p>

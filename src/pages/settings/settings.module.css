@@ -1,0 +1,31 @@
+
+
+/* --- extracted from page.module.css --- */
+.settingsForm {
+  align-items: stretch;
+  overflow-x: clip;
+}
+
+.settingsForm .section {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.settingsForm :global(label),
+.settingsForm :global(select),
+.settingsForm :global(input),
+.settingsForm :global(option),
+.settingsForm :global(.hint),
+.settingsForm .sectionTitle {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.settingsForm :global(select),
+.settingsForm :global(input:not([type='checkbox'])) {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}

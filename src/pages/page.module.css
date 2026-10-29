@@ -1,36 +1,9 @@
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  max-width: 1040px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-}
-
-.header h1 {
-  font-size: var(--text-h1);
-  letter-spacing: var(--tracking-tight);
-  line-height: var(--leading-tight);
-}
-
-.kicker {
-  display: block;
-  font-size: var(--text-base);
-  color: var(--text-muted);
-  margin-bottom: var(--space-1);
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
+#raiox-resumo,
+#raiox-previsto,
+#raiox-graficos,
+#raiox-arvore,
+[id^='raiox-account-'] {
+  scroll-margin-top: calc(56px + env(safe-area-inset-top, 0px) + 52px);
 }
 
 /* ---------- Sections and cards ---------- */
@@ -44,20 +17,6 @@
   gap: var(--space-4);
 }
 
-.sectionTitle {
-  font-size: var(--text-h3);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-tight);
-}
-
-.sectionHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
 .hero {
   background: var(--surface);
   border-radius: var(--radius-xl);
@@ -65,6 +24,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .heroTop {
@@ -114,68 +78,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-}
-
-.quickActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-.budgetTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-md);
-}
-
-.budgetTable th,
-.budgetTable td {
-  padding: 8px 6px;
-  border-top: 1px solid var(--border-subtle);
-  text-align: left;
-  vertical-align: middle;
-}
-
-.budgetTable th {
-  color: var(--text-muted);
-  font-weight: var(--weight-semibold);
-  white-space: nowrap;
-}
-
-.budgetTable .num {
-  text-align: right;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.budgetRowActual {
-  background: color-mix(in srgb, var(--color-ok, #2f9e44) 10%, transparent);
-}
-
-.budgetRowPlanned {
-  background: color-mix(in srgb, var(--color-info, #385387) 8%, transparent);
-}
-
-.budgetAccountLink {
-  color: inherit;
-  text-decoration: none;
-  font-weight: var(--weight-semibold);
-}
-
-.budgetAccountLink:hover {
-  text-decoration: underline;
-}
-
-.homeCharts {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.homePieGrid {
-  display: grid;
-  gap: var(--space-3);
-  grid-template-columns: 1fr;
 }
 
 .pieLayout {
@@ -241,169 +143,10 @@
   flex-shrink: 0;
 }
 
-.homeBlocks {
-  display: grid;
-  gap: var(--space-3);
-  grid-template-columns: 1fr;
-}
-
-.homeBlock {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border-radius: var(--radius-lg);
-  background: var(--surface-muted, var(--surface));
-  border: 1px solid var(--border-subtle);
-  color: inherit;
-  text-decoration: none;
-  min-height: 96px;
-}
-
-.homeBlock:hover {
-  border-color: var(--color-primary, #385387);
-}
-
-.homeBlock strong {
-  font-size: var(--text-h3);
-}
-
-.homeBlock span {
-  color: var(--text-muted);
-  font-size: var(--text-base);
-}
-
-.homeBlockProjects {
-  min-height: 168px;
-  gap: var(--space-3);
-}
-
-.homeBlockInsight {
-  min-height: 140px;
-  gap: var(--space-2);
-}
-
-.homeBlockHero {
-  font-size: clamp(1rem, 3vw + 0.45rem, var(--text-h2));
-  font-weight: var(--weight-semibold);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.15;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.homeBlockHint {
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-}
-
-.homeBlockProjectsHead {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: inherit;
-  text-decoration: none;
-}
-
-.homeBlockProjectsHead:hover strong {
-  color: var(--primary);
-}
-
-.homeHorizonList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.homeHorizonRow {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: inherit;
-  text-decoration: none;
-}
-
-.homeHorizonRow:hover strong {
-  color: var(--primary);
-}
-
-.homeHorizonMeta {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-}
-
-.homeHorizonMeta strong {
-  font-size: var(--text-sm);
-}
-
-.homeHorizonAmounts {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.quickChip {
-  height: 40px;
-  padding: 0 var(--space-4);
-  font-size: var(--text-md);
-  gap: var(--space-2);
-}
-
-.emptyCard {
-  background: var(--surface);
-  border-radius: var(--radius-xl);
-  padding: var(--space-7) var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.emptyCard h2 {
-  margin: 0;
-  font-size: var(--text-h3);
-  font-weight: var(--weight-semibold);
-}
-
 .sectionLink {
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
   color: var(--primary);
-}
-
-.alertList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.alertRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-}
-
-.alertRow:last-child {
-  margin-bottom: 0;
-}
-
-.alertIcon {
-  flex-shrink: 0;
-  display: inline-flex;
-  color: inherit;
 }
 
 .alertRow_ok {
@@ -424,13 +167,6 @@
 .alertRow_danger {
   background: var(--danger-bg);
   color: var(--danger);
-}
-
-.skeleton {
-  border-radius: var(--radius-xl);
-  background: linear-gradient(90deg, var(--border-subtle) 0%, var(--surface) 50%, var(--border-subtle) 100%);
-  background-size: 200% 100%;
-  animation: skeletonPulse 1.2s ease-in-out infinite;
 }
 
 .skeletonStack {
@@ -455,42 +191,6 @@
   }
 }
 
-.grid2,
-.grid3 {
-  display: grid;
-  gap: var(--space-5);
-}
-
-.grid2,
-.grid3 {
-  grid-template-columns: 1fr;
-}
-
-.stat {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  padding: 22px var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.stat span {
-  font-size: var(--text-md);
-  color: var(--text-muted);
-}
-
-.stat strong {
-  font-size: clamp(1rem, 3vw + 0.45rem, var(--text-h2));
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-tight);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
 /* ---------- Lists ---------- */
 
 .list {
@@ -499,90 +199,6 @@
   list-style: none;
   margin: 0;
   padding: 0;
-}
-
-.row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.row:last-child {
-  border-bottom: 0;
-}
-
-.rowLink {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--border-subtle);
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-}
-
-.rowLink:last-child {
-  border-bottom: 0;
-}
-
-.rowLink:hover strong {
-  color: var(--primary);
-}
-
-.rowMain {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-}
-
-.rowMain:disabled {
-  cursor: default;
-}
-
-.rowMain strong {
-  font-weight: var(--weight-medium);
-}
-
-.rowSub {
-  font-size: var(--text-md);
-  color: var(--text-muted);
-}
-
-.rowEnd {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.amount {
-  font-weight: var(--weight-semibold);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.moneyValue {
-  display: inline-block;
-  max-width: 100%;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  font-size: clamp(0.85rem, 2.8vw + 0.35rem, 1em);
-  line-height: 1.2;
 }
 
 .positive {
@@ -727,34 +343,6 @@
 }
 
 /** Settings: mold to any viewport; no horizontal letter clipping on labels or options. */
-.settingsForm {
-  align-items: stretch;
-  overflow-x: clip;
-}
-
-.settingsForm .section {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.settingsForm :global(label),
-.settingsForm :global(select),
-.settingsForm :global(input),
-.settingsForm :global(option),
-.settingsForm :global(.hint),
-.settingsForm .sectionTitle {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  white-space: normal;
-}
-
-.settingsForm :global(select),
-.settingsForm :global(input) {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
 
 .formWide {
   grid-column: 1 / -1;
@@ -909,98 +497,21 @@ button.compact {
   background: var(--border-subtle);
 }
 
-.raioxToneOk {
-  color: var(--primary);
-}
-
-.raioxToneOver {
-  color: var(--danger);
-}
-
-.raioxToneMuted {
-  color: var(--text-muted);
-  opacity: 0.75;
-}
-
-.raioxToneUnbudgeted {
-  color: var(--warning);
-  font-weight: var(--weight-semibold);
-}
-
-.raioxPercentLink {
-  margin: 0;
-  padding: var(--space-2) 0;
-  min-height: 44px;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  box-sizing: border-box;
-}
-
-.budgetRowFocus {
-  outline: 2px solid var(--primary);
-  outline-offset: -2px;
-}
-
-.raioxLegend {
+.macroHeadRow {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2) var(--space-3);
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  line-height: 1.4;
-}
-
-.raioxLegendItem {
-  white-space: nowrap;
-}
-
-.raioxLegendSep {
-  color: var(--border);
-}
-
-.raioxLegendMark {
-  font-weight: var(--weight-semibold);
-}
-
-.raioxFocus,
-.raioxFocusIncome {
-  outline: 2px solid var(--primary);
-  outline-offset: -2px;
-  background: var(--selected) !important;
-}
-
-.raioxFocusDiscount,
-.raioxFocusLiability {
-  outline: 2px solid var(--danger);
-  outline-offset: -2px;
-  background: var(--danger-bg) !important;
-}
-
-.raioxFocusAsset {
-  outline: 2px solid var(--success);
-  outline-offset: -2px;
-  background: var(--success-bg) !important;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 
 .heroCards {
   display: grid;
   gap: var(--space-3);
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr));
-}
-
-.heroCardsRaioX {
-  grid-template-columns: 1fr;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .heroCard {
@@ -1066,286 +577,25 @@ button.compact {
   text-overflow: clip;
 }
 
-.periodSlider {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: 1 1 12rem;
-  min-width: 12rem;
-  max-width: 18rem;
-  padding: 0 var(--space-3);
-  height: 36px;
-  background: var(--bg-app);
-  border-radius: var(--radius-md);
-  box-shadow: 0 0 0 1px var(--border-subtle);
-  box-sizing: border-box;
-}
-
-.periodSliderValue {
-  flex: 0 0 auto;
-  min-width: 7.5rem;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.periodSliderEnds {
-  flex: 0 0 auto;
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.periodSlider input[type='range'] {
-  flex: 1 1 auto;
-  min-width: 0;
-  width: auto;
-  height: 36px;
-  margin: 0;
-  accent-color: var(--primary);
-  cursor: pointer;
-}
-
-.periodSlider input[type='range']::-webkit-slider-thumb {
-  width: 20px;
-  height: 20px;
-}
-
-.periodSlider input[type='range']::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
-}
-
-.leakageFilter {
-  flex: 1 0 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 36px;
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--text);
-  cursor: pointer;
-}
-
-.leakageFilter input {
-  width: 1.125rem;
-  height: 1.125rem;
-  margin: 0;
-  accent-color: var(--primary);
-  cursor: pointer;
-}
-
-.budgetSaveBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-}
-
-.budgetSaveBar p {
-  margin: 0;
-}
-
-.budgetSaveActions {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.budgetSpread {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.budgetSpreadBlock {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--bg-app);
-}
-
-.budgetSpreadBlock p {
-  margin: var(--space-1) 0 0;
-}
-
-.budgetSpreadTitle {
-  margin: 0;
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-}
-
-.budgetSpreadBlock :global(button) {
-  align-self: flex-start;
-}
-
-.budgetSheet {
-  width: min(100%, 32rem);
-  max-height: min(92vh, 48rem);
-  padding: var(--space-5);
-}
-
-.budgetSheet .budgetSpreadBlock {
-  padding: var(--space-3);
-  gap: var(--space-2);
-}
-
-.budgetSheet .sectionTitle {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.budgetSheet :global(input[inputmode='numeric']),
-.budgetSheet :global(input[inputmode='decimal']) {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  height: 44px;
-}
-
-.budgetResult {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.budgetResult li {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.budgetResult li span:last-child {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.budgetRow {
-  grid-template-columns:
-    2rem
-    minmax(8rem, 1fr)
-    calc(var(--money-field-w) + 2.5rem + var(--space-2) + 4.5rem + var(--space-4));
-  min-width: calc(
-    2rem + 8rem + var(--money-field-w) + 2.5rem + var(--space-2) + 4.5rem + 2 * var(--space-4) + var(--space-3)
-  );
-}
-
-.budgetRow .budgetTotals {
-  grid-template-columns: calc(var(--money-field-w) + 2.5rem + var(--space-2)) 4.5rem;
-  gap: var(--space-4);
-  align-items: center;
-  justify-items: end;
-}
-
-.budgetPlannedCell {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  width: 100%;
-}
-
-.budgetSpreadIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  flex: 0 0 2.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--primary);
-  cursor: pointer;
-}
-
-.budgetSpreadIcon:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.budgetDayField {
-  width: 4.5rem;
-  min-width: 4.5rem;
-  max-width: 4.5rem;
-  flex: 0 0 4.5rem;
-}
-
-.budgetDayField :global(input[inputmode='numeric']) {
-  width: 4.5rem;
-  min-width: 4.5rem;
-  max-width: 4.5rem;
-  padding-inline: var(--space-2);
-  text-align: center;
-}
-
-.budgetValueTrigger,
-.budgetDayTrigger {
-  display: block;
-  width: 100%;
-  height: 1.5rem;
-  min-height: 1.5rem;
-  margin: 0;
-  padding-inline: 4px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.625rem;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  line-height: 1.5rem;
-}
-
-.budgetDayTrigger {
-  padding-inline: 0;
-  text-align: center;
-}
-
-.budgetValueTrigger:disabled,
-.budgetDayTrigger:disabled {
-  opacity: 0.6;
-}
-
-.raioxBudgetField {
-  width: var(--money-field-w);
-  min-width: var(--money-field-w);
-  max-width: var(--money-field-w);
-  justify-self: end;
-}
-
-.raioxBudgetField :global(input[inputmode='numeric']) {
-  width: var(--money-field-w);
-  min-width: var(--money-field-w);
-  max-width: var(--money-field-w);
-  text-align: right;
-}
-
-
 .macroGrid {
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: 1fr;
+  /* minmax(0,1fr): stop grid min-content from blowing past the padded main column */
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .macroSplit {
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .macroCard {
@@ -1356,6 +606,45 @@ button.compact {
   border-radius: var(--radius-lg);
   background: var(--surface-muted, var(--surface));
   border: 1px solid var(--border-subtle);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.macroCard .heroCards {
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.macroCard .heroCard,
+.macroCard .horizonRow {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.macroCard .heroCard strong,
+.macroCard .moneyValue {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.macroCard .horizonMeta {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.macroCard .horizonMeta span,
+.macroCard .horizonMeta strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .macroHead {
@@ -1381,6 +670,12 @@ button.compact {
   gap: var(--space-3);
 }
 
+.macroBarItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 .macroBarLink {
   display: flex;
   flex-direction: column;
@@ -1390,6 +685,43 @@ button.compact {
   min-height: 44px;
   margin: 0;
   padding: var(--space-2) 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.macroBarToggle {
+  display: inline-block;
+  width: 1rem;
+  margin-right: var(--space-2);
+  color: var(--primary);
+  font-weight: var(--weight-semibold);
+}
+
+.macroBarChildren {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-left: 2px solid var(--border-subtle);
+}
+
+.macroBarChildLink {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 40px;
+  margin: 0;
+  padding: var(--space-1) 0 var(--space-1) var(--space-3);
   border: 0;
   background: transparent;
   color: inherit;
@@ -1470,42 +802,12 @@ button.compact {
   padding: var(--space-2) 0;
   width: 100%;
   text-align: left;
-  cursor: pointer;
 }
 
 .horizonRowActive {
   border-color: color-mix(in srgb, var(--primary) 35%, var(--border-subtle));
   padding: var(--space-2) var(--space-3);
   background: color-mix(in srgb, var(--primary) 6%, var(--surface));
-}
-
-.projectDashCard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  color: inherit;
-  text-decoration: none;
-  border: 1px solid var(--border-subtle);
-}
-
-.projectDashCard:hover {
-  border-color: color-mix(in srgb, var(--primary) 35%, var(--border-subtle));
-}
-
-.projectDashPreview {
-  margin: 0;
-  color: var(--text-muted);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  white-space: pre-wrap;
-}
-
-.projectDescription {
-  margin: 0;
-  white-space: pre-wrap;
-  line-height: var(--leading-normal, 1.5);
 }
 
 .horizonMeta {
@@ -1519,96 +821,40 @@ button.compact {
   color: var(--text-muted);
 }
 
-.raioxList {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  overflow-x: auto;
-  background: var(--surface);
-}
-
-.raioxHead {
-  background: var(--surface);
-  color: var(--text-muted);
-  font-size: var(--text-base);
-  cursor: default;
-}
-
-.raioxRow {
-  display: grid;
-  grid-template-columns:
-    2rem
-    minmax(8rem, 1fr)
-    calc(var(--money-display-w) + var(--money-display-w) + var(--money-percent-w) + 2 * var(--space-4));
-  gap: var(--space-3);
-  align-items: center;
-  width: 100%;
-  min-width: calc(
-    2rem + 8rem + var(--money-display-w) + var(--money-display-w) + var(--money-percent-w) + 2 * var(--space-4) +
-      2 * var(--space-4)
-  );
-  padding: var(--space-3) var(--space-4);
-  border: 0;
-  border-bottom: 1px solid var(--border-subtle);
-  background: transparent;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.raioxRoot {
-  background: var(--surface);
-}
-
-.raioxGroup {
-  background: var(--bg-app);
-}
-
-.raioxLeaf {
-  background: color-mix(in srgb, var(--surface) 70%, var(--bg-app));
-}
-
-.raioxEntry {
-  background: color-mix(in srgb, var(--primary) 6%, var(--bg-app));
-}
-
-.raioxToggle {
-  font-weight: var(--weight-semibold);
-  color: var(--primary);
-  width: 1.25rem;
-  text-align: center;
-}
-
-.raioxAccountName {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
 .categoriesRow {
-  grid-template-columns: 2rem minmax(8rem, 1fr) auto;
+  grid-template-columns: 44px minmax(8rem, 1fr) auto;
   min-width: 0;
   cursor: default;
-}
-
-.categoryPendingTrail .raioxAccountName,
-.categoryPendingTrail .rowSub {
-  color: var(--danger);
+  align-items: center;
 }
 
 .categoriesToggleBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
   padding: 0;
   border: 0;
+  border-radius: var(--radius-sm, 6px);
   background: transparent;
   color: inherit;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .categoriesToggleBtn:disabled {
   cursor: default;
+}
+
+.categoriesShowMore {
+  display: flex;
+  justify-content: flex-start;
+  margin: 0;
+  padding: var(--space-2) 0 var(--space-2) calc(var(--space-4) + 44px);
 }
 
 .categoriesActions {
@@ -1654,209 +900,127 @@ button.compact {
   accent-color: var(--color-accent, var(--color-primary));
 }
 
-.raioxTotals {
-  display: grid;
-  grid-template-columns: var(--money-display-w) var(--money-display-w) var(--money-percent-w);
-  gap: var(--space-4);
-  align-items: baseline;
-  justify-items: end;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.raioxAmount,
-.raioxPercent {
-  width: 100%;
-  min-width: 0;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  overflow: visible;
-  font-feature-settings: 'tnum';
-}
-
-.raioxHead .raioxTotals {
-  font-size: var(--text-sm);
-}
-
 @media (max-width: 719px) {
-  .page {
+.page {
     gap: var(--space-4);
     width: 100%;
     max-width: 100%;
     min-width: 0;
     overflow-x: clip;
   }
-
-  .budgetRow {
+.budgetRow {
     min-width: 0;
   }
-
-  .raioxRow {
+.raioxRow {
     min-width: 0;
   }
-
-  .section {
+.section {
     padding: var(--space-4);
     gap: var(--space-3);
   }
-
-  .header {
+.header {
     gap: var(--space-3);
   }
-
-  .header h1 {
+.header h1 {
     font-size: var(--text-h2);
   }
-
-  .actions {
+.actions {
     width: 100%;
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-2);
   }
-
-  /* Direct action controls only — do not stretch CompetencePicker chevrons. */
-  .actions > :global(button),
+/* Direct action controls only — do not stretch CompetencePicker chevrons. */
+.actions > :global(button),
   .actions > :global(a),
   .actions > :global(select) {
     min-height: 44px;
     width: 100%;
   }
-
-  .picker {
+.picker {
     width: 100%;
     gap: var(--space-2);
   }
-
-  .pickerLabel {
+.pickerLabel {
     font-size: var(--text-md);
   }
-
-  .picker :global(button) {
+.picker :global(button) {
     width: 2.5rem;
     min-width: 2.5rem;
     max-width: 2.5rem;
     height: 2.5rem;
     min-height: 2.5rem;
   }
-
-  .homeLaunch {
+.homeLaunch {
     padding: var(--space-3) 0;
     gap: var(--space-3);
     background: transparent;
   }
-
-  .homeLaunchO {
+.homeLaunchO {
     width: 100%;
     max-width: 100%;
     padding: 0;
   }
-
-  .homeLaunchOIcon {
+.homeLaunchOIcon {
     width: 4.75rem;
     height: 4.75rem;
   }
-
-  .homeLaunchOIcon :global(.icon) {
+.homeLaunchOIcon :global(.icon) {
     width: 2.1rem;
     height: 2.1rem;
   }
-
-  /* Do not flex-grow in column actions — was stretching to ~192px on Raio-X. */
-  .periodSlider {
-    flex: 0 0 auto;
-    flex-grow: 0;
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-    height: 44px;
-    max-height: 44px;
+/* Do not flex-grow in column actions — was stretching to ~192px on Raio-X. */
+.raioxPage {
+    gap: var(--space-3);
   }
-
-  .periodSliderValue {
-    min-width: 0;
-    font-size: var(--text-xs);
+.raioxPage h1 {
+    font-size: var(--text-h2, 1.35rem);
+    margin: 0;
   }
-
-  .periodSlider input[type='range'] {
-    height: 44px;
-  }
-
-  .periodSlider input[type='range']::-webkit-slider-thumb {
-    width: 24px;
-    height: 24px;
-  }
-
-  .periodSlider input[type='range']::-moz-range-thumb {
-    width: 24px;
-    height: 24px;
-  }
-
-  /* Tighter hero so indicators enter the first viewport. */
-  .hero {
+/* Tighter hero so indicators enter the first viewport. */
+.hero {
     gap: var(--space-2);
-    padding: var(--space-3);
+    padding: var(--space-2);
   }
-
-  .heroTop {
-    font-size: var(--text-xs);
+.heroTop {
+    display: none;
   }
-
-  .heroCards {
+.heroCards {
     gap: var(--space-2);
   }
-
-  .heroCardsRaioX {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .heroCardsRaioX .heroCardStatic:first-child,
-  .heroCardsRaioX .heroCardStatic:last-child {
-    grid-column: 1 / -1;
-  }
-
-  .heroCard {
+.heroCard {
     padding: var(--space-2) var(--space-3);
     gap: 2px;
     min-height: 44px;
   }
-
-  .heroCard .muted {
-    font-size: var(--text-xs);
-    line-height: 1.25;
+.heroCard .muted {
+    display: none;
   }
-
-  .macroBarLink {
+.macroBarLink {
     min-height: 44px;
     padding: 10px 0;
   }
-
-  .macroBars {
+.macroBars {
     gap: var(--space-1);
   }
-
-  .raioxList {
+.raioxList {
     overflow-x: hidden;
   }
-
-  /* Portrait: name + Previsto/Realizado/% on ONE row (not stacked). */
-  .raioxRow:not(.categoriesRow):not(.budgetRow) {
+/* Portrait: name + Previsto/Realizado/% on ONE row (not stacked). */
+.raioxRow:not(.categoriesRow):not(.budgetRow) {
     grid-template-columns: 1.5rem minmax(0, 1fr) max-content;
     min-width: 0;
     align-items: center;
     gap: 6px;
     padding: var(--space-2) var(--space-3);
   }
-
-  .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxAccountName {
+.raioxRow:not(.categoriesRow):not(.budgetRow) .raioxAccountName {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: var(--text-sm);
   }
-
-  .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxTotals {
+.raioxRow:not(.categoriesRow):not(.budgetRow) .raioxTotals {
     grid-column: auto;
     width: max-content;
     min-width: 0;
@@ -1867,15 +1031,13 @@ button.compact {
     font-size: 0.625rem;
     letter-spacing: -0.04em;
   }
-
-  .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxHead .raioxTotals,
+.raioxRow:not(.categoriesRow):not(.budgetRow) .raioxHead .raioxTotals,
   .raioxHead:not(.budgetRow) .raioxTotals {
     font-size: 0.5625rem;
     letter-spacing: 0;
     grid-template-columns: 4.55rem 4.55rem 2.1rem;
   }
-
-  .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxAmount,
+.raioxRow:not(.categoriesRow):not(.budgetRow) .raioxAmount,
   .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxPercent,
   .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxPercentLink {
     font-size: inherit;
@@ -1886,33 +1048,28 @@ button.compact {
     min-height: 0;
     padding: 0;
   }
-
-  .raioxRow:not(.categoriesRow):not(.budgetRow) .moneyValue {
+.raioxRow:not(.categoriesRow):not(.budgetRow) .moneyValue {
     font-size: inherit;
   }
-
-  /* Orçamento: uma linha, como antes. O dia ocupa a coluna estreita do percentual. */
-  .budgetRow {
+/* Orçamento: uma linha, como antes. O dia ocupa a coluna estreita do percentual. */
+.budgetRow {
     grid-template-columns: 1.5rem minmax(0, 1fr) max-content;
     min-width: 0;
     align-items: center;
     gap: 6px;
     padding: var(--space-2) var(--space-3);
   }
-
-  .budgetRow .raioxAccountName,
+.budgetRow .raioxAccountName,
   .budgetRow .budgetAccountCell {
     min-width: 0;
     overflow: hidden;
   }
-
-  .budgetRow .raioxAccountName {
+.budgetRow .raioxAccountName {
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: var(--text-sm);
   }
-
-  .budgetRow .budgetTotals {
+.budgetRow .budgetTotals {
     grid-column: auto;
     width: max-content;
     min-width: 0;
@@ -1923,14 +1080,12 @@ button.compact {
     letter-spacing: -0.04em;
     align-items: center;
   }
-
-  .budgetRow .budgetTotalsHead {
+.budgetRow .budgetTotalsHead {
     font-size: 0.5625rem;
     letter-spacing: 0;
     grid-template-columns: 4.55rem 2.1rem;
   }
-
-  .budgetTotals .raioxAmount,
+.budgetTotals .raioxAmount,
   .budgetTotals .raioxPercent,
   .budgetTotals .raioxPercentLink,
   .budgetTotals .moneyValue {
@@ -1942,63 +1097,54 @@ button.compact {
     min-height: 0;
     padding: 0;
   }
-
-  .budgetPlannedCell {
+.budgetPlannedCell {
     gap: 2px;
     width: 100%;
     min-width: 0;
   }
-
-  .budgetSpreadIcon {
+.budgetSpreadIcon {
     width: 1.5rem;
     height: 1.5rem;
     min-width: 1.5rem;
     min-height: 1.5rem;
     flex: 0 0 1.5rem;
   }
-
-  .raioxBudgetField,
+.raioxBudgetField,
   .raioxBudgetField :global(input[inputmode='numeric']) {
     width: 100%;
     min-width: 0;
     max-width: 100%;
   }
-
-  .budgetRow .raioxBudgetField {
+.budgetRow .raioxBudgetField {
     flex: 1 1 auto;
     width: auto;
     min-width: 0;
     max-width: none;
   }
-
-  .budgetRow .raioxBudgetField :global(input[inputmode='numeric']) {
+.budgetRow .raioxBudgetField :global(input[inputmode='numeric']) {
     height: 1.5rem;
     min-height: 1.5rem;
     padding-inline: 4px;
     font-size: 0.625rem;
   }
-
-  .budgetRow .budgetDayField,
+.budgetRow .budgetDayField,
   .budgetRow .budgetDayField :global(input[inputmode='numeric']) {
     width: 100%;
     min-width: 0;
     max-width: 100%;
     flex: none;
   }
-
-  .budgetRow .budgetDayField :global(input[inputmode='numeric']) {
+.budgetRow .budgetDayField :global(input[inputmode='numeric']) {
     height: 1.5rem;
     min-height: 1.5rem;
     padding-inline: 0;
     font-size: 0.625rem;
     text-align: center;
   }
-
-  .macroBarLabel {
+.macroBarLabel {
     gap: var(--space-2);
   }
-
-  .macroBarLabel .moneyValue {
+.macroBarLabel .moneyValue {
     font-size: 0.75rem;
     letter-spacing: -0.02em;
     min-width: 0;
@@ -2009,49 +1155,6 @@ button.compact {
 }
 
 /* Very narrow phones: squeeze money cols a bit more, still one row. */
-@media (max-width: 379px) {
-  .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxTotals,
-  .raioxHead:not(.budgetRow) .raioxTotals {
-    grid-template-columns: 4.15rem 4.15rem 1.9rem;
-    font-size: 0.5625rem;
-    gap: 1px;
-  }
-
-  .budgetRow {
-    grid-template-columns: 1.35rem minmax(0, 1fr) max-content;
-    gap: 4px;
-  }
-
-  .budgetRow .budgetTotals,
-  .budgetRow .budgetTotalsHead {
-    grid-template-columns: 4.15rem 1.9rem;
-    font-size: 0.5625rem;
-    gap: 1px;
-  }
-}
-
-@media (pointer: coarse) {
-  .categoriesIconBtn,
-  .budgetSpreadIcon {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  @media (max-width: 719px) {
-    .budgetRow .budgetSpreadIcon {
-      width: 1.5rem;
-      height: 1.5rem;
-      min-width: 1.5rem;
-      min-height: 1.5rem;
-    }
-  }
-}
-
-@media (min-width: 720px) {
-  .heroCardsRaioX {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
 
 /* ---------- Hub tiles ---------- */
 
@@ -2103,44 +1206,26 @@ button.compact {
   line-height: var(--leading-body);
 }
 
-.header {
-  align-items: flex-start;
-}
-
-.actions {
-  width: 100%;
-}
-
-.actions :global(button),
-.actions :global(select) {
-  flex: 1 1 auto;
-}
-
-.row {
-  align-items: flex-start;
-  flex-direction: column;
-}
-
-.rowEnd {
-  justify-content: flex-start;
-}
-
 @media (min-width: 900px) {
   .grid2 {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .macroGrid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .macroSplit {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .homePieGrid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .grid3,
   .tiles {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .form {
@@ -2180,93 +1265,6 @@ button.compact {
   .rowEnd {
     justify-content: flex-end;
   }
-}
-
-.budgetGroup {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-
-.budgetGroupToggle {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  width: 100%;
-  padding: var(--space-3) 0;
-  border: 0;
-  border-top: 1px solid var(--border-subtle);
-  background: none;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.budgetGroupToggle:hover strong {
-  color: var(--primary);
-}
-
-.budgetGroupChevron {
-  flex-shrink: 0;
-  width: 1.25rem;
-  font-weight: var(--weight-semibold);
-  color: var(--text-muted);
-}
-
-.budgetGroupMain {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.budgetGroupBody {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-left: var(--space-2);
-}
-
-.budgetAccountName {
-  display: block;
-  padding: 0;
-  margin: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.budgetAccountName:hover strong {
-  color: var(--primary);
-}
-
-.budgetAccountCell {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.budgetAccountCell :global(button) {
-  padding: 0;
-  height: auto;
-  min-height: 0;
-  font-size: var(--text-sm);
-}
-
-.budgetAmountWrap {
-  width: 14.5rem;
-  flex-shrink: 0;
-}
-
-.budgetAmountWrap :global(input) {
-  width: 100%;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 .sheetOverlay {
@@ -2344,12 +1342,6 @@ button.compact {
   font-size: var(--text-md);
 }
 
-.homeProgress {
-  display: grid;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
-}
-
 .qrPanel {
   display: flex;
   flex-direction: column;
@@ -2371,10 +1363,6 @@ button.compact {
   border-radius: var(--radius-lg);
   background: var(--text);
   object-fit: cover;
-}
-
-.homePage {
-  min-height: min(78vh, 720px);
 }
 
 @media (min-width: 768px) {
@@ -2407,117 +1395,6 @@ button.compact {
   }
 }
 
-.homeJourney {
-  width: 100%;
-  max-width: 40rem;
-  margin-inline: auto;
-  padding-bottom: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.homeJourneyKicker {
-  margin: 0;
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  font-weight: var(--weight-medium);
-}
-
-.homeJourneyFooter {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: var(--space-2);
-  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
-}
-
-.homeLaunch {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  background: transparent;
-  padding: var(--space-4) 0;
-  flex: 1;
-  justify-content: center;
-}
-
-.homeLaunchOWrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-}
-
-.homeLaunchO {
-  position: relative;
-  width: min(100%, 96vw, 860px);
-  aspect-ratio: 1;
-  margin-inline: auto;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.homeLaunchOCenter {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  z-index: 4;
-  width: 62%;
-  height: 62%;
-  transform: translate(-50%, -50%);
-}
-
-.homeLaunchOMark {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  pointer-events: none;
-  user-select: none;
-}
-
-.homeLaunchOSvg {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.homeLaunchOArc {
-  fill: transparent;
-  cursor: pointer;
-  outline: none;
-  pointer-events: auto;
-  transition: fill 140ms ease;
-}
-
-.homeLaunchOArc:hover {
-  fill: color-mix(in srgb, var(--accent) 18%, transparent);
-}
-
-.homeLaunchOArc:active {
-  fill: color-mix(in srgb, var(--accent) 28%, transparent);
-}
-
-.homeLaunchOArc:focus-visible {
-  fill: color-mix(in srgb, var(--accent) 22%, transparent);
-  stroke: var(--accent);
-  stroke-width: 0.6;
-}
-
-.homeLaunchOHitDim {
-  opacity: 0.55;
-  pointer-events: none;
-  cursor: not-allowed;
-}
-
 @keyframes homeLaunchOPulse {
   0%,
   100% {
@@ -2526,62 +1403,6 @@ button.compact {
   50% {
     opacity: 0.45;
   }
-}
-
-.homeLaunchOIcon {
-  position: absolute;
-  z-index: 3;
-  display: grid;
-  place-items: center;
-  width: 5.5rem;
-  height: 5.5rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  color: var(--primary-on);
-  background: linear-gradient(
-    160deg,
-    color-mix(in srgb, var(--primary) 45%, white) 0%,
-    var(--primary) 45%,
-    color-mix(in srgb, var(--primary) 65%, black) 100%
-  );
-  box-shadow:
-    0 8px 18px color-mix(in srgb, var(--text) 22%, transparent),
-    0 1px 0 color-mix(in srgb, var(--surface) 45%, transparent) inset,
-    0 -3px 8px color-mix(in srgb, var(--text) 18%, transparent) inset;
-  transition: box-shadow 140ms ease, transform 140ms ease;
-}
-
-.homeLaunchOIcon :global(.icon) {
-  width: 2.35rem;
-  height: 2.35rem;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
-}
-
-.homeLaunchOIconPulse {
-  animation: homeLaunchOPulse 1.1s ease-in-out infinite;
-}
-
-.homeLaunchOSvg:has(path[aria-label='Escanear recibo']:hover) ~ .homeLaunchOIconScan,
-.homeLaunchOSvg:has(path[aria-label='Lançar por voz']:hover) ~ .homeLaunchOIconVoice,
-.homeLaunchOSvg:has(path[aria-label='Lançar manualmente']:hover) ~ .homeLaunchOIconManual {
-  transform: translate(-50%, -50%) translateY(-2px) scale(1.06);
-  box-shadow:
-    0 10px 22px color-mix(in srgb, var(--text) 28%, transparent),
-    0 2px 0 color-mix(in srgb, var(--surface) 50%, transparent) inset,
-    0 -3px 6px color-mix(in srgb, var(--text) 18%, transparent) inset;
-}
-
-.homeLaunchOSvg:has(path[aria-label='Escanear recibo']:active) ~ .homeLaunchOIconScan,
-.homeLaunchOSvg:has(path[aria-label='Lançar por voz']:active) ~ .homeLaunchOIconVoice,
-.homeLaunchOSvg:has(path[aria-label='Lançar manualmente']:active) ~ .homeLaunchOIconManual {
-  transform: translate(-50%, -50%) translateY(1px) scale(0.97);
-  box-shadow:
-    0 3px 8px color-mix(in srgb, var(--text) 22%, transparent),
-    0 1px 0 color-mix(in srgb, var(--surface) 30%, transparent) inset;
 }
 
 .voiceListenSheet {
@@ -2629,58 +1450,6 @@ button.compact {
   line-height: 1.45;
 }
 
-.homeUrgent {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  margin: 0 0 var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border-subtle));
-  background: var(--danger-bg);
-  color: var(--text);
-  text-decoration: none;
-  font-weight: var(--weight-medium);
-}
-
-.homeUrgent:hover {
-  border-color: color-mix(in srgb, var(--danger) 55%, var(--border-subtle));
-}
-
-.marcoGrid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-3);
-}
-
-.marcoCard {
-  background: var(--surface);
-  border-radius: var(--radius-xl);
-  padding: var(--space-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  border: 1px solid var(--border-subtle);
-}
-
-.marcoCardEarned {
-  border-color: color-mix(in srgb, var(--success) 40%, var(--border-subtle));
-}
-
-.marcoCardPending {
-  opacity: 0.85;
-}
-
-.marcoCardHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
 .achievementList {
   list-style: none;
   margin: 0;
@@ -2722,124 +1491,12 @@ button.compact {
   color: var(--text-secondary);
 }
 
-.journeyList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-3);
-}
-
-.journeyItem,
-.journeyDone {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: var(--space-3);
-  align-items: center;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
-  background: var(--surface);
-}
-
-.journeyDone {
-  background: color-mix(in srgb, var(--success) 8%, var(--surface));
-}
-
-.journeyIndex {
-  width: 2rem;
-  height: 2rem;
-  border-radius: var(--radius-full);
-  display: grid;
-  place-items: center;
-  background: var(--selected);
-  color: var(--primary);
-  font-weight: var(--weight-semibold);
-}
-
-.journeyBody {
-  display: grid;
-  gap: 2px;
-}
-
-.journeyLink {
-  color: var(--primary);
-  font-weight: var(--weight-medium);
-}
-
-.onboarding {
-  width: min(40rem, 100%);
-  margin-inline: auto;
-  min-height: 100dvh;
-  padding: var(--space-6) var(--space-4) calc(var(--space-8, 32px) + env(safe-area-inset-bottom));
-}
-
 .welcomeVideo {
   width: 100%;
   aspect-ratio: 16 / 9;
   border: 0;
   border-radius: var(--radius-md);
   background: var(--surface);
-}
-
-.journeyProgress {
-  display: grid;
-  gap: var(--space-2);
-}
-
-.journeyProgressLabel {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  color: var(--text-muted);
-  font-size: var(--text-base);
-}
-
-.journeyTrack {
-  height: 6px;
-  border-radius: var(--radius-full);
-  background: var(--border-subtle);
-  overflow: hidden;
-}
-
-.journeyTrack > span {
-  display: block;
-  height: 100%;
-  background: var(--primary);
-}
-
-.journeyNext {
-  display: block;
-  padding: 0;
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
-}
-
-.journeyItem,
-.journeyDone {
-  display: block;
-  padding: 0;
-}
-
-.journeyOpen {
-  display: grid;
-  grid-template-columns: auto auto 1fr auto;
-  gap: var(--space-3);
-  align-items: center;
-  width: 100%;
-  min-height: 44px;
-  padding: var(--space-3) var(--space-4);
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.journeyOpen:disabled {
-  cursor: wait;
 }
 
 .avatarLarge {
@@ -2852,6 +1509,28 @@ button.compact {
   color: var(--primary);
   font-size: var(--text-h3);
   font-weight: var(--weight-semibold);
+  flex-shrink: 0;
+}
+
+.profileIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.profileIdentity strong {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.profileLogin {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
 }
 
 .celebrateInline {

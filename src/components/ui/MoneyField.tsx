@@ -39,7 +39,7 @@ export function MoneyField({
       label={label}
       name={name}
       type="text"
-      inputMode="numeric"
+      inputMode="decimal"
       autoComplete="off"
       placeholder={placeholder}
       required={required}

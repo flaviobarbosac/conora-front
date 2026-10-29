@@ -10,7 +10,7 @@ import { useAction } from '../hooks/useAction'
 import { useLookups } from '../hooks/useLookups'
 import { formatDate, formatMoney } from '../lib/format'
 import { showSaveToast } from '../lib/saveToast'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 export function ImportPage() {
   const lookups = useLookups()
@@ -59,7 +59,7 @@ export function ImportPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="Importar extrato" />
+      <PageHeader title="Importar extrato" backTo={{ to: '/relatorios', label: '← Relatórios' }} />
       <section className={styles.section}>
         <form className={styles.form} onSubmit={(event) => void runPreview(event)}>
           <Select label="Formato" name="importFormat" value={format} onChange={(event) => setFormat(event.target.value as ImportFormat)}>

@@ -34,6 +34,20 @@
   color: var(--text);
   font-weight: var(--weight-medium);
   font-size: var(--text-base);
+  min-height: 44px;
+  min-width: 44px;
   height: auto;
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+
+/* Destructive actions — fixed red, not theme tokens. */
+.danger {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #b91c1c;
+  font-weight: var(--weight-semibold);
+}
+
+.danger:hover:not(:disabled) {
+  background: #b91c1c;
 }

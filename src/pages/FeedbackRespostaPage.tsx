@@ -5,7 +5,7 @@ import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
 import { formatDate } from '../lib/format'
 import { FEEDBACK_RATING_LABELS, feedbackRatingColor } from '../lib/feedbackRatingColors'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 export function FeedbackRespostaPage() {
   const { id } = useParams<{ id: string }>()
@@ -14,7 +14,7 @@ export function FeedbackRespostaPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="Resposta ao feedback" />
+      <PageHeader title="Resposta ao feedback" backTo={{ to: '/', label: '← Início' }} />
       <ErrorText message={load.error} />
       {load.loading && !item ? <Loading /> : null}
       {item ? (

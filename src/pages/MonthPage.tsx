@@ -11,7 +11,7 @@ import { useLoad } from '../hooks/useLoad'
 import { confirmDestructive } from '../lib/confirm'
 import { currentCompetence, formatDateTime, formatMoney } from '../lib/format'
 import { showSaveToast } from '../lib/saveToast'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 function closeBlockedReason(ym: string, monthCloseDay: number | undefined): string | null {
   if (ym !== currentCompetence() || !monthCloseDay) {
@@ -74,7 +74,11 @@ export function MonthPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="Fechar mês" actions={<CompetencePicker value={ym} onChange={(value) => { setYm(value); setJustClosed(false) }} />} />
+      <PageHeader
+        title="Fechar mês"
+        backTo={{ to: '/orcamento', label: '← Orçamento' }}
+        actions={<CompetencePicker value={ym} onChange={(value) => { setYm(value); setJustClosed(false) }} />}
+      />
       <ErrorText message={status.error ?? summary.error ?? action.error} />
       {status.loading && !data ? <Loading /> : null}
 

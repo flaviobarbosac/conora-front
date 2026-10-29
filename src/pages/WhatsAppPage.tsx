@@ -17,7 +17,7 @@ import { useLookups } from '../hooks/useLookups'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import { formatMoney } from '../lib/format'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 function parsePayload(json: string): WhatsAppDraftPayload | null {
   try {
@@ -87,7 +87,7 @@ export function WhatsAppPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="WhatsApp" />
+      <PageHeader title="WhatsApp" backTo={{ to: '/', label: '← Início' }} />
       <ErrorText message={link.error ?? drafts.error ?? linkAction.error ?? draftAction.error} />
 
       <section className={styles.section}>
@@ -109,6 +109,8 @@ export function WhatsAppPage() {
               label="Telefone (com DDI)"
               name="whatsappPhone"
               required
+              inputMode="tel"
+              autoComplete="tel"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
               placeholder="5511999999999"

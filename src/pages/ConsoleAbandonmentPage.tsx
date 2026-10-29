@@ -2,7 +2,7 @@ import { consoleApi } from '../api/finance'
 import { ErrorText, Loading, Empty } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
 import { formatDateTime } from '../lib/format'
-import layout from './page.module.css'
+import layout from './pageStyles'
 import styles from './ConsolePage.module.css'
 
 /** Console view: login, entry screen, whether they launched, and the path trail. */

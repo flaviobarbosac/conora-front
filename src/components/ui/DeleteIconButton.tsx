@@ -16,7 +16,7 @@ export function DeleteIconButton({ label = 'Excluir', className, ...props }: Pro
       title={label}
       {...props}
     >
-      <Icon name="trash" size={20} decorative />
+      <Icon name="trash" size={24} decorative />
     </Button>
   )
 }

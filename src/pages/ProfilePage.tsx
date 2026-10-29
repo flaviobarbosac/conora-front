@@ -8,7 +8,7 @@ import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { showSaveToast } from '../lib/saveToast'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 function initialsFrom(name: string, email: string): string {
   const source = name.trim() || email.trim()
@@ -94,7 +94,7 @@ export function ProfilePage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="Perfil" />
+      <PageHeader title="Perfil" backTo={{ to: '/', label: '← Início' }} />
       <ErrorText message={profile.error ?? saveProfile.error} />
       {profile.loading && !data ? <Loading /> : null}
 
@@ -104,9 +104,9 @@ export function ProfilePage() {
             <span className={styles.avatarLarge} aria-hidden="true">
               {initialsFrom(name || data.name, data.email)}
             </span>
-            <div>
-              <h2 className={styles.sectionTitle}>Conta</h2>
-              <p className={styles.muted}>Os mesmos dados do onboard. Conta e cartão ficam em Contas / Cartões.</p>
+            <div className={styles.profileIdentity}>
+              <strong>{name.trim() || data.name}</strong>
+              <span className={styles.profileLogin}>{data.email}</span>
             </div>
           </div>
 
@@ -121,14 +121,31 @@ export function ProfilePage() {
                 hint="Aparece no grupo familiar e nos avisos."
               />
             </div>
-            <Field label="E-mail" name="email" value={data.email} readOnly disabled />
+            <Field
+              label="E-mail"
+              name="email"
+              value={data.email}
+              readOnly
+              disabled
+              autoComplete="username"
+              hint="Login da conta. Somente leitura — não pode ser alterado."
+            />
             <Field
               label="Telefone"
               name="phone"
+              inputMode="tel"
+              autoComplete="tel"
               value={phone}
               onChange={(event) => setPhone(formatPhone(event.target.value))}
             />
-            <Field label="CEP" name="cep" value={cep} onChange={(event) => setCep(formatCep(event.target.value))} />
+            <Field
+              label="CEP"
+              name="cep"
+              inputMode="numeric"
+              autoComplete="postal-code"
+              value={cep}
+              onChange={(event) => setCep(formatCep(event.target.value))}
+            />
             <div className={styles.formActions}>
               <Button type="button" variant="secondary" disabled={!dirty || saveProfile.busy} onClick={onCancel}>
                 Cancelar

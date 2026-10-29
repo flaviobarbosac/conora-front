@@ -8,7 +8,7 @@ import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { usePlanAccess } from '../hooks/usePlanAccess'
 import { hasFullAccess, planCtaLabel } from '../lib/freeTier'
-import { downloadBlob, formatDate, formatMoney } from '../lib/format'
+import { formatDate, formatMoney } from '../lib/format'
 import {
   markGraceScreenShown,
   PLAN_CHANGED,
@@ -184,10 +184,13 @@ export function PlanPage() {
   }
 
   async function exportData() {
-    await exporter.run(async () => {
-      const exported = await lgpdApi.exportData()
-      downloadBlob(new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' }), 'conora-meus-dados.json')
-    })
+    const ok = await exporter.run(() => lgpdApi.exportData())
+    if (ok) {
+      showSaveToast(
+        'A exportação será agendada e estará disponível pra você daqui a 24 horas.',
+        5000,
+      )
+    }
   }
 
   return (
@@ -411,7 +414,7 @@ export function PlanPage() {
           </details>
         ))}
         <p className={styles.support}>
-          Ainda com dúvida? <Link to="/ajuda">Fale com o suporte</Link>.
+          Ainda com dúvida? <Link to="/ajuda">Veja na central de ajuda</Link>.
         </p>
       </section>
     </div>

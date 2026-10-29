@@ -1,9 +1,12 @@
 import type { KeyboardEvent } from 'react'
+import { VOICE_LAUNCH_ENABLED } from '../lib/voiceLaunch'
 import { Icon } from './ui/Icon'
-import styles from '../pages/page.module.css'
+import styles from '../pages/pageStyles'
 
 type Props = {
   listening?: boolean
+  /** Same control as Settings → confirmar lançamento por voz (only when product mic exists). */
+  voiceEnabled?: boolean
   onScan: () => void
   onVoice: () => void
   onManual: () => void
@@ -30,10 +33,6 @@ const ARCS_NO_VOICE = {
   manual: { a0: 130, a1: 230 },
   voice: { a0: 218, a1: 322 },
 } as const
-
-/** Ian / voice launch on the home O — hidden for MVP 14/11. */
-const SHOW_VOICE_LAUNCH = false
-const ARCS = SHOW_VOICE_LAUNCH ? ARCS_WITH_VOICE : ARCS_NO_VOICE
 
 function polar(r: number, degFromTopCw: number): [number, number] {
   const rad = (degFromTopCw * Math.PI) / 180
@@ -68,10 +67,12 @@ function onActivate(e: KeyboardEvent, fn: () => void) {
   }
 }
 
-export function HomeLaunchO({ listening = false, onScan, onVoice, onManual }: Props) {
-  const scanMid = arcMid(ARCS.scan.a0, ARCS.scan.a1)
-  const voiceMid = arcMid(ARCS.voice.a0, ARCS.voice.a1)
-  const manualMid = arcMid(ARCS.manual.a0, ARCS.manual.a1)
+export function HomeLaunchO({ listening = false, voiceEnabled = false, onScan, onVoice, onManual }: Props) {
+  const showVoice = VOICE_LAUNCH_ENABLED && voiceEnabled
+  const arcs = showVoice ? ARCS_WITH_VOICE : ARCS_NO_VOICE
+  const scanMid = arcMid(arcs.scan.a0, arcs.scan.a1)
+  const voiceMid = arcMid(arcs.voice.a0, arcs.voice.a1)
+  const manualMid = arcMid(arcs.manual.a0, arcs.manual.a1)
   const rIcon = (R_OUT + R_IN) / 2
 
   const [scanX, scanY] = polar(rIcon, scanMid)
@@ -86,7 +87,7 @@ export function HomeLaunchO({ listening = false, onScan, onVoice, onManual }: Pr
         <svg className={styles.homeLaunchOSvg} viewBox="0 0 100 100" aria-hidden={false}>
           <path
             className={`${styles.homeLaunchOArc} ${listening ? styles.homeLaunchOHitDim : ''}`}
-            d={annularSectorPath(ARCS.scan.a0, ARCS.scan.a1)}
+            d={annularSectorPath(arcs.scan.a0, arcs.scan.a1)}
             role="button"
             tabIndex={listening ? -1 : 0}
             aria-label="Escanear recibo"
@@ -94,10 +95,10 @@ export function HomeLaunchO({ listening = false, onScan, onVoice, onManual }: Pr
             onClick={listening ? undefined : onScan}
             onKeyDown={listening ? undefined : (e) => onActivate(e, onScan)}
           />
-          {SHOW_VOICE_LAUNCH ? (
+          {showVoice ? (
             <path
               className={styles.homeLaunchOArc}
-              d={annularSectorPath(ARCS.voice.a0, ARCS.voice.a1)}
+              d={annularSectorPath(arcs.voice.a0, arcs.voice.a1)}
               role="button"
               tabIndex={listening ? -1 : 0}
               aria-label={listening ? 'Ouvindo…' : 'Lançar por voz'}
@@ -109,7 +110,7 @@ export function HomeLaunchO({ listening = false, onScan, onVoice, onManual }: Pr
           ) : null}
           <path
             className={`${styles.homeLaunchOArc} ${listening ? styles.homeLaunchOHitDim : ''}`}
-            d={annularSectorPath(ARCS.manual.a0, ARCS.manual.a1)}
+            d={annularSectorPath(arcs.manual.a0, arcs.manual.a1)}
             role="button"
             tabIndex={listening ? -1 : 0}
             aria-label="Lançar manualmente"
@@ -126,7 +127,7 @@ export function HomeLaunchO({ listening = false, onScan, onVoice, onManual }: Pr
         >
           <Icon name="camera" size={24} />
         </span>
-        {SHOW_VOICE_LAUNCH ? (
+        {showVoice ? (
           <span
             className={`${styles.homeLaunchOIcon} ${styles.homeLaunchOIconVoice} ${listening ? styles.homeLaunchOIconPulse : ''}`}
             style={{ left: `${voiceX}%`, top: `${voiceY}%` }}

@@ -8,7 +8,7 @@ import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { currentCompetence, downloadBlob, formatMoney } from '../lib/format'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 const TILES: ReadonlyArray<{ to: string; title: string; text: string }> = [
   { to: '/diagnostico', title: 'Diagnóstico', text: 'Fontes de renda e valor líquido' },

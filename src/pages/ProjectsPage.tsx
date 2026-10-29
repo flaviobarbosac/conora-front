@@ -38,7 +38,9 @@ import {
   type HorizonKey,
 } from '../lib/lifeHorizon'
 import { showSaveToast } from '../lib/saveToast'
-import styles from './page.module.css'
+import pageStyles from './pageStyles'
+import cadastroStyles from './cadastros/cadastros.module.css'
+const styles = { ...pageStyles, ...cadastroStyles }
 
 function isHorizon(value: string | null): value is HorizonKey {
   return value === 'short' || value === 'mid' || value === 'long'
@@ -117,7 +119,7 @@ export function ProjectsPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        kicker="Metas"
+        kicker="Cadastros"
         title="Projetos de vida"
         actions={
           <>
@@ -134,20 +136,31 @@ export function ProjectsPage() {
         <p className={styles.muted}>Você pode ver os projetos. Cadastro e edição ficam nos planos pagos.</p>
       ) : null}
 
-      <section className={styles.horizonBlock} aria-label="Resumo por horizonte">
+      <div className={`${styles.segmented} ${styles.projectsHorizonFilter}`} role="group" aria-label="Filtro por horizonte">
+        <button type="button" aria-pressed={!horizonte} onClick={() => setHorizonFilter(null)}>
+          Todos
+        </button>
+        {LIFE_HORIZONS.map((horizon) => (
+          <button
+            key={horizon.key}
+            type="button"
+            aria-pressed={horizonte === horizon.key}
+            onClick={() => setHorizonFilter(horizon.key)}
+          >
+            {horizon.key === 'short' ? 'Curto' : horizon.key === 'mid' ? 'Médio' : 'Longo'}
+          </button>
+        ))}
+      </div>
+
+      <section className={`${styles.horizonBlock} ${styles.projectsHorizonSummary}`} aria-label="Resumo por horizonte">
+        <h2 className={styles.sectionTitle}>Resumo</h2>
         {LIFE_HORIZONS.map((horizon) => {
           const items = (projects.data ?? []).filter((project) => project.horizon === horizon.key)
           const goal = items.reduce((sum, project) => sum + project.goalAmount, 0)
           const accumulated = items.reduce((sum, project) => sum + project.accumulatedAmount, 0)
           const percent = goal <= 0 ? 0 : Math.min(100, (accumulated / goal) * 100)
-          const active = horizonte === horizon.key
           return (
-            <button
-              key={horizon.key}
-              type="button"
-              className={`${styles.horizonRow} ${active ? styles.horizonRowActive : ''}`}
-              onClick={() => setHorizonFilter(active ? null : horizon.key)}
-            >
+            <div key={horizon.key} className={styles.horizonRow}>
               <span className={styles.horizonMeta}>
                 <strong>{horizon.label}</strong>
                 <span>
@@ -161,38 +174,24 @@ export function ProjectsPage() {
                   style={{ width: `${percent}%` }}
                 />
               </span>
-            </button>
+            </div>
           )
         })}
-        <p className={styles.muted}>
-          Verde: curto prazo. Amarelo: médio prazo. Azul: longo prazo. Vermelho: acima da meta.
-        </p>
       </section>
 
-      <div className={styles.segmented} role="group" aria-label="Filtro por horizonte">
-        <button type="button" aria-pressed={!horizonte} onClick={() => setHorizonFilter(null)}>
-          Todos
-        </button>
-        {LIFE_HORIZONS.map((horizon) => (
-          <button
-            key={horizon.key}
-            type="button"
-            aria-pressed={horizonte === horizon.key}
-            onClick={() => setHorizonFilter(horizon.key)}
-          >
-            {horizon.label}
-          </button>
-        ))}
-      </div>
-
       <form
-        className={styles.toolbar}
+        className={`${styles.toolbar} ${styles.projectsSearchBar}`}
         onSubmit={(event) => {
           event.preventDefault()
           setAppliedSearch(search.trim())
         }}
       >
-        <Field label="Buscar" name="search" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <Field
+          label="Buscar projetos"
+          name="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
         <Button type="submit" variant="secondary">
           Buscar
         </Button>

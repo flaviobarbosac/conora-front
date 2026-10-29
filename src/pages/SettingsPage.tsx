@@ -12,17 +12,20 @@ import { useAuth } from '../auth/AuthProvider'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
+import { CheckboxField } from '../components/ui/CheckboxField'
 import { Field } from '../components/ui/Field'
-import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../lib/confirm'
-import { downloadBlob } from '../lib/format'
 import { planSummary } from '../lib/planAccess'
 import { showSaveToast } from '../lib/saveToast'
+import { VOICE_LAUNCH_ENABLED } from '../lib/voiceLaunch'
 import { useTheme } from '../theme/ThemeProvider'
-import styles from './page.module.css'
+import pageStyles from './pageStyles'
+import settingsStyles from './settings/settings.module.css'
+
+const styles = { ...pageStyles, ...settingsStyles }
 
 type PrefDraft = Omit<UserPreferencesInput, 'themeId'>
 
@@ -53,10 +56,12 @@ export function SettingsPage() {
   const { logout } = useAuth()
   const profile = useLoad(() => familyApi.profile(), [])
   const plan = useLoad(() => planApi.get(), [])
+  const lgpdStatus = useLoad(() => lgpdApi.status(), [])
   const savePrefs = useAction()
   const privacy = useAction()
   const [draft, setDraft] = useState<PrefDraft | null>(null)
   const [saved, setSaved] = useState<PrefDraft | null>(null)
+  const canDeleteAccount = Boolean(lgpdStatus.data?.canDeleteAccount)
 
   const dirty = Boolean(draft && saved && JSON.stringify(draft) !== JSON.stringify(saved))
   useRegisterDirty('settings-form', dirty)
@@ -111,13 +116,25 @@ export function SettingsPage() {
   }
 
   async function exportData() {
-    await privacy.run(async () => {
-      const data = await lgpdApi.exportData()
-      downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'conora-meus-dados.json')
-    })
+    const ok = await privacy.run(() => lgpdApi.exportData())
+    if (ok) {
+      showSaveToast(
+        'A exportação será agendada e estará disponível pra você daqui a 24 horas.',
+        5000,
+      )
+      lgpdStatus.reload()
+    }
   }
 
   async function deleteAccount() {
+    if (!canDeleteAccount) {
+      showSaveToast(
+        lgpdStatus.data?.message
+          ?? 'Aguarde a exportação dos seus dados ficar disponível antes de excluir a conta.',
+        5000,
+      )
+      return
+    }
     const confirmed = await confirmDestructive(
       'Excluir sua conta remove o acesso ao app. Registros com obrigação fiscal podem ser retidos por até 5 anos. Continuar?',
       { title: 'Excluir conta' },
@@ -141,7 +158,7 @@ export function SettingsPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="Configurações" />
+      <PageHeader title="Configurações" />
       <ErrorText message={profile.error ?? plan.error ?? savePrefs.error ?? privacy.error} />
       {profile.loading && !profile.data ? <Loading /> : null}
 
@@ -149,24 +166,20 @@ export function SettingsPage() {
         <form className={`${styles.form} ${styles.settingsForm}`} onSubmit={(event) => void onSave(event)}>
           <section className={styles.section} id="ritmo">
             <h2 className={styles.sectionTitle}>Ritmo</h2>
-            <Select
+            <CheckboxField
               label="Modo discreto"
               name="quietMode"
-              value={draft.quietMode ? 'on' : 'off'}
-              onChange={(event) => patch({ quietMode: event.target.value === 'on' })}
-            >
-              <option value="off">Desligado — mostra jornada e celebrações</option>
-              <option value="on">Ligado — só números, sem celebrações</option>
-            </Select>
-            <Select
+              checked={draft.quietMode}
+              onChange={(event) => patch({ quietMode: event.target.checked })}
+              description="Desligado: mostra jornadas e celebrações. Ligado: mostra só números."
+            />
+            <CheckboxField
               label="E-mails do Conora"
               name="emailsEnabled"
-              value={draft.emailsEnabled ? 'on' : 'off'}
-              onChange={(event) => patch({ emailsEnabled: event.target.value === 'on' })}
-            >
-              <option value="on">Receber — avisos e convites do sistema</option>
-              <option value="off">Não receber — desliga e-mails do Conora</option>
-            </Select>
+              checked={draft.emailsEnabled}
+              onChange={(event) => patch({ emailsEnabled: event.target.checked })}
+              description="Receber avisos e convites do sistema."
+            />
             <Field
               label="Meta da reserva (meses)"
               name="reserveTargetMonths"
@@ -224,44 +237,38 @@ export function SettingsPage() {
               }}
               hint="Amarelo desse percentual até 99%. Em 100% o aviso é Limite atingido. Acima de 100% fica vermelho."
             />
-            <Select
+            <CheckboxField
               label="Evolução das fotos do Ian e da Clara"
               name="photoEvolutionEnabled"
-              value={draft.photoEvolutionEnabled !== false ? 'on' : 'off'}
-              onChange={(event) => patch({ photoEvolutionEnabled: event.target.value === 'on' })}
-            >
-              <option value="on">Ligada — foto e voz seguem os marcos</option>
-              <option value="off">Desligada — foto e voz ficam nos 30 anos</option>
-            </Select>
+              checked={draft.photoEvolutionEnabled !== false}
+              onChange={(event) => patch({ photoEvolutionEnabled: event.target.checked })}
+              description="Ligado: foto e voz seguem os marcos. Desligado: ficam nos 30 anos."
+            />
           </section>
 
           <section className={styles.section} id="retrospectiva">
             <h2 className={styles.sectionTitle}>Retrospectiva</h2>
-            <Select
+            <CheckboxField
               label="Incluir valores absolutos"
               name="includeValues"
-              value={draft.includeAbsoluteValuesInRetrospective ? 'on' : 'off'}
-              onChange={(event) =>
-                patch({ includeAbsoluteValuesInRetrospective: event.target.value === 'on' })
-              }
-            >
-              <option value="off">Não — só percentuais e marcos</option>
-              <option value="on">Sim — mostrar valores</option>
-            </Select>
+              checked={draft.includeAbsoluteValuesInRetrospective}
+              onChange={(event) => patch({ includeAbsoluteValuesInRetrospective: event.target.checked })}
+              description="Ligado: mostra valores. Desligado: só percentuais e marcos."
+            />
           </section>
 
-          <section className={styles.section} id="voz">
-            <h2 className={styles.sectionTitle}>Voz</h2>
-            <Select
-              label="Confirmar lançamento por voz"
-              name="voiceEntryConfirm"
-              value={draft.voiceEntryConfirm ? 'on' : 'off'}
-              onChange={(event) => patch({ voiceEntryConfirm: event.target.value === 'on' })}
-            >
-              <option value="on">Ligado — o Ian mostra o lançamento e espera a aprovação</option>
-              <option value="off">Desligado — o lançamento entra direto</option>
-            </Select>
-          </section>
+          {VOICE_LAUNCH_ENABLED ? (
+            <section className={styles.section} id="voz">
+              <h2 className={styles.sectionTitle}>Voz</h2>
+              <CheckboxField
+                label="Confirmar lançamento por voz"
+                name="voiceEntryConfirm"
+                checked={draft.voiceEntryConfirm}
+                onChange={(event) => patch({ voiceEntryConfirm: event.target.checked })}
+                description="Ligado: microfone no início e o Ian confirma o lançamento antes de gravar. Desligado: sem microfone no painel."
+              />
+            </section>
+          ) : null}
 
           <div className={styles.formActions}>
             <Button type="button" variant="secondary" disabled={!dirty || savePrefs.busy} onClick={onCancel}>
@@ -284,17 +291,26 @@ export function SettingsPage() {
           <Link to="/perfil" className={styles.accountLink}>
             <strong>Perfil</strong>
             <span>{profile.data?.name?.trim() || 'Sem nome'}</span>
+            {profile.data?.email ? <span>{profile.data.email}</span> : null}
           </Link>
         </div>
         <p className={styles.muted}>
           Processos satélites da LGPD: baixe uma cópia dos seus dados ou exclua sua conta definitivamente. O
           aceite ciente da LGPD é pedido só no pagamento de um plano pago — não no acesso gratuito.
+          Exportar e excluir são ações separadas; a exclusão só libera depois que a exportação estiver pronta.
         </p>
+        {lgpdStatus.data && !lgpdStatus.data.canDeleteAccount ? (
+          <p className={styles.muted}>{lgpdStatus.data.message}</p>
+        ) : null}
         <div className={styles.actions}>
           <Button variant="secondary" disabled={privacy.busy} onClick={() => void exportData()}>
             Exportar meus dados
           </Button>
-          <Button variant="secondary" disabled={privacy.busy} onClick={() => void deleteAccount()}>
+          <Button
+            variant="danger"
+            disabled={privacy.busy || !canDeleteAccount}
+            onClick={() => void deleteAccount()}
+          >
             Excluir minha conta
           </Button>
         </div>

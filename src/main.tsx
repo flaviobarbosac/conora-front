@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import { AuthProvider } from './auth/AuthProvider'
+import { installMobileViewportGuard } from './lib/resetMobileViewport'
 import { ThemeProvider } from './theme/ThemeProvider'
 import './styles/global.css'
 
@@ -17,6 +18,7 @@ async function bootstrapNative(): Promise<void> {
 }
 
 void bootstrapNative()
+installMobileViewportGuard()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

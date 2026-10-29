@@ -9,7 +9,7 @@ import {
   type JourneyTimelineStep,
 } from '../lib/jornadaTimeline'
 import { maturityAgeFromAchievements } from '../lib/speakPt'
-import page from '../pages/page.module.css'
+import page from '../pages/pageStyles'
 import { ErrorText, Loading } from './ui/Feedback'
 import styles from './JornadaTimeline.module.css'
 
