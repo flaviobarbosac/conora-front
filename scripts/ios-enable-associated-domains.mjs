@@ -106,6 +106,27 @@ async function main() {
     }
   }
 
+  const allowedCertTypes = new Set(['IOS_DISTRIBUTION', 'DISTRIBUTION'])
+  let distCerts = []
+  for (const certType of ['IOS_DISTRIBUTION', 'DISTRIBUTION']) {
+    try {
+      const certs = await request(
+        'GET',
+        `/v1/certificates?filter[certificateType]=${certType}&limit=50`,
+      )
+      distCerts = (certs.data || []).filter((c) => allowedCertTypes.has(c.attributes.certificateType))
+      if (distCerts.length) break
+    } catch (e) {
+      console.warn(`Cert filter ${certType} failed: ${e.message}`)
+    }
+  }
+  if (!distCerts.length) {
+    const all = await request('GET', '/v1/certificates?limit=200')
+    distCerts = (all.data || []).filter((c) => allowedCertTypes.has(c.attributes.certificateType))
+  }
+  if (!distCerts.length) throw new Error('No iOS distribution certificate found')
+  console.log(`Using distribution cert ${distCerts[0].id} (${distCerts[0].attributes.certificateType})`)
+
   const profiles = await request(
     'GET',
     `/v1/profiles?filter[name]=${encodeURIComponent(profileName)}&filter[profileType]=IOS_APP_STORE&limit=20`,
@@ -114,21 +135,6 @@ async function main() {
     console.log(`Deleting old profile ${p.id} (${p.attributes.name})…`)
     await request('DELETE', `/v1/profiles/${p.id}`)
   }
-
-  const certQueries = ['IOS_DISTRIBUTION', 'APPLE_DISTRIBUTION', 'DISTRIBUTION']
-  let distCerts = []
-  for (const certType of certQueries) {
-    const certs = await request(
-      'GET',
-      `/v1/certificates?filter[certificateType]=${certType}&limit=50`,
-    )
-    distCerts = (certs.data || []).filter((c) =>
-      ['IOS_DISTRIBUTION', 'DISTRIBUTION', 'APPLE_DISTRIBUTION'].includes(c.attributes.certificateType),
-    )
-    if (distCerts.length) break
-  }
-  if (!distCerts.length) throw new Error('No iOS distribution certificate found')
-  console.log(`Using distribution cert ${distCerts[0].id} (${distCerts[0].attributes.certificateType})`)
 
   console.log(`Creating profile "${profileName}"…`)
   const created = await request('POST', '/v1/profiles', {
