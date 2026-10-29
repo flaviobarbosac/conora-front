@@ -1,7 +1,11 @@
 import type { KeyboardEvent } from 'react'
 import { VOICE_LAUNCH_ENABLED } from '../lib/voiceLaunch'
 import { Icon } from './ui/Icon'
-import styles from '../pages/pageStyles'
+import pageStyles from '../pages/pageStyles'
+import homeStyles from '../pages/home/home.module.css'
+
+/** Launch ring tokens live in home.module.css — pageStyles alone left the Ian dock unstyled (full-viewport). */
+const styles = { ...pageStyles, ...homeStyles }
 
 type Props = {
   listening?: boolean
