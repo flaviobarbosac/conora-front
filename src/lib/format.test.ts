@@ -95,7 +95,9 @@ describe('date helpers', () => {
     expect(formatDate('2026-10-15T12:00:00Z')).toBe('15/10/2026')
     expect(formatDate(null)).toBe('—')
     expect(formatDateTime(null)).toBe('—')
-    expect(formatDateTime('2026-10-15T12:00:00Z')).toContain('2026')
+    // 12:00 UTC → 09:00 in America/Sao_Paulo
+    expect(formatDateTime('2026-10-15T12:00:00Z')).toMatch(/15\/10\/2026/)
+    expect(formatDateTime('2026-10-15T12:00:00Z')).toMatch(/09:00/)
   })
 
   it('formats money and error messages', () => {

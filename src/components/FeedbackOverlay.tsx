@@ -61,7 +61,7 @@ export function FeedbackOverlay({ open, onClose, pathnameSnapshot }: Props) {
     [pathnameSnapshot, location.pathname, pathItems],
   )
 
-  const agoraLocal = new Date().toLocaleString('pt-BR')
+  const agoraLocal = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
   function resetAndClose() {
     setNota(0)

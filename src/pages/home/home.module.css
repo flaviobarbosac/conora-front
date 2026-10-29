@@ -130,7 +130,7 @@
   min-height: min(78vh, 720px);
 }
 
-/* With journey: launch stays compact at the top. Without: fill and center on device. */
+/* With journey: launch stays compact at the top. */
 .homeLaunch {
   display: flex;
   flex-direction: column;
@@ -142,50 +142,41 @@
   justify-content: flex-start;
 }
 
+/*
+ * Without journey: one device-tall screen (no empty scroll) and logo+Ian+icons
+ * centered in the remaining space below the greeting.
+ */
 .homePageSolo {
-  position: relative;
   flex: 1 1 auto;
   width: 100%;
   max-width: none;
-  /* Usable device viewport between app header and bottom nav (all OSes). */
-  min-height: calc(100svh - 12.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-  min-height: calc(100dvh - 12.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .homePageSolo .header,
 .homePageSolo .homeUrgent,
 .homePageSolo .muted {
-  position: relative;
-  z-index: 1;
   align-self: stretch;
   flex-shrink: 0;
 }
 
-/* Logo + Ian/Clara + launch icons: geometric center of the content screen. */
 .homePageSolo .homeLaunch {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   max-width: none;
   margin: 0;
   padding: 0;
-  pointer-events: none;
-}
-
-.homePageSolo .homeLaunch > * {
-  pointer-events: auto;
+  justify-content: center;
+  align-items: center;
 }
 
 @media (min-width: 768px) {
-  .homePageSolo {
-    min-height: calc(100svh - 8.5rem);
-    min-height: calc(100dvh - 8.5rem);
-  }
-
   .homePageSolo .homeLaunch {
     width: 100%;
   }
