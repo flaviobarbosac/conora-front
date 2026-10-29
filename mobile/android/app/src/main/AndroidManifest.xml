@@ -35,6 +35,17 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="conora" />
             </intent-filter>
+
+            <!-- HTTPS App Links: e-mail verification / password reset open the app, not Chrome. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="conora.com.br" android:pathPrefix="/app/validar-email" />
+                <data android:scheme="https" android:host="conora.com.br" android:pathPrefix="/app/redefinir-senha" />
+                <data android:scheme="https" android:host="www.conora.com.br" android:pathPrefix="/app/validar-email" />
+                <data android:scheme="https" android:host="www.conora.com.br" android:pathPrefix="/app/redefinir-senha" />
+            </intent-filter>
         </activity>
 
         <provider
