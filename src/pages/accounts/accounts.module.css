@@ -1,0 +1,125 @@
+.accountList {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: var(--space-2);
+}
+
+.accountRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'main meta'
+    'actions actions';
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-sizing: border-box;
+}
+
+.accountRowArchived {
+  opacity: 0.72;
+  background: color-mix(in srgb, var(--bg-app) 55%, var(--surface));
+}
+
+.accountMain {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.accountMain:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.accountMain strong {
+  font-weight: var(--weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountMain:hover strong {
+  color: var(--primary);
+}
+
+.accountMeta {
+  grid-area: meta;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+}
+
+.accountBalance {
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-size: var(--text-md);
+  line-height: 1.2;
+}
+
+.accountActions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-2);
+  margin: 0;
+}
+
+.accountIconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+.accountIconBtn:hover:not(:disabled) {
+  color: var(--primary);
+}
+
+.accountIconDanger:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+@media (min-width: 480px) {
+  .accountRow {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: 'main meta actions';
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .accountActions {
+    border-top: 0;
+    padding-top: 0;
+  }
+}

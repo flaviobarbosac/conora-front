@@ -335,6 +335,15 @@
   align-items: flex-start;
   gap: var(--space-1);
   min-width: 0;
+  width: 100%;
+  text-align: left;
+}
+
+.budgetRow .raioxAccountName {
+  display: block;
+  width: 100%;
+  text-align: left;
+  justify-self: start;
 }
 
 .budgetAccountCell :global(button) {

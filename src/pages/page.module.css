@@ -821,11 +821,43 @@ button.compact {
   color: var(--text-muted);
 }
 
-.categoriesRow {
-  grid-template-columns: 44px minmax(8rem, 1fr) auto;
+/* Double class beats shared .raioxRow grid from raioX.module.css. */
+.categoriesRow.categoriesRow {
+  grid-template-columns: 44px minmax(0, 1fr) auto;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   cursor: default;
   align-items: center;
+  text-align: left;
+}
+
+.categoriesNameCell {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+  width: 100%;
+  text-align: left;
+}
+
+.categoriesNameCell .raioxAccountName,
+.categoriesNameCell :global(strong) {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.categoriesNameCell .categoriesActiveCheck {
+  flex: 0 0 auto;
+  min-height: 0;
 }
 
 .categoriesToggleBtn {

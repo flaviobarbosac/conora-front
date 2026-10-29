@@ -1,7 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { formatCpfInput } from '../auth/loginIdentifier'
 import { useAuth } from '../auth/AuthProvider'
+import { appleSignInAvailable, requestAppleIdentityToken } from '../auth/apple'
+import { requestGoogleIdToken } from '../auth/google'
+import { AppleMark } from '../components/AppleMark'
+import { GoogleMark } from '../components/GoogleMark'
 import { Button } from '../components/ui/Button'
 import { Field } from '../components/ui/Field'
 import { PasswordField } from '../components/ui/PasswordField'
@@ -15,13 +19,20 @@ function safeReturnTo(raw: string | null): string {
   return '/'
 }
 
+function isAlreadyRegisteredMessage(message: string): boolean {
+  return /já existe|email duplicado|já cadastrado|conta conora com este/i.test(message)
+}
+
 export function RegisterPage() {
-  const { session, register } = useAuth()
+  const { session, register, registerGoogle, registerApple } = useAuth()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const afterRegister = safeReturnTo(searchParams.get('returnTo'))
   const invitedEmail = (searchParams.get('email') ?? '').trim()
   const emailLocked = invitedEmail.includes('@')
+  const missingAccount = searchParams.get('aviso') === 'conta-inexistente'
   const loginTo = afterRegister === '/' ? '/login' : `/login?returnTo=${encodeURIComponent(afterRegister)}`
+  const showApple = appleSignInAvailable()
   const [name, setName] = useState('')
   const [email, setEmail] = useState(invitedEmail)
   const [cpf, setCpf] = useState('')
@@ -33,6 +44,19 @@ export function RegisterPage() {
 
   if (session) {
     return <Navigate to={afterRegister} replace />
+  }
+
+  function goLoginBecauseExists(message: string, usuario?: string) {
+    const base =
+      loginTo.includes('?')
+        ? `${loginTo}&aviso=conta-existe`
+        : `${loginTo}?aviso=conta-existe`
+    const withUser = usuario?.trim()
+      ? `${base}&usuario=${encodeURIComponent(usuario.trim())}`
+      : base
+    setError(message)
+    setDuplicateLoginTo(withUser)
+    window.setTimeout(() => navigate(withUser, { replace: true }), 1200)
   }
 
   async function onSubmit(event: FormEvent) {
@@ -53,15 +77,47 @@ export function RegisterPage() {
       await register(name, email, cpf, password)
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Não foi possível criar o acesso.'
-      if (/já existe.*e-?mail|email duplicado|já cadastrado com o email/i.test(message)) {
-        const loginWithEmail =
-          loginTo.includes('?')
-            ? `${loginTo}&usuario=${encodeURIComponent(email.trim())}`
-            : `${loginTo}?usuario=${encodeURIComponent(email.trim())}`
-        setError(`${message} Entre com a conta existente.`)
-        setDuplicateLoginTo(loginWithEmail)
+      if (isAlreadyRegisteredMessage(message)) {
+        goLoginBecauseExists(`${message} Vamos te levar para Entrar.`, email)
       } else {
         setDuplicateLoginTo(null)
+        setError(message)
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onGoogle() {
+    setBusy(true)
+    setError(null)
+    setDuplicateLoginTo(null)
+    try {
+      await registerGoogle(await requestGoogleIdToken())
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Não foi possível criar com Google.'
+      if (isAlreadyRegisteredMessage(message)) {
+        goLoginBecauseExists(message)
+      } else {
+        setError(message)
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onApple() {
+    setBusy(true)
+    setError(null)
+    setDuplicateLoginTo(null)
+    try {
+      const apple = await requestAppleIdentityToken()
+      await registerApple(apple.identityToken, apple.name, apple.email)
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Não foi possível criar com Apple.'
+      if (isAlreadyRegisteredMessage(message)) {
+        goLoginBecauseExists(message)
+      } else {
         setError(message)
       }
     } finally {
@@ -75,7 +131,7 @@ export function RegisterPage() {
       subtitle={
         emailLocked
           ? `Convite para ${invitedEmail}. Complete o cadastro com este e-mail.`
-          : 'Cadastre com nome, CPF, e-mail e senha. Enviamos um e-mail de validação; o acesso abre depois do clique no link.'
+          : 'Crie um acesso novo com e-mail e senha, Google ou Apple. Cada provedor gera uma conta Conora separada.'
       }
       footer={
         <>
@@ -84,6 +140,26 @@ export function RegisterPage() {
       }
     >
       <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+        {missingAccount ? (
+          <p className={styles.notice} role="status">
+            Não encontramos esse acesso. Crie a conta aqui e depois entre.
+          </p>
+        ) : null}
+        <div className={styles.actions}>
+          <Button type="button" variant="secondary" className={styles.google} disabled={busy} onClick={() => void onGoogle()}>
+            <GoogleMark />
+            Criar com Google
+          </Button>
+          {showApple ? (
+            <Button type="button" variant="secondary" className={styles.google} disabled={busy} onClick={() => void onApple()}>
+              <AppleMark />
+              Criar com Apple
+            </Button>
+          ) : null}
+          <div className={styles.divider} aria-hidden="true">
+            <span>ou com e-mail</span>
+          </div>
+        </div>
         <Field label="Nome" name="name" required value={name} onChange={(event) => setName(event.target.value)} />
         <Field
           label="E-mail"
@@ -132,7 +208,7 @@ export function RegisterPage() {
         ) : null}
         {duplicateLoginTo ? (
           <p>
-            <Link to={duplicateLoginTo}>Entrar com este e-mail</Link>
+            <Link to={duplicateLoginTo}>Ir para Entrar</Link>
           </p>
         ) : null}
         <div className={styles.actions}>

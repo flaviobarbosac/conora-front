@@ -6,7 +6,7 @@ import { PageHeader } from '../components/PageHeader'
 import { SharingViewToggle } from '../components/SharingViewToggle'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useRaioXPageController } from '../hooks/useRaioXPageController'
-import { isFreeCategoryCode } from '../lib/freeTier'
+import { FREE_TIER_CATEGORY_LABEL, isFreeCategoryCode } from '../lib/freeTier'
 import {
   focusSections,
   sectionHead,
@@ -284,6 +284,7 @@ export function RaioXPage() {
         />
       ) : null}
       {accounts.loading && !accounts.data ? <Loading /> : null}
+      {freeLimited && !fullAccess ? <p className={styles.muted}>{FREE_TIER_CATEGORY_LABEL}</p> : null}
       {rootRows.length > 0 && leakageOnly && !hasLeakage ? <RaioXNoLeakageCelebrate /> : null}
       {rootRows.length > 0 && !(leakageOnly && !hasLeakage) ? (
         <RaioXTreeList

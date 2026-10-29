@@ -45,6 +45,54 @@ export function isCategoryWritable(plan: Plan | null | undefined, category: Pick
   return isFreeCategoryCode(category?.code)
 }
 
+/**
+ * Free plan chart: keep unlocked analytical leaves (+ pending review) and their
+ * ancestors only — hide locked paid categories so the tree stays clean.
+ */
+export function freeTierVisibleIds(list: Category[]): Set<string> {
+  const byId = new Map(list.map((account) => [account.id, account]))
+  const visible = new Set<string>()
+  for (const account of list) {
+    if (!isFreeCategoryCode(account.code) && !account.isPendingReview) {
+      continue
+    }
+    let current: Category | undefined = account
+    while (current) {
+      visible.add(current.id)
+      current = current.parentId ? byId.get(current.parentId) : undefined
+    }
+  }
+  return visible
+}
+
+/** Full chart when plan has full access; otherwise free-tier leaves + ancestors. */
+export function filterCategoriesForPlan(
+  list: Category[],
+  plan: Plan | null | undefined,
+  options?: { keepPendingReview?: boolean },
+): Category[] {
+  if (hasFullAccess(plan)) {
+    return list
+  }
+  if (options?.keepPendingReview === false) {
+    const keep = new Set<string>()
+    const byId = new Map(list.map((account) => [account.id, account]))
+    for (const account of list) {
+      if (!isFreeCategoryCode(account.code)) {
+        continue
+      }
+      let current: Category | undefined = account
+      while (current) {
+        keep.add(current.id)
+        current = current.parentId ? byId.get(current.parentId) : undefined
+      }
+    }
+    return list.filter((account) => keep.has(account.id))
+  }
+  const keep = freeTierVisibleIds(list)
+  return list.filter((account) => keep.has(account.id))
+}
+
 /** Ever had a store/plan row → renew; otherwise first subscribe. */
 export function planCtaLabel(plan: Plan | null | undefined): 'Assinar plano' | 'Renovar plano' {
   return plan?.everSubscribed ? 'Renovar plano' : 'Assinar plano'

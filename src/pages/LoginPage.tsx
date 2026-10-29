@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import { appleSignInAvailable, requestAppleIdentityToken } from '../auth/apple'
 import { requestGoogleIdToken } from '../auth/google'
@@ -18,12 +18,18 @@ function safeReturnTo(raw: string | null): string {
   return '/'
 }
 
+function isMissingAccountMessage(message: string): boolean {
+  return /não encontramos uma conta|conta não encontrada|crie uma conta/i.test(message)
+}
+
 export function LoginPage() {
   const { session, authReady, login, loginGoogle, loginApple } = useAuth()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const afterLogin = safeReturnTo(searchParams.get('returnTo'))
   const fromInvite = afterLogin.startsWith('/grupo/convite/')
   const emailSent = searchParams.get('aviso') === 'email-enviado'
+  const accountExists = searchParams.get('aviso') === 'conta-existe'
   const registerTo = afterLogin === '/' ? '/register' : `/register?returnTo=${encodeURIComponent(afterLogin)}`
   const showApple = appleSignInAvailable()
   const [usuario, setUsuario] = useState(() => searchParams.get('usuario') ?? '')
@@ -42,6 +48,15 @@ export function LoginPage() {
     return <Navigate to={afterLogin} replace />
   }
 
+  function goRegisterBecauseMissing(message: string) {
+    const dest =
+      registerTo.includes('?')
+        ? `${registerTo}&aviso=conta-inexistente`
+        : `${registerTo}?aviso=conta-inexistente`
+    setError(message)
+    window.setTimeout(() => navigate(dest, { replace: true }), 1200)
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     setBusy(true)
@@ -49,7 +64,12 @@ export function LoginPage() {
     try {
       await login(usuario, password)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Não foi possível entrar.')
+      const message = caught instanceof Error ? caught.message : 'Não foi possível entrar.'
+      if (isMissingAccountMessage(message)) {
+        goRegisterBecauseMissing(message)
+      } else {
+        setError(message)
+      }
     } finally {
       setBusy(false)
     }
@@ -61,7 +81,12 @@ export function LoginPage() {
     try {
       await loginGoogle(await requestGoogleIdToken())
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Não foi possível entrar com Google.')
+      const message = caught instanceof Error ? caught.message : 'Não foi possível entrar com Google.'
+      if (isMissingAccountMessage(message)) {
+        goRegisterBecauseMissing(message)
+      } else {
+        setError(message)
+      }
     } finally {
       setBusy(false)
     }
@@ -74,7 +99,12 @@ export function LoginPage() {
       const apple = await requestAppleIdentityToken()
       await loginApple(apple.identityToken, apple.name, apple.email)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Não foi possível entrar com Apple.')
+      const message = caught instanceof Error ? caught.message : 'Não foi possível entrar com Apple.'
+      if (isMissingAccountMessage(message)) {
+        goRegisterBecauseMissing(message)
+      } else {
+        setError(message)
+      }
     } finally {
       setBusy(false)
     }
@@ -84,12 +114,12 @@ export function LoginPage() {
     <>
       <Button variant="secondary" className={styles.google} disabled={busy} onClick={() => void onGoogle()}>
         <GoogleMark />
-        Continuar com Google
+        Entrar com Google
       </Button>
       {showApple ? (
         <Button variant="secondary" className={styles.google} disabled={busy} onClick={() => void onApple()}>
           <AppleMark />
-          Continuar com Apple
+          Entrar com Apple
         </Button>
       ) : null}
     </>
@@ -100,8 +130,8 @@ export function LoginPage() {
       title="Entrar"
       subtitle={
         fromInvite
-          ? 'Para aceitar o convite, entre com Google ou Apple. CPF ou e-mail também servem.'
-          : 'Acesse com CPF ou e-mail. Google e Apple são opcionais.'
+          ? 'Para aceitar o convite, entre com uma conta Conora já criada (Google, Apple, CPF ou e-mail).'
+          : 'Entre só se a conta já existir. Google e Apple abrem a conta daquele provedor — não criam acesso novo aqui.'
       }
       footer={
         <>
@@ -115,6 +145,11 @@ export function LoginPage() {
         {emailSent ? (
           <p className={styles.notice} role="status">
             E-mail enviado. Abra o link para definir a senha e entre com ela aqui.
+          </p>
+        ) : null}
+        {accountExists ? (
+          <p className={styles.notice} role="status">
+            Esta conta já existe. Entre com o mesmo acesso usado no cadastro.
           </p>
         ) : null}
         {fromInvite ? (

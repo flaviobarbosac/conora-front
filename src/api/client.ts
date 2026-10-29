@@ -285,17 +285,22 @@ export const authApi = {
       auth: false,
       body: { name, email, cpf, password },
     }),
-  google: (idToken: string) =>
+  google: (idToken: string, intent: 'login' | 'register' = 'login') =>
     apiFetch<AuthResponse>('/auth/google', {
       method: 'POST',
       auth: false,
-      body: { idToken },
+      body: { idToken, intent },
     }),
-  apple: (identityToken: string, name?: string | null, email?: string | null) =>
+  apple: (
+    identityToken: string,
+    name?: string | null,
+    email?: string | null,
+    intent: 'login' | 'register' = 'login',
+  ) =>
     apiFetch<AuthResponse>('/auth/apple', {
       method: 'POST',
       auth: false,
-      body: { identityToken, name, email },
+      body: { identityToken, name, email, intent },
     }),
   logout: () => apiFetch<void>('/auth/logout', { method: 'POST' }),
   forgotPassword: (usuario: string) =>

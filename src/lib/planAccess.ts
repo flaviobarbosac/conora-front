@@ -49,7 +49,7 @@ const LEGACY_KINDS: ReadonlyArray<PlanKind> = ['Monthly1490', 'Yearly14990']
 
 /** Seats beyond the owner. Trial and no plan count as Individual (no invites). */
 export function familyInviteLimit(plan: Plan | null | undefined): { maxExtra: number; message: string } {
-  const tier = plan?.phase === 'Subscribed' ? plan.tier : null
+  const tier = subscribedTier(plan)
   const fromOffer = tier ? plan?.offers.find((offer) => offer.tier === tier)?.maxExtraMembers : null
   const maxExtra = fromOffer ?? 0
   if (tier === 'Family') {
@@ -78,17 +78,47 @@ export function tierOfKind(kind: PlanKind): PlanTier {
   return 'Individual'
 }
 
-/** One-line summary for settings and menus. */
+/** Billing cycle from the persisted kind — never trust a detached yearly flag. */
+export function isYearlyKind(kind: PlanKind): boolean {
+  return kind.includes('Yearly') || kind === 'Yearly14990'
+}
+
+/** Commercial title + cycle from PlanKind (source of truth for what was signed). */
+export function planKindLabel(kind: PlanKind): string {
+  const tier = LEGACY_KINDS.includes(kind) ? 'Individual' : tierOfKind(kind)
+  const cycle = isYearlyKind(kind) ? 'anual' : 'mensal'
+  return `${TIER_INFO[tier].title} ${cycle}`
+}
+
+/** Active subscribed tier from kind; null when not on a paid personal plan. */
+export function subscribedTier(plan: Plan | null | undefined): PlanTier | null {
+  if (!plan || plan.phase !== 'Subscribed' || !plan.plan) return null
+  if (plan.coveredByFamily) return tierOfKind(plan.plan)
+  return LEGACY_KINDS.includes(plan.plan) ? 'Individual' : tierOfKind(plan.plan)
+}
+
+/** One-line summary for settings, profile and menus. Always derived from `plan.plan`. */
 export function planSummary(plan: Plan | null | undefined): string {
   if (!plan) return 'Carregando…'
-  if (plan.phase === 'Trial') return `Acesso gratuito · ${plan.daysLeft} dias restantes`
+  if (plan.phase === 'Trial') {
+    return plan.isTrainingStudent
+      ? `Acesso completo gratuito · ${plan.daysLeft} dias restantes`
+      : `Acesso gratuito · ${plan.daysLeft} dias restantes`
+  }
   if (plan.phase === 'Grace') return 'Acesso gratuito encerrado · somente leitura'
   if (plan.phase === 'Blocked') return 'Conta bloqueada'
+  if (plan.phase === 'Expired') {
+    return plan.everSubscribed
+      ? 'Plano vencido · Conora grátis'
+      : 'Conora grátis'
+  }
   if (!plan.plan) return PHASE_LABEL[plan.phase]
-  const tier = LEGACY_KINDS.includes(plan.plan) ? 'Individual' : (plan.tier ?? 'Individual')
-  const cycle = plan.yearly ? 'anual' : 'mensal'
+  const label = planKindLabel(plan.plan)
   const price = plan.price !== null ? ` · ${formatMoney(plan.price)}` : ''
-  return `${TIER_INFO[tier].title} ${cycle}${price} · ${PHASE_LABEL[plan.phase]}`
+  if (plan.coveredByFamily) {
+    return `${label} do grupo${price} · ${PHASE_LABEL[plan.phase]}`
+  }
+  return `${label}${price} · ${PHASE_LABEL[plan.phase]}`
 }
 
 export function graceScreenShown(): boolean {
