@@ -21,7 +21,9 @@ type AuthContextValue = {
   login: (usuario: string, password: string) => Promise<void>
   register: (name: string, email: string, cpf: string, password: string) => Promise<void>
   loginGoogle: (idToken: string) => Promise<void>
+  registerGoogle: (idToken: string) => Promise<void>
   loginApple: (identityToken: string, name?: string | null, email?: string | null) => Promise<void>
+  registerApple: (identityToken: string, name?: string | null, email?: string | null) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -88,16 +90,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginGoogle = useCallback(
     async (idToken: string) => {
-      applyAuth(await authApi.google(idToken))
+      applyAuth(await authApi.google(idToken, 'login'))
       void import('../lib/journeyTrack').then(({ trackJourney }) => trackJourney('/', 'Login'))
+    },
+    [applyAuth],
+  )
+
+  const registerGoogle = useCallback(
+    async (idToken: string) => {
+      applyAuth(await authApi.google(idToken, 'register'))
+      void import('../lib/journeyTrack').then(({ trackJourney }) => trackJourney('/', 'Register'))
     },
     [applyAuth],
   )
 
   const loginApple = useCallback(
     async (identityToken: string, name?: string | null, email?: string | null) => {
-      applyAuth(await authApi.apple(identityToken, name, email))
+      applyAuth(await authApi.apple(identityToken, name, email, 'login'))
       void import('../lib/journeyTrack').then(({ trackJourney }) => trackJourney('/', 'Login'))
+    },
+    [applyAuth],
+  )
+
+  const registerApple = useCallback(
+    async (identityToken: string, name?: string | null, email?: string | null) => {
+      applyAuth(await authApi.apple(identityToken, name, email, 'register'))
+      void import('../lib/journeyTrack').then(({ trackJourney }) => trackJourney('/', 'Register'))
     },
     [applyAuth],
   )
@@ -113,8 +131,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ session, authReady, acceptSession: applyAuth, login, register, loginGoogle, loginApple, logout }),
-    [session, authReady, applyAuth, login, register, loginGoogle, loginApple, logout],
+    () => ({
+      session,
+      authReady,
+      acceptSession: applyAuth,
+      login,
+      register,
+      loginGoogle,
+      registerGoogle,
+      loginApple,
+      registerApple,
+      logout,
+    }),
+    [
+      session,
+      authReady,
+      applyAuth,
+      login,
+      register,
+      loginGoogle,
+      registerGoogle,
+      loginApple,
+      registerApple,
+      logout,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

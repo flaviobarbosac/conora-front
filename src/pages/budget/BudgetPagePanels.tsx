@@ -25,7 +25,13 @@ import { useAction } from '../../hooks/useAction'
 import { useLoad } from '../../hooks/useLoad'
 import { useRegisterDirty } from '../../hooks/useUnsavedChanges'
 import { confirmDestructive } from '../../lib/confirm'
-import { hasFullAccess, isFreeCategoryCode, PAID_MODULE_HINT_SHORT } from '../../lib/freeTier'
+import {
+  FREE_TIER_CATEGORY_LABEL,
+  filterCategoriesForPlan,
+  freeTierVisibleIds,
+  hasFullAccess,
+  PAID_MODULE_HINT_SHORT,
+} from '../../lib/freeTier'
 import { showSaveToast } from '../../lib/saveToast'
 import { usePlanAccess } from '../../hooks/usePlanAccess'
 import { categoryLabel } from '../../lib/categoryLabel'
@@ -85,6 +91,11 @@ export function BudgetTreeEditor({
   const [sheetCategoryId, setSheetCategoryId] = useState<string | null>(null)
   const saveAction = useAction()
 
+  const visibleCategories = useMemo(
+    () => filterCategoriesForPlan(categories, plan, { keepPendingReview: false }),
+    [categories, plan],
+  )
+
   const projectLockedCategoryIds = useMemo(() => {
     const ids = new Set<string>()
     for (const project of projects) {
@@ -95,23 +106,28 @@ export function BudgetTreeEditor({
     return ids
   }, [projects])
 
-  const lockedCategoryIds = useMemo(() => {
-    const ids = new Set(projectLockedCategoryIds)
-    if (!fullAccess) {
-      for (const account of categories) {
-        if (account.level === 'Analytical' && !isFreeCategoryCode(account.code)) {
-          ids.add(account.id)
-        }
-      }
-    }
-    return ids
-  }, [projectLockedCategoryIds, categories, fullAccess])
+  // Project-linked categories stay read-only; paid leaves are hidden on free tier.
+  const lockedCategoryIds = projectLockedCategoryIds
 
   useEffect(() => {
-    if (!focusCategoryId || categories.length === 0) {
+    if (fullAccess || categories.length === 0) {
       return
     }
-    const byId = new Map(categories.map((account) => [account.id, account]))
+    const keep = freeTierVisibleIds(categories)
+    setOpen(
+      new Set(
+        categories
+          .filter((account) => keep.has(account.id) && account.level !== 'Analytical')
+          .map((account) => account.id),
+      ),
+    )
+  }, [fullAccess, categories])
+
+  useEffect(() => {
+    if (!focusCategoryId || visibleCategories.length === 0) {
+      return
+    }
+    const byId = new Map(visibleCategories.map((account) => [account.id, account]))
     const target = byId.get(focusCategoryId)
     if (!target) {
       return
@@ -137,14 +153,14 @@ export function BudgetTreeEditor({
       input?.select()
     }, 80)
     return () => window.clearTimeout(timer)
-  }, [focusCategoryId, categories])
+  }, [focusCategoryId, visibleCategories])
 
   const { planned, actual } = useMemo(() => buildAmountMaps(budget.lines), [budget.lines])
 
   const cashAccounts = useMemo(() => {
-    const cash = categories.filter((account) => CASH_FLOW_SECTIONS.includes(account.section))
+    const cash = visibleCategories.filter((account) => CASH_FLOW_SECTIONS.includes(account.section))
     return chartWithAmounts(cash, idsWithAmount([planned, actual]))
-  }, [categories, planned, actual])
+  }, [visibleCategories, planned, actual])
 
   const byParent = useMemo(() => {
     const map = groupAccountsByParent(cashAccounts)
@@ -161,11 +177,11 @@ export function BudgetTreeEditor({
           if (account.section !== section || account.level === 'Analytical') {
             return false
           }
-          const parent = categories.find((item) => item.id === account.parentId)
+          const parent = visibleCategories.find((item) => item.id === account.parentId)
           return !parent || parent.section !== section
         }),
       ).filter(Boolean) as Category[],
-    [cashAccounts, categories],
+    [cashAccounts, visibleCategories],
   )
 
   const expenseDays = useMemo(() => {
@@ -435,6 +451,7 @@ export function BudgetTreeEditor({
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Ex.: aluguel, salário…"
       />
+      {!fullAccess ? <p className={styles.muted}>{FREE_TIER_CATEGORY_LABEL}</p> : null}
       <ErrorText message={saveAction.error} />
       {roots.length === 0 && categoriesLoading ? <Loading /> : null}
       {roots.length === 0 && !categoriesLoading ? (

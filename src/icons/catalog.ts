@@ -26,6 +26,7 @@ export type IconName =
   | 'camera'
   | 'mic'
   | 'pen'
+  | 'archive'
   | 'console'
 
 type IconDef = {
@@ -174,6 +175,11 @@ export const ICON_CATALOG: Record<IconName, IconDef> = {
     label: 'Escrever',
     base: ['M5 19h4l10.5-10.5a2.1 2.1 0 0 0-3-3L6 16v3z'],
     accent: ['M13.5 6.5l3 3', 'M4 21h7'],
+  },
+  archive: {
+    label: 'Arquivar',
+    base: ['M3 7h18v3H3z', 'M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9'],
+    accent: ['M10 14h4'],
   },
   console: {
     label: 'Console',

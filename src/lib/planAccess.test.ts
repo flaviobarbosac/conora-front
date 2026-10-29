@@ -71,9 +71,13 @@ describe('planAccess', () => {
   })
 
   it('family invite limits by subscribed tier', () => {
-    expect(familyInviteLimit(plan({ tier: 'Family' })).maxExtra).toBe(1)
-    expect(familyInviteLimit(plan({ tier: 'FamilyPlus' })).message).toContain('6')
-    expect(familyInviteLimit(plan({ phase: 'Trial', tier: 'Family' })).maxExtra).toBe(0)
+    expect(familyInviteLimit(plan({ plan: 'FamilyMonthly', tier: 'Family' })).maxExtra).toBe(1)
+    expect(
+      familyInviteLimit(plan({ plan: 'FamilyPlusMonthly', tier: 'FamilyPlus' })).message,
+    ).toContain('6')
+    expect(
+      familyInviteLimit(plan({ phase: 'Trial', plan: 'FamilyMonthly', tier: 'Family' })).maxExtra,
+    ).toBe(0)
   })
 
   it('summarizes plan phases', () => {
@@ -81,7 +85,12 @@ describe('planAccess', () => {
     expect(planSummary(plan({ phase: 'Trial', daysLeft: 12 }))).toContain('12 dias')
     expect(planSummary(plan({ phase: 'Grace' }))).toContain('somente leitura')
     expect(planSummary(plan({ phase: 'Blocked' }))).toBe('Conta bloqueada')
-    expect(planSummary(plan({ phase: 'Subscribed', yearly: true }))).toContain(TIER_INFO.Individual.title)
+    expect(
+      planSummary(plan({ phase: 'Subscribed', plan: 'IndividualYearly', yearly: true })),
+    ).toContain(TIER_INFO.Individual.title)
+    expect(planSummary(plan({ phase: 'Subscribed', plan: 'FamilyMonthly', tier: 'Family' }))).toContain(
+      'Duo mensal',
+    )
     expect(PHASE_LABEL.Subscribed).toBe('Ativo')
   })
 

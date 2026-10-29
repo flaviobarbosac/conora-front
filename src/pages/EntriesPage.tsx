@@ -1012,10 +1012,9 @@ function EntryForm({
           name="categoryId"
           value={categoryId}
           onChange={setCategoryId}
-          options={kindCategories}
+          options={writableKindCategories}
           tree={tree}
           emptyLabel="Selecione a categoria"
-          isOptionDisabled={(account) => !isCategoryWritable(plan, account)}
         />
         <Select
           label="Conta bancária"

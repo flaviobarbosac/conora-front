@@ -13,30 +13,22 @@ import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import { categoryLabel } from '../lib/categoryLabel'
 import { acceptsAnalyticalChild, compareCategorySiblings } from '../lib/categoryOrder'
-import { FREE_TIER_CATEGORY_LABEL, hasFullAccess, isFreeCategoryCode } from '../lib/freeTier'
+import {
+  FREE_TIER_CATEGORY_LABEL,
+  filterCategoriesForPlan,
+  freeTierVisibleIds,
+  hasFullAccess,
+  isFreeCategoryCode,
+} from '../lib/freeTier'
 import { groupAccountsByParent } from '../lib/raioX'
 import { usePlanAccess } from '../hooks/usePlanAccess'
-import styles from './pageStyles'
+import pageStyles from './pageStyles'
+import raioStyles from './raioX/raioX.module.css'
+
+const styles = { ...pageStyles, ...raioStyles }
 
 /** Max sibling rows before “Ver mais” (keeps mobile scroll bounded). */
 const CATEGORY_CHILD_PAGE = 12
-
-/** Free plan: keep unlocked leaves (+ pending review) and their ancestors only. */
-function freeVisibleIds(list: Category[]): Set<string> {
-  const byId = new Map(list.map((account) => [account.id, account]))
-  const visible = new Set<string>()
-  for (const account of list) {
-    if (!isFreeCategoryCode(account.code) && !account.isPendingReview) {
-      continue
-    }
-    let current: Category | undefined = account
-    while (current) {
-      visible.add(current.id)
-      current = current.parentId ? byId.get(current.parentId) : undefined
-    }
-  }
-  return visible
-}
 
 export function CategoriesPage() {
   // Management screen keeps inactive rows so the owner can reactivate them.
@@ -57,13 +49,7 @@ export function CategoriesPage() {
   const isBudgetOwner = Boolean(group.data?.isBudgetOwner)
   const canEditChart = !inGroup || isBudgetOwner
   const rawList = accounts.data ?? []
-  const list = useMemo(() => {
-    if (fullAccess) {
-      return rawList
-    }
-    const keep = freeVisibleIds(rawList)
-    return rawList.filter((account) => keep.has(account.id))
-  }, [fullAccess, rawList])
+  const list = useMemo(() => filterCategoriesForPlan(rawList, plan), [plan, rawList])
 
   useRegisterDirty(
     'categories-edit',
@@ -101,7 +87,7 @@ export function CategoriesPage() {
     if (fullAccess || rawList.length === 0) {
       return
     }
-    const keep = freeVisibleIds(rawList)
+    const keep = freeTierVisibleIds(rawList)
     setOpen(
       new Set(
         rawList
@@ -378,7 +364,7 @@ function CategoryTreeRow({
         </button>
         {renaming ? (
           <form
-            className={styles.categoriesInlineForm}
+            className={`${styles.categoriesInlineForm} ${styles.categoriesNameCell}`}
             onSubmit={(event: FormEvent) => {
               event.preventDefault()
               onSaveRename(account)
@@ -414,17 +400,31 @@ function CategoryTreeRow({
             </Button>
           </form>
         ) : (
-          <strong className={styles.raioxAccountName}>
-            {categoryLabel(account)}
-            {!account.isActive ? <span className={styles.rowSub}> · Desativada</span> : null}
-            {account.isPendingReview ? (
-              <span className={styles.rowSub}>
-                {' '}
-                · Sob análise
-                {account.createdByName ? ` · ${account.createdByName}` : ''}
-              </span>
+          <span className={styles.categoriesNameCell}>
+            <strong className={styles.raioxAccountName}>
+              {categoryLabel(account)}
+              {!account.isActive ? <span className={styles.rowSub}> · Desativada</span> : null}
+              {account.isPendingReview ? (
+                <span className={styles.rowSub}>
+                  {' '}
+                  · Sob análise
+                  {account.createdByName ? ` · ${account.createdByName}` : ''}
+                </span>
+              ) : null}
+            </strong>
+            {canToggleActive ? (
+              <label className={styles.categoriesActiveCheck} onClick={stop}>
+                <input
+                  type="checkbox"
+                  name={`active-${account.id}`}
+                  checked={account.isActive}
+                  disabled={busy}
+                  onChange={(event) => onSetActive(account, event.target.checked)}
+                />
+                Ativa
+              </label>
             ) : null}
-          </strong>
+          </span>
         )}
         <span className={styles.categoriesActions} onClick={stop}>
           {canAdd && !renaming ? (
@@ -448,18 +448,6 @@ function CategoryTreeRow({
                 Recusar
               </Button>
             </>
-          ) : null}
-          {canToggleActive && !renaming ? (
-            <label className={styles.categoriesActiveCheck}>
-              <input
-                type="checkbox"
-                name={`active-${account.id}`}
-                checked={account.isActive}
-                disabled={busy}
-                onChange={(event) => onSetActive(account, event.target.checked)}
-              />
-              Ativa
-            </label>
           ) : null}
           {canManage && !renaming ? (
             <>

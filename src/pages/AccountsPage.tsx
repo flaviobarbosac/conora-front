@@ -19,6 +19,7 @@ import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
+import { Icon } from '../components/ui/Icon'
 import { IntegerField } from '../components/ui/IntegerField'
 import { MoneyField } from '../components/ui/MoneyField'
 import { Select } from '../components/ui/Select'
@@ -29,7 +30,10 @@ import { useLookups } from '../hooks/useLookups'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
-import styles from './pageStyles'
+import accountsStyles from './accounts/accounts.module.css'
+import pageStyles from './pageStyles'
+
+const styles = { ...pageStyles, ...accountsStyles }
 
 const KIND_LABEL: Record<AccountKind, string> = {
   Checking: 'Conta corrente',
@@ -112,53 +116,70 @@ export function AccountsPage() {
             {accounts.data && accounts.data.length === 0 ? <Empty>Nenhuma conta cadastrada.</Empty> : null}
             {accounts.data && accounts.data.length > 0 ? (
               <>
-                <ul className={styles.list}>
-                  {accountsPage.pageItems.map((account) => (
-                    <li key={account.id} className={styles.row}>
-                      <span className={styles.rowMain}>
-                        <strong>{account.name}</strong>
-                        <span className={styles.rowSub}>
-                          {KIND_LABEL[account.kind]}
-                          {account.bankCode
-                            ? ` · ${account.bankCode}${account.bankName ? ` ${account.bankName}` : ''}`
-                            : ''}
-                        </span>
-                        {account.agency || account.accountNumber ? (
-                          <span className={styles.rowSub}>
-                            {account.agency ? `Ag ${account.agency}` : null}
-                            {account.agency && account.accountNumber ? ' · ' : null}
-                            {account.accountNumber
-                              ? `Conta ${account.accountNumber}${account.checkDigit ? `-${account.checkDigit}` : ''}`
-                              : null}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className={styles.rowEnd}>
-                        {account.isArchived ? <Badge tone="warning">Arquivada</Badge> : null}
-                        <span className={styles.amount} aria-label="Saldo atual">
-                          {formatMoney(account.balance)}
-                        </span>
-                        <Button
-                          variant="secondary"
+                <ul className={styles.accountList}>
+                  {accountsPage.pageItems.map((account) => {
+                    const archiveLabel = account.isArchived
+                      ? `Reativar ${account.name}`
+                      : `Arquivar ${account.name}`
+                    return (
+                      <li
+                        key={account.id}
+                        className={`${styles.accountRow}${account.isArchived ? ` ${styles.accountRowArchived}` : ''}`}
+                      >
+                        <button
+                          type="button"
+                          className={styles.accountMain}
                           disabled={archive.busy}
-                          aria-label={`Editar ${account.name}`}
                           onClick={() => setEditing(account)}
                         >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          disabled={archive.busy}
-                          aria-label={
-                            account.isArchived ? `Reativar ${account.name}` : `Arquivar ${account.name}`
-                          }
-                          onClick={() => void toggleArchive(account)}
-                        >
-                          {account.isArchived ? 'Reativar' : 'Arquivar'}
-                        </Button>
-                      </span>
-                    </li>
-                  ))}
+                          <strong>{account.name}</strong>
+                          <span className={styles.rowSub}>
+                            {KIND_LABEL[account.kind]}
+                            {account.bankCode
+                              ? ` · ${account.bankCode}${account.bankName ? ` ${account.bankName}` : ''}`
+                              : ''}
+                          </span>
+                          {account.agency || account.accountNumber ? (
+                            <span className={styles.rowSub}>
+                              {account.agency ? `Ag ${account.agency}` : null}
+                              {account.agency && account.accountNumber ? ' · ' : null}
+                              {account.accountNumber
+                                ? `Conta ${account.accountNumber}${account.checkDigit ? `-${account.checkDigit}` : ''}`
+                                : null}
+                            </span>
+                          ) : null}
+                        </button>
+                        <span className={styles.accountMeta}>
+                          {account.isArchived ? <Badge tone="warning">Arquivada</Badge> : null}
+                          <span className={styles.accountBalance} aria-label="Saldo atual">
+                            {formatMoney(account.balance)}
+                          </span>
+                        </span>
+                        <span className={styles.accountActions}>
+                          <Button
+                            variant="ghost"
+                            className={styles.accountIconBtn}
+                            disabled={archive.busy}
+                            aria-label={`Editar ${account.name}`}
+                            title="Editar"
+                            onClick={() => setEditing(account)}
+                          >
+                            <Icon name="pen" size={20} decorative />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className={`${styles.accountIconBtn}${account.isArchived ? '' : ` ${styles.accountIconDanger}`}`}
+                            disabled={archive.busy}
+                            aria-label={archiveLabel}
+                            title={account.isArchived ? 'Reativar' : 'Arquivar'}
+                            onClick={() => void toggleArchive(account)}
+                          >
+                            <Icon name="archive" size={20} decorative />
+                          </Button>
+                        </span>
+                      </li>
+                    )
+                  })}
                 </ul>
                 <Pager
                   page={accountsPage.page}
