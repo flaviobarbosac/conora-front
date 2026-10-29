@@ -12,11 +12,12 @@ const verifyByToken = new Map<string, Promise<AuthResponse>>()
 function verifyEmailOnce(token: string): Promise<AuthResponse> {
   const existing = verifyByToken.get(token)
   if (existing) return existing
-  const pending = authApi.verifyEmail(token)
-  verifyByToken.set(token, pending)
-  pending.catch(() => {
-    // Allow a later retry only after a hard failure (network); invalid token stays cached.
+  const pending = authApi.verifyEmail(token).catch((error: unknown) => {
+    // Drop failed attempts so a later open (browser then app) can retry the same token.
+    verifyByToken.delete(token)
+    throw error
   })
+  verifyByToken.set(token, pending)
   return pending
 }
 

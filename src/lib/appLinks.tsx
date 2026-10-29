@@ -88,7 +88,9 @@ export function listenAppLinks(onRoute: (route: string) => void): () => void {
 export function useAppHandoff(page: AppLinkPage) {
   const [searchParams] = useSearchParams()
   const token = (searchParams.get('token') ?? '').trim()
-  const [handoff, setHandoff] = useState(() => !isNativeApp() && !!token)
+  // Caddy serves a static handoff for these URLs unless ?web=1 (explicit browser).
+  const forceWeb = searchParams.get('web') === '1'
+  const [handoff, setHandoff] = useState(() => !isNativeApp() && !!token && !forceWeb)
   const url = appUrl(page, token)
 
   useEffect(() => {
@@ -96,7 +98,15 @@ export function useAppHandoff(page: AppLinkPage) {
     if (handoff) window.location.href = url
   }, [handoff, url])
 
-  return { handoff, url, continueInBrowser: () => setHandoff(false) }
+  return {
+    handoff,
+    url,
+    continueInBrowser: () => {
+      const next = new URL(window.location.href)
+      next.searchParams.set('web', '1')
+      window.location.replace(next.toString())
+    },
+  }
 }
 
 export function AppHandoff({ url, onContinue }: { url: string; onContinue: () => void }) {
