@@ -362,6 +362,14 @@
   font-weight: var(--weight-semibold);
   font-size: var(--text-md);
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .profileMeta {
