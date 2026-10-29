@@ -77,8 +77,12 @@ export function HomePage() {
     setShowJourney(false)
   }
 
+  const pageClass = [styles.page, styles.homePage, !showJourney ? styles.homePageSolo : '']
+    .filter(Boolean)
+    .join(' ')
+
   return (
-    <div className={`${styles.page} ${styles.homePage}`}>
+    <div className={pageClass}>
       <PageHeader
         kicker="Início"
         title={name ? `Olá, ${name}` : 'Olá'}

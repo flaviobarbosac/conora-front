@@ -130,6 +130,67 @@
   min-height: min(78vh, 720px);
 }
 
+/* With journey: launch stays compact at the top. Without: fill and center on device. */
+.homeLaunch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  background: transparent;
+  padding: var(--space-4) 0;
+  flex: 0 0 auto;
+  justify-content: flex-start;
+}
+
+.homePageSolo {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
+  /* Usable device viewport between app header and bottom nav (all OSes). */
+  min-height: calc(100svh - 12.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  min-height: calc(100dvh - 12.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+}
+
+.homePageSolo .header,
+.homePageSolo .homeUrgent,
+.homePageSolo .muted {
+  position: relative;
+  z-index: 1;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+/* Logo + Ian/Clara + launch icons: geometric center of the content screen. */
+.homePageSolo .homeLaunch {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.homePageSolo .homeLaunch > * {
+  pointer-events: auto;
+}
+
+@media (min-width: 768px) {
+  .homePageSolo {
+    min-height: calc(100svh - 8.5rem);
+    min-height: calc(100dvh - 8.5rem);
+  }
+
+  .homePageSolo .homeLaunch {
+    width: 100%;
+  }
+}
+
 .homeJourney {
   width: 100%;
   max-width: 40rem;
@@ -154,17 +215,6 @@
   justify-content: flex-end;
   padding-top: var(--space-2);
   padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
-}
-
-.homeLaunch {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  background: transparent;
-  padding: var(--space-4) 0;
-  flex: 1;
-  justify-content: center;
 }
 
 .homeLaunchOWrap {
