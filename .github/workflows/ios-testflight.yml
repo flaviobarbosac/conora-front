@@ -23,8 +23,8 @@ permissions:
 
 jobs:
   testflight:
-    # Prefer a pinned label: macos-latest often queues forever under arm64 capacity limits.
-    runs-on: macos-14
+    # Needs a current Xcode (Capacitor plugins). macos-14 fails archive; macos-latest has Xcode 26.x.
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
         with:
