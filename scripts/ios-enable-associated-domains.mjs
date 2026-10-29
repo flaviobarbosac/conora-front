@@ -77,7 +77,12 @@ async function main() {
   if (!bundle) throw new Error(`Bundle ID ${bundleId} not found`)
   console.log(`Bundle: ${bundle.id} (${bundle.attributes.identifier})`)
 
-  const caps = await request('GET', `/v1/bundleIds/${bundle.id}/bundleIdCapabilities?limit=200`)
+  let caps
+  try {
+    caps = await request('GET', `/v1/bundleIds/${bundle.id}/bundleIdCapabilities`)
+  } catch {
+    caps = { data: [] }
+  }
   const hasAssociated = (caps.data || []).some((c) => c.attributes?.capabilityType === 'ASSOCIATED_DOMAINS')
   if (hasAssociated) {
     console.log('ASSOCIATED_DOMAINS already enabled')
@@ -110,13 +115,18 @@ async function main() {
     await request('DELETE', `/v1/profiles/${p.id}`)
   }
 
-  const certs = await request(
-    'GET',
-    '/v1/certificates?filter[certificateType]=DISTRIBUTION&limit=50',
-  )
-  const distCerts = (certs.data || []).filter((c) =>
-    ['IOS_DISTRIBUTION', 'DISTRIBUTION', 'APPLE_DISTRIBUTION'].includes(c.attributes.certificateType),
-  )
+  const certQueries = ['IOS_DISTRIBUTION', 'APPLE_DISTRIBUTION', 'DISTRIBUTION']
+  let distCerts = []
+  for (const certType of certQueries) {
+    const certs = await request(
+      'GET',
+      `/v1/certificates?filter[certificateType]=${certType}&limit=50`,
+    )
+    distCerts = (certs.data || []).filter((c) =>
+      ['IOS_DISTRIBUTION', 'DISTRIBUTION', 'APPLE_DISTRIBUTION'].includes(c.attributes.certificateType),
+    )
+    if (distCerts.length) break
+  }
   if (!distCerts.length) throw new Error('No iOS distribution certificate found')
   console.log(`Using distribution cert ${distCerts[0].id} (${distCerts[0].attributes.certificateType})`)
 
