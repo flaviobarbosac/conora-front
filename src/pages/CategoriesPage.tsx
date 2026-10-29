@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react'
 import { categoriesApi, familyApi, type Category } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -16,7 +16,27 @@ import { acceptsAnalyticalChild, compareCategorySiblings } from '../lib/category
 import { FREE_TIER_CATEGORY_LABEL, hasFullAccess, isFreeCategoryCode } from '../lib/freeTier'
 import { groupAccountsByParent } from '../lib/raioX'
 import { usePlanAccess } from '../hooks/usePlanAccess'
-import styles from './page.module.css'
+import styles from './pageStyles'
+
+/** Max sibling rows before “Ver mais” (keeps mobile scroll bounded). */
+const CATEGORY_CHILD_PAGE = 12
+
+/** Free plan: keep unlocked leaves (+ pending review) and their ancestors only. */
+function freeVisibleIds(list: Category[]): Set<string> {
+  const byId = new Map(list.map((account) => [account.id, account]))
+  const visible = new Set<string>()
+  for (const account of list) {
+    if (!isFreeCategoryCode(account.code) && !account.isPendingReview) {
+      continue
+    }
+    let current: Category | undefined = account
+    while (current) {
+      visible.add(current.id)
+      current = current.parentId ? byId.get(current.parentId) : undefined
+    }
+  }
+  return visible
+}
 
 export function CategoriesPage() {
   // Management screen keeps inactive rows so the owner can reactivate them.
@@ -26,6 +46,7 @@ export function CategoriesPage() {
   const group = useLoad(() => familyApi.group(), [])
   const action = useAction()
   const [open, setOpen] = useState<Set<string>>(() => new Set())
+  const [showAllChildren, setShowAllChildren] = useState<Set<string>>(() => new Set())
   const [draftParentId, setDraftParentId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
   const [renameId, setRenameId] = useState<string | null>(null)
@@ -35,7 +56,14 @@ export function CategoriesPage() {
   const inGroup = Boolean(group.data?.groupId)
   const isBudgetOwner = Boolean(group.data?.isBudgetOwner)
   const canEditChart = !inGroup || isBudgetOwner
-  const list = accounts.data ?? []
+  const rawList = accounts.data ?? []
+  const list = useMemo(() => {
+    if (fullAccess) {
+      return rawList
+    }
+    const keep = freeVisibleIds(rawList)
+    return rawList.filter((account) => keep.has(account.id))
+  }, [fullAccess, rawList])
 
   useRegisterDirty(
     'categories-edit',
@@ -67,6 +95,25 @@ export function CategoriesPage() {
   }, [list])
 
   const roots = useMemo(() => byParent.get(null) ?? [], [byParent])
+
+  // Free: open ancestor branches so unlocked leaves are one tap away.
+  useEffect(() => {
+    if (fullAccess || rawList.length === 0) {
+      return
+    }
+    const keep = freeVisibleIds(rawList)
+    setOpen(
+      new Set(
+        rawList
+          .filter((account) => keep.has(account.id) && account.level !== 'Analytical')
+          .map((account) => account.id),
+      ),
+    )
+  }, [fullAccess, rawList])
+
+  function revealAllChildren(parentId: string) {
+    setShowAllChildren((current) => new Set(current).add(parentId))
+  }
 
   function toggle(id: string) {
     setOpen((current) => {
@@ -144,7 +191,7 @@ export function CategoriesPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="Categorias" />
+      <PageHeader title="Categorias" />
       <ErrorText message={accounts.error ?? action.error} />
       {accounts.loading && !accounts.data ? <Loading /> : null}
       {!accounts.loading && roots.length === 0 ? <Empty>Nenhuma categoria.</Empty> : null}
@@ -158,11 +205,6 @@ export function CategoriesPage() {
       ) : null}
       {roots.length > 0 ? (
         <div className={styles.raioxList}>
-          <div className={`${styles.raioxRow} ${styles.raioxHead} ${styles.categoriesRow}`}>
-            <span />
-            <span>Categoria</span>
-            <span />
-          </div>
           {roots.map((account) => (
             <CategoryTreeRow
               key={account.id}
@@ -170,6 +212,7 @@ export function CategoriesPage() {
               depth={0}
               byParent={byParent}
               open={open}
+              showAllChildren={showAllChildren}
               draftParentId={draftParentId}
               draftName={draftName}
               renameId={renameId}
@@ -181,6 +224,7 @@ export function CategoriesPage() {
               freeLimited={!fullAccess}
               pendingAncestorIds={pendingAncestorIds}
               onToggle={toggle}
+              onRevealChildren={revealAllChildren}
               onDraftParent={(parentId) => {
                 setDraftParentId(parentId)
                 setDraftName('')
@@ -221,6 +265,7 @@ function CategoryTreeRow({
   depth,
   byParent,
   open,
+  showAllChildren,
   draftParentId,
   draftName,
   renameId,
@@ -232,6 +277,7 @@ function CategoryTreeRow({
   freeLimited,
   pendingAncestorIds,
   onToggle,
+  onRevealChildren,
   onDraftParent,
   onDraftName,
   onCancelDraft,
@@ -249,6 +295,7 @@ function CategoryTreeRow({
   depth: number
   byParent: Map<string | null, Category[]>
   open: Set<string>
+  showAllChildren: Set<string>
   draftParentId: string | null
   draftName: string
   renameId: string | null
@@ -260,6 +307,7 @@ function CategoryTreeRow({
   freeLimited: boolean
   pendingAncestorIds: Set<string>
   onToggle: (id: string) => void
+  onRevealChildren: (parentId: string) => void
   onDraftParent: (parentId: string) => void
   onDraftName: (value: string) => void
   onCancelDraft: () => void
@@ -289,6 +337,9 @@ function CategoryTreeRow({
     isBudgetOwner && account.level === 'Analytical' && Boolean(account.isPendingReview)
   const expanded = open.has(account.id) || drafting || pendingAncestorIds.has(account.id)
   const pendingTrail = pendingAncestorIds.has(account.id)
+  const revealAll = showAllChildren.has(account.id)
+  const visibleChildren = revealAll ? children : children.slice(0, CATEGORY_CHILD_PAGE)
+  const hiddenChildCount = children.length - visibleChildren.length
   const rowClass =
     account.level === 'Root' ||
     account.section === 'Expense' ||
@@ -423,13 +474,14 @@ function CategoryTreeRow({
         </span>
       </div>
       {expanded
-        ? children.map((child) => (
+        ? visibleChildren.map((child) => (
             <CategoryTreeRow
               key={child.id}
               account={child}
               depth={depth + 1}
               byParent={byParent}
               open={open}
+              showAllChildren={showAllChildren}
               draftParentId={draftParentId}
               draftName={draftName}
               renameId={renameId}
@@ -441,6 +493,7 @@ function CategoryTreeRow({
               freeLimited={freeLimited}
               pendingAncestorIds={pendingAncestorIds}
               onToggle={onToggle}
+              onRevealChildren={onRevealChildren}
               onDraftParent={onDraftParent}
               onDraftName={onDraftName}
               onCancelDraft={onCancelDraft}
@@ -456,6 +509,13 @@ function CategoryTreeRow({
             />
           ))
         : null}
+      {expanded && hiddenChildCount > 0 ? (
+        <div className={styles.categoriesShowMore}>
+          <Button type="button" variant="secondary" onClick={() => onRevealChildren(account.id)}>
+            Ver mais ({hiddenChildCount})
+          </Button>
+        </div>
+      ) : null}
       {expanded && drafting ? (
         <form
           className={`${styles.raioxRow} ${styles.categoriesRow} ${styles.raioxEntry} ${styles.categoriesInlineForm}`}

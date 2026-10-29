@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { PAID_MODULE_BADGE } from '../lib/freeTier'
-import styles from '../pages/page.module.css'
+import styles from '../pages/pageStyles'
 
 /** Commercial tag on free-tier modules that stay read-only until a paid plan. */
 export function PaidModuleBadge() {

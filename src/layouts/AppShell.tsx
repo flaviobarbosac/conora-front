@@ -16,7 +16,6 @@ import { trackJourney } from '../lib/journeyTrack'
 import { PREFERENCES_CHANGED, readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
 import { applyIanMaturity, maturityAgeFromAchievements } from '../lib/speakPt'
 import { CADASTROS_ITEMS, NAV_ITEMS } from '../nav'
-import { isIosApp } from '../lib/platform'
 import { ALL_THEMES, type ThemeId } from '../theme/themes'
 import { useTheme } from '../theme/ThemeProvider'
 import styles from './AppShell.module.css'
@@ -86,15 +85,6 @@ export function AppShell() {
   const [railViewport, setRailViewport] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1199px)').matches,
   )
-  // iOS native always; in local Vite, phone-width preview so Flavio can check the sheet + X on localhost.
-  const [themesSheet, setThemesSheet] = useState(
-    () =>
-      isIosApp() ||
-      (import.meta.env.DEV &&
-        typeof window !== 'undefined' &&
-        window.matchMedia('(max-width: 767px)').matches),
-  )
-
   useEffect(() => {
     writeSidebarCollapsed(sidebarCollapsed)
   }, [sidebarCollapsed])
@@ -116,22 +106,6 @@ export function AppShell() {
   }, [])
 
   useEffect(() => {
-    if (isIosApp()) {
-      setThemesSheet(true)
-      return
-    }
-    if (!import.meta.env.DEV) {
-      setThemesSheet(false)
-      return
-    }
-    const media = window.matchMedia('(max-width: 767px)')
-    const apply = () => setThemesSheet(media.matches)
-    apply()
-    media.addEventListener('change', apply)
-    return () => media.removeEventListener('change', apply)
-  }, [])
-
-  useEffect(() => {
     setProfileMenuOpen(false)
     setThemesMenuOpen(false)
     setMobileNavOpen(false)
@@ -146,8 +120,6 @@ export function AppShell() {
     setTheme(themeId)
     const current = profile.data
     if (!current) {
-      setThemesMenuOpen(false)
-      setProfileMenuOpen(false)
       return
     }
     try {
@@ -167,8 +139,7 @@ export function AppShell() {
     } catch {
       // Preview stays; profile reload will restore server theme if save failed.
     }
-    setThemesMenuOpen(false)
-    setProfileMenuOpen(false)
+    // Keep profile menu + themes list open so the user can try another theme fluidly.
   }
 
   useEffect(() => {
@@ -414,25 +385,16 @@ export function AppShell() {
                   >
                     <Icon name={theme === 'noite' || theme === 'contraste' ? 'moon' : 'sun'} size={20} />
                     Temas
-                    <Icon name="chevron" size={16} className={styles.themesChevron} />
+                    <Icon
+                      name="chevron"
+                      size={16}
+                      className={
+                        themesMenuOpen ? `${styles.themesChevron} ${styles.themesChevronOpen}` : styles.themesChevron
+                      }
+                    />
                   </button>
                   {themesMenuOpen ? (
-                    <div
-                      className={themesSheet ? `${styles.themesMenu} ${styles.themesMenuIos}` : styles.themesMenu}
-                      role="menu"
-                      aria-label="Temas"
-                    >
-                      <div className={styles.themesMenuHeader}>
-                        <span className={styles.themesMenuTitle}>Temas</span>
-                        <button
-                          type="button"
-                          className={styles.themesMenuClose}
-                          aria-label="Fechar temas"
-                          onClick={() => setThemesMenuOpen(false)}
-                        >
-                          ×
-                        </button>
-                      </div>
+                    <div className={styles.themesMenuInline} role="menu" aria-label="Temas">
                       {ALL_THEMES.map((item) => (
                         <button
                           key={item.id}
@@ -531,7 +493,14 @@ export function AppShell() {
             </>
           )}
         </NavLink>
-        <NavLink to="/raio-x" className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
+        <NavLink
+          to="/raio-x"
+          className={({ isActive }) =>
+            isActive
+              ? `${styles.bottomLinkActive} ${styles.bottomLinkFeature} ${styles.bottomLinkFeatureActive}`
+              : `${styles.bottomLink} ${styles.bottomLinkFeature}`
+          }
+        >
           {({ isActive }) => (
             <>
               <Icon name="budget" variant={isActive ? 'duo' : 'linear'} size={24} />
@@ -543,7 +512,7 @@ export function AppShell() {
           {({ isActive }) => (
             <>
               <Icon name="folder" variant={isActive ? 'duo' : 'linear'} size={24} />
-              <span>Categoria</span>
+              <span>Categorias</span>
             </>
           )}
         </NavLink>

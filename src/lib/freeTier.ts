@@ -1,14 +1,27 @@
 import type { Category, Plan } from '../api/finance'
 
-/** Analytical expense codes unlocked on the free product (see FreeTierLimits on the API). */
-export const FREE_TIER_CATEGORY_CODES = ['ESS_RENT', 'ESS_POWER', 'ESS_WATER', 'ESS_SCHOOL'] as const
+/** Analytical codes unlocked on the free product (see FreeTierLimits on the API). */
+export const FREE_TIER_CATEGORY_CODES = [
+  'ESS_RENT',
+  'ESS_POWER',
+  'ESS_WATER',
+  'ESS_SCHOOL',
+  'INC_SALARY',
+] as const
 
 export type FreeTierCategoryCode = (typeof FREE_TIER_CATEGORY_CODES)[number]
 
 export const FREE_TIER_CATEGORY_LABEL =
-  'No Conora grátis você começa com Aluguel, Energia elétrica, Água e esgoto e Escola. As outras categorias aparecem em cinza até você assinar.'
+  'No Conora grátis: Salário bruto, Aluguel, Energia elétrica, Água e esgoto e Escola. Assine para liberar as demais.'
+
+/** Shown on the entry form when Income has no writable free-tier categories. */
+export const FREE_TIER_INCOME_ENTRY_HINT =
+  'No plano gratuito a renda liberada é só Salário bruto. Assine para as demais receitas.'
 
 export const PAID_MODULE_BADGE = 'Liberado nos planos pagos'
+
+/** Compact lock hint for dense mobile lists (budget / category trees). */
+export const PAID_MODULE_HINT_SHORT = 'Plano pago'
 
 /** Full product: training-student trial or paid subscription. */
 export function hasFullAccess(plan: Plan | null | undefined): boolean {

@@ -4,6 +4,7 @@ import { formatCpfInput } from '../auth/loginIdentifier'
 import { useAuth } from '../auth/AuthProvider'
 import { Button } from '../components/ui/Button'
 import { Field } from '../components/ui/Field'
+import { PasswordField } from '../components/ui/PasswordField'
 import { AuthLayout } from '../layouts/AuthLayout'
 import styles from './auth.module.css'
 
@@ -25,6 +26,7 @@ export function RegisterPage() {
   const [email, setEmail] = useState(invitedEmail)
   const [cpf, setCpf] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [duplicateLoginTo, setDuplicateLoginTo] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -35,8 +37,18 @@ export function RegisterPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
-    setBusy(true)
     setError(null)
+    setDuplicateLoginTo(null)
+    if (password.length < 8) {
+      setError('Senha deve ter no mínimo 8 caracteres.')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('As senhas não conferem.')
+      return
+    }
+
+    setBusy(true)
     try {
       await register(name, email, cpf, password)
     } catch (caught) {
@@ -93,16 +105,25 @@ export function RegisterPage() {
           value={cpf}
           onChange={(event) => setCpf(formatCpfInput(event.target.value))}
         />
-        <Field
+        <PasswordField
           label="Senha"
           name="password"
-          type="password"
           autoComplete="new-password"
           required
           minLength={8}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           hint="Mínimo de 8 caracteres."
+        />
+        <PasswordField
+          label="Confirmar senha"
+          name="confirmPassword"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+          hint="Digite a mesma senha de novo."
         />
         {error ? (
           <p className={styles.error} role="alert">

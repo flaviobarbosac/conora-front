@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { patrimonyApi, type PatrimonyItem } from '../api/finance'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { patrimonyApi } from '../api/finance'
 import { CategorySelect } from '../components/CategorySelect'
 import { PaidModuleBadge } from '../components/PaidModuleBadge'
 import { PageHeader } from '../components/PageHeader'
@@ -8,7 +8,6 @@ import { usePlanAccess } from '../hooks/usePlanAccess'
 import { hasFullAccess } from '../lib/freeTier'
 import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
-import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
@@ -16,23 +15,35 @@ import { useAction } from '../hooks/useAction'
 import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
-import { useRegisterDirty } from '../hooks/useUnsavedChanges'
-import { confirmDestructive } from '../lib/confirm'
+import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import { showSaveToast } from '../lib/saveToast'
-import { formatMoney, formatMoneyInput, parseMoney } from '../lib/format'
-import styles from './page.module.css'
+import { formatMoney, parseMoney } from '../lib/format'
+import pageStyles from './pageStyles'
+import cadastroStyles from './cadastros/cadastros.module.css'
+const styles = { ...pageStyles, ...cadastroStyles }
+
+type SectionFilter = 'Asset' | 'Liability'
+
+function isSectionFilter(value: string | null): value is SectionFilter {
+  return value === 'Asset' || value === 'Liability'
+}
 
 export function PatrimonyPage() {
+  const navigate = useNavigate()
   const { plan } = usePlanAccess()
   const canWrite = hasFullAccess(plan)
+  const { confirmLeave } = useUnsavedChanges()
   const [searchParams, setSearchParams] = useSearchParams()
   const filterAccountId = searchParams.get('categoryId')
+  const sectionFilter = isSectionFilter(searchParams.get('secao')) ? searchParams.get('secao') : null
   const summary = useLoad(() => patrimonyApi.get(), [])
-  const remove = useAction()
-  const [editing, setEditing] = useState<PatrimonyItem | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [formDirty, setFormDirty] = useState(false)
   const [search, setSearch] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
   const data = summary.data
+
+  useRegisterDirty('patrimony-form', showForm && formDirty)
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams)
@@ -49,8 +60,13 @@ export function PatrimonyPage() {
     }
   }, [searchParams, setSearchParams])
 
+  const allItems = data?.items ?? []
+
   const items = useMemo(() => {
-    let list = data?.items ?? []
+    let list = allItems
+    if (sectionFilter) {
+      list = list.filter((item) => item.section === sectionFilter)
+    }
     if (filterAccountId) {
       list = list.filter((item) => item.categoryId === filterAccountId)
     }
@@ -64,165 +80,289 @@ export function PatrimonyPage() {
       )
     }
     return list
-  }, [data?.items, filterAccountId, appliedSearch])
+  }, [allItems, sectionFilter, filterAccountId, appliedSearch])
+
   const pagination = useClientPagination(items, 10)
 
-  async function removeItem(item: PatrimonyItem) {
-    if (!(await confirmDestructive(`Excluir "${item.name}"?`, { title: 'Excluir item' }))) {
+  const categorySummary = useMemo(() => {
+    const map = new Map<
+      string,
+      { categoryId: string; categoryName: string; section: SectionFilter; amount: number; count: number }
+    >()
+    for (const item of allItems) {
+      if (item.section !== 'Asset' && item.section !== 'Liability') {
+        continue
+      }
+      const current = map.get(item.categoryId)
+      if (current) {
+        current.amount += item.amount
+        current.count += 1
+      } else {
+        map.set(item.categoryId, {
+          categoryId: item.categoryId,
+          categoryName: item.categoryName || item.groupName,
+          section: item.section,
+          amount: item.amount,
+          count: 1,
+        })
+      }
+    }
+    return [...map.values()].sort((a, b) => {
+      if (a.section !== b.section) {
+        return a.section === 'Asset' ? -1 : 1
+      }
+      return b.amount - a.amount
+    })
+  }, [allItems])
+
+  function setSectionFilter(next: SectionFilter | null) {
+    const params = new URLSearchParams()
+    if (next) {
+      params.set('secao', next)
+    }
+    if (filterAccountId) {
+      params.set('categoryId', filterAccountId)
+    }
+    if (appliedSearch) {
+      params.set('search', appliedSearch)
+    }
+    setSearchParams(params)
+  }
+
+  async function toggleForm() {
+    if (showForm && formDirty && !(await confirmLeave())) {
       return
     }
-    if (await remove.run(() => patrimonyApi.remove(item.id))) {
-      showSaveToast('Item excluído.')
-      if (editing?.id === item.id) {
-        setEditing(null)
-      }
-      summary.reload()
+    setShowForm((value) => !value)
+    if (showForm) {
+      setFormDirty(false)
     }
   }
 
-  function loadItem(item: PatrimonyItem) {
-    setEditing(item)
-    showSaveToast('Item carregado. Pronto para editar.', 1000)
-  }
+  const assetCount = allItems.filter((item) => item.section === 'Asset').length
+  const liabilityCount = allItems.filter((item) => item.section === 'Liability').length
 
   return (
     <div className={styles.page}>
       <PageHeader
-        secondary
+        kicker="Cadastros"
         title="Patrimônio"
-        actions={!canWrite ? <PaidModuleBadge /> : undefined}
+        actions={
+          <>
+            {!canWrite ? <PaidModuleBadge /> : null}
+            {canWrite ? (
+              <Button onClick={() => void toggleForm()}>
+                {showForm ? 'Fechar cadastro' : 'Novo item'}
+              </Button>
+            ) : null}
+          </>
+        }
       />
       {!canWrite ? (
-        <p className={styles.muted}>Você pode ver o patrimônio. Cadastro e edição ficam nos planos pagos.</p>
+        <p className={styles.muted}>
+          Você pode ver o patrimônio. Cadastro e edição ficam nos planos pagos.
+        </p>
       ) : null}
-      <ErrorText message={summary.error ?? remove.error} />
+
+      <div
+        className={`${styles.segmented} ${styles.projectsHorizonFilter}`}
+        role="group"
+        aria-label="Filtro por tipo"
+      >
+        <button type="button" aria-pressed={!sectionFilter} onClick={() => setSectionFilter(null)}>
+          Todos
+        </button>
+        <button
+          type="button"
+          aria-pressed={sectionFilter === 'Asset'}
+          onClick={() => setSectionFilter('Asset')}
+        >
+          Ativo
+        </button>
+        <button
+          type="button"
+          aria-pressed={sectionFilter === 'Liability'}
+          onClick={() => setSectionFilter('Liability')}
+        >
+          Passivo
+        </button>
+      </div>
+
+      <form
+        className={`${styles.toolbar} ${styles.projectsSearchBar}`}
+        onSubmit={(event) => {
+          event.preventDefault()
+          setAppliedSearch(search.trim())
+        }}
+      >
+        <Field
+          label="Buscar itens"
+          name="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        <Button type="submit" variant="secondary">
+          Buscar
+        </Button>
+      </form>
+
+      <ErrorText message={summary.error} />
       {summary.loading && !data ? <Loading /> : null}
-      {data ? (
-        <>
-          {data.groups.length > 0 ? (
-            <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>Totais por grupo</h2>
-              <ul className={styles.list}>
-                {data.groups.map((group) => (
-                  <li key={`${group.section}-${group.groupName}`} className={styles.row}>
-                    <span className={styles.rowMain}>
-                      <strong>{group.groupName}</strong>
-                      <span className={styles.rowSub}>{group.section === 'Asset' ? 'Ativo' : 'Passivo'}</span>
-                    </span>
-                    <span className={`${styles.amount} ${styles.moneyValue}`}>{formatMoney(group.amount)}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>
-              Itens{filterAccountId ? ' · filtrados pela conta do Raio-X' : ''}
-            </h2>
-            <form
-              className={styles.toolbar}
-              onSubmit={(event) => {
-                event.preventDefault()
-                setAppliedSearch(search.trim())
-              }}
-            >
-              <Field label="Buscar" name="search" value={search} onChange={(event) => setSearch(event.target.value)} />
-              <Button type="submit" variant="secondary">
-                Buscar
-              </Button>
-            </form>
-            {items.length === 0 ? <Empty>Nenhum item cadastrado.</Empty> : null}
-            <ul className={styles.list}>
-              {pagination.pageItems.map((item) => (
-                <li key={item.id} className={styles.row}>
-                  <button
-                    type="button"
-                    className={styles.rowMain}
-                    onClick={() => {
-                      if (canWrite) loadItem(item)
-                    }}
-                    disabled={!canWrite}
-                  >
-                    <strong>{item.name}</strong>
-                    <span className={styles.rowSub}>
-                      {item.categoryName} · {item.groupName}
-                    </span>
-                  </button>
-                  <span className={styles.rowEnd}>
-                    <Badge tone={item.section === 'Asset' ? 'ok' : 'danger'}>
-                      {item.section === 'Asset' ? 'Ativo' : 'Passivo'}
-                    </Badge>
-                    <span className={`${styles.amount} ${styles.moneyValue}`}>{formatMoney(item.amount)}</span>
-                    {canWrite ? (
-                      <DeleteIconButton disabled={remove.busy} onClick={() => void removeItem(item)} />
-                    ) : null}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <Pager
-              page={pagination.page}
-              pageCount={pagination.pageCount}
-              total={pagination.total}
-              pageSize={pagination.pageSize}
-              onPageChange={pagination.setPage}
-            />
-          </section>
-        </>
+
+      {filterAccountId ? (
+        <p className={styles.muted}>Lista filtrada pela conta do Raio-X.</p>
       ) : null}
-      {canWrite ? (
-        <ItemForm
-          key={editing?.id ?? 'new'}
-          editing={editing}
+
+      {data && items.length === 0 ? (
+        <Empty>
+          {appliedSearch || filterAccountId
+            ? 'Nenhum item encontrado para este filtro.'
+            : sectionFilter
+              ? `Nenhum ${sectionFilter === 'Asset' ? 'ativo' : 'passivo'} cadastrado.`
+              : canWrite
+                ? 'Nenhum item ainda. Cadastre o primeiro pelo botão Novo item.'
+                : 'Nenhum item cadastrado.'}
+        </Empty>
+      ) : null}
+
+      {pagination.pageItems.map((item) => (
+        <Link
+          key={item.id}
+          className={`${styles.section} ${styles.projectDashCard}`}
+          to={`/patrimonio/${item.id}`}
+        >
+          <div className={styles.sectionHead}>
+            <span className={styles.rowMain}>
+              <strong className={styles.cadastroBadgeRow}>
+                <span>{item.name}</span>
+                <Badge tone={item.section === 'Asset' ? 'ok' : 'danger'}>
+                  {item.section === 'Asset' ? 'Ativo' : 'Passivo'}
+                </Badge>
+              </strong>
+              <span className={styles.rowSub}>
+                {item.categoryName} · {item.groupName}
+              </span>
+            </span>
+            <strong className={`${styles.amount} ${styles.moneyValue}`}>{formatMoney(item.amount)}</strong>
+          </div>
+        </Link>
+      ))}
+
+      <Pager
+        page={pagination.page}
+        pageCount={pagination.pageCount}
+        total={pagination.total}
+        pageSize={pagination.pageSize}
+        onPageChange={pagination.setPage}
+      />
+
+      {showForm && canWrite ? (
+        <PatrimonyCreateForm
           initialCategoryId={filterAccountId}
-          onCancel={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null)
+          onDirtyChange={setFormDirty}
+          onCancel={() => {
+            setShowForm(false)
+            setFormDirty(false)
+          }}
+          onSaved={(id) => {
+            setFormDirty(false)
+            setShowForm(false)
             summary.reload()
+            navigate(`/patrimonio/${id}`)
           }}
         />
+      ) : null}
+
+      {data ? (
+        <section
+          className={`${styles.horizonBlock} ${styles.projectsHorizonSummary}`}
+          aria-label="Resumo por categoria"
+        >
+          <h2 className={styles.sectionTitle}>Resumo</h2>
+          <div className={styles.horizonRow}>
+            <span className={styles.horizonMeta}>
+              <strong>Ativo</strong>
+              <span>
+                {assetCount} {assetCount === 1 ? 'item' : 'itens'} · {formatMoney(data.assetsTotal)}
+              </span>
+            </span>
+          </div>
+          <div className={styles.horizonRow}>
+            <span className={styles.horizonMeta}>
+              <strong>Passivo</strong>
+              <span>
+                {liabilityCount} {liabilityCount === 1 ? 'item' : 'itens'} ·{' '}
+                {formatMoney(data.liabilitiesTotal)}
+              </span>
+            </span>
+          </div>
+          <div className={styles.horizonRow}>
+            <span className={styles.horizonMeta}>
+              <strong>Patrimônio líquido</strong>
+              <span>{formatMoney(data.netWorth)}</span>
+            </span>
+          </div>
+          {categorySummary.length > 0 ? (
+            <>
+              <h3 className={styles.sectionTitle}>Por categoria</h3>
+              {categorySummary.map((row) => (
+                <div key={row.categoryId} className={styles.horizonRow}>
+                  <span className={styles.horizonMeta}>
+                    <strong>
+                      {row.categoryName}
+                      <span className={styles.rowSub}>
+                        {' '}
+                        · {row.section === 'Asset' ? 'Ativo' : 'Passivo'}
+                      </span>
+                    </strong>
+                    <span>
+                      {row.count} {row.count === 1 ? 'item' : 'itens'} · {formatMoney(row.amount)}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </>
+          ) : (
+            <p className={styles.muted}>Sem categorias com itens ainda.</p>
+          )}
+        </section>
       ) : null}
     </div>
   )
 }
 
-function ItemForm({
-  editing,
+function PatrimonyCreateForm({
   onSaved,
   onCancel,
+  onDirtyChange,
   initialCategoryId,
 }: {
-  editing: PatrimonyItem | null
-  onSaved: () => void
+  onSaved: (id: string) => void
   onCancel: () => void
+  onDirtyChange?: (dirty: boolean) => void
   initialCategoryId: string | null
 }) {
   const lookups = useLookups()
   const options = lookups.patrimonyAccounts
-  const [categoryId, setCategoryId] = useState(
-    () => editing?.categoryId ?? initialCategoryId ?? '',
-  )
-  const [name, setName] = useState(() => editing?.name ?? '')
-  const [amount, setAmount] = useState(() => (editing ? formatMoneyInput(editing.amount) : ''))
+  const [categoryId, setCategoryId] = useState(() => initialCategoryId ?? '')
+  const [name, setName] = useState('')
+  const [amount, setAmount] = useState('')
   const action = useAction()
 
   const dirty =
-    editing !== null
-      ? categoryId !== editing.categoryId ||
-        name !== editing.name ||
-        parseMoney(amount) !== editing.amount
-      : categoryId !== (initialCategoryId ?? '') || name.trim() !== '' || amount.trim() !== ''
+    categoryId !== (initialCategoryId ?? '') || name.trim() !== '' || amount.trim() !== ''
 
-  useRegisterDirty('patrimony-item-form', dirty)
+  useRegisterDirty('patrimony-create-form', dirty)
 
   useEffect(() => {
-    if (editing) {
-      return
-    }
+    onDirtyChange?.(dirty)
+  }, [dirty, onDirtyChange])
+
+  useEffect(() => {
     if (initialCategoryId) {
       setCategoryId(initialCategoryId)
     }
-  }, [initialCategoryId, editing])
+  }, [initialCategoryId])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -239,23 +379,21 @@ function ItemForm({
       action.setError('Valor inválido.')
       return
     }
-    const saved = editing
-      ? await action.run(() => patrimonyApi.update(editing.id, categoryId, name.trim(), value))
-      : await action.run(() => patrimonyApi.create(categoryId, name.trim(), value))
-    if (saved) {
-      showSaveToast(editing ? 'Item de patrimônio salvo.' : 'Item de patrimônio adicionado.')
-      if (!editing) {
-        setCategoryId(initialCategoryId ?? '')
-        setName('')
-        setAmount('')
-      }
-      onSaved()
+    let createdId = ''
+    if (
+      await action.run(async () => {
+        const item = await patrimonyApi.create(categoryId, name.trim(), value)
+        createdId = item.id
+      })
+    ) {
+      showSaveToast('Item de patrimônio adicionado.')
+      onSaved(createdId)
     }
   }
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>{editing ? 'Editar item' : 'Novo item'}</h2>
+      <h2 className={styles.sectionTitle}>Novo item</h2>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
         <CategorySelect
           label="Categoria"
@@ -281,13 +419,11 @@ function ItemForm({
         </div>
         <div className={styles.formActions}>
           <Button type="submit" disabled={action.busy || options.length === 0}>
-            {editing ? 'Salvar' : 'Adicionar'}
+            Adicionar
           </Button>
-          {editing ? (
-            <Button type="button" variant="ghost" onClick={onCancel}>
-              Cancelar
-            </Button>
-          ) : null}
+          <Button type="button" variant="ghost" onClick={onCancel}>
+            Cancelar
+          </Button>
         </div>
       </form>
     </section>

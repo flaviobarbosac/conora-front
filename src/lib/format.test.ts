@@ -1,11 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import {
+  competencesFrom,
+  currentCompetence,
+  dateToApi,
+  errorMessage,
+  formatCompetence,
+  formatDate,
+  formatDateTime,
+  formatMoney,
   formatMoneyInput,
   formatPercent,
+  monthsInclusive,
   parseMoney,
   sanitizeMoneyTyping,
   shiftCompetence,
-  monthsInclusive,
+  todayInput,
 } from './format'
 
 describe('sanitizeMoneyTyping', () => {
@@ -69,5 +78,30 @@ describe('competence helpers', () => {
   it('lists inclusive months', () => {
     expect(monthsInclusive('2026-10', '2026-12')).toEqual(['2026-10', '2026-11', '2026-12'])
     expect(monthsInclusive('2026-12', '2026-10')).toEqual([])
+  })
+
+  it('builds competence ranges and labels', () => {
+    expect(competencesFrom('2026-11', 2)).toEqual(['2026-11', '2026-12'])
+    expect(competencesFrom('2026-11', 0)).toEqual([])
+    expect(currentCompetence()).toMatch(/^\d{4}-\d{2}$/)
+    expect(formatCompetence('2026-03')).toMatch(/2026/)
+  })
+})
+
+describe('date helpers', () => {
+  it('formats and converts dates', () => {
+    expect(todayInput()).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(dateToApi('2026-10-15')).toBe('2026-10-15T12:00:00Z')
+    expect(formatDate('2026-10-15T12:00:00Z')).toBe('15/10/2026')
+    expect(formatDate(null)).toBe('—')
+    expect(formatDateTime(null)).toBe('—')
+    expect(formatDateTime('2026-10-15T12:00:00Z')).toContain('2026')
+  })
+
+  it('formats money and error messages', () => {
+    expect(formatMoney(10)).toContain('10')
+    expect(formatMoney(null)).toContain('0')
+    expect(errorMessage(new Error('falhou'))).toBe('falhou')
+    expect(errorMessage('x')).toBe('Algo deu errado. Tente novamente.')
   })
 })

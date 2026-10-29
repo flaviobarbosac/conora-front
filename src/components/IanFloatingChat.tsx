@@ -31,6 +31,7 @@ import {
 import { isVoiceRoute } from '../lib/voiceRoutes'
 import { beginVoiceSession, clearVoiceDraft, clearVoiceFill, isCancelPhrase, publishVoiceFill, setVoiceDraft, speechRecognitionAvailable, type VoiceSessionHandle } from '../lib/voiceDraft'
 import { startVoiceVisualizer } from '../lib/voiceVisualizer'
+import { VOICE_LAUNCH_ENABLED } from '../lib/voiceLaunch'
 import { VoiceOscillator } from './VoiceOscillator'
 import styles from './IanFloatingChat.module.css'
 
@@ -114,8 +115,8 @@ function matchCategoryOption(spoken: string, names: string[]): string | null {
   return partial.length === 1 ? partial[0] : null
 }
 
-/** When false, Ian voice listen / mic stays in code but is unreachable on web, iOS, and Android. */
-const IAN_MIC_ENABLED = false
+/** Same product gate as home mic + Settings voice section. */
+const IAN_MIC_ENABLED = VOICE_LAUNCH_ENABLED
 
 /**
  * Portrait only: aging stays visible on home (and header on other routes).

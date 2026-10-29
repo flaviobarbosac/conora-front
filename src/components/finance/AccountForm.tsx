@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { accountsApi, type AccountKind } from '../../api/finance'
+import { accountsApi, type Account, type AccountKind } from '../../api/finance'
 import { Button } from '../ui/Button'
 import { ErrorText } from '../ui/Feedback'
 import { Field } from '../ui/Field'
@@ -9,7 +9,7 @@ import { useAction } from '../../hooks/useAction'
 import { useLoad } from '../../hooks/useLoad'
 import { useRegisterDirty } from '../../hooks/useUnsavedChanges'
 import { showSaveToast } from '../../lib/saveToast'
-import styles from '../../pages/page.module.css'
+import styles from '../../pages/pageStyles'
 
 const KIND_LABEL: Record<AccountKind, string> = {
   Checking: 'Conta corrente',
@@ -23,29 +23,48 @@ const ACCOUNT_KIND_OPTIONS: AccountKind[] = ['Checking', 'Savings', 'Investment'
 
 type Props = {
   onSaved: () => void
+  onCancel?: () => void
+  /** When set, form updates this account instead of creating. */
+  initial?: Account
   /** Compact title for onboard embed. */
   title?: string
   submitLabel?: string
 }
 
-export function AccountForm({ onSaved, title = 'Nova conta', submitLabel = 'Criar conta' }: Props) {
+function kindForForm(kind: AccountKind): AccountKind {
+  return ACCOUNT_KIND_OPTIONS.includes(kind) ? kind : 'Checking'
+}
+
+export function AccountForm({
+  onSaved,
+  onCancel,
+  initial,
+  title = initial ? 'Editar conta' : 'Nova conta',
+  submitLabel = initial ? 'Salvar' : 'Criar conta',
+}: Props) {
   const banks = useLoad(() => accountsApi.banks(), [])
-  const [name, setName] = useState('')
-  const [kind, setKind] = useState<AccountKind>('Checking')
-  const [bankCode, setBankCode] = useState('')
-  const [agency, setAgency] = useState('')
-  const [accountNumber, setAccountNumber] = useState('')
-  const [checkDigit, setCheckDigit] = useState('')
+  const [name, setName] = useState(() => initial?.name ?? '')
+  const [kind, setKind] = useState<AccountKind>(() => kindForForm(initial?.kind ?? 'Checking'))
+  const [bankCode, setBankCode] = useState(() => initial?.bankCode ?? '')
+  const [agency, setAgency] = useState(() => initial?.agency ?? '')
+  const [accountNumber, setAccountNumber] = useState(() => initial?.accountNumber ?? '')
+  const [checkDigit, setCheckDigit] = useState(() => initial?.checkDigit ?? '')
   const action = useAction()
   const needsBank = kind !== 'Cash'
+  const baselineName = initial?.name ?? ''
+  const baselineKind = kindForForm(initial?.kind ?? 'Checking')
+  const baselineBank = initial?.bankCode ?? ''
+  const baselineAgency = initial?.agency ?? ''
+  const baselineNumber = initial?.accountNumber ?? ''
+  const baselineDigit = initial?.checkDigit ?? ''
   useRegisterDirty(
-    'account-form',
-    name.trim() !== '' ||
-      kind !== 'Checking' ||
-      bankCode !== '' ||
-      agency.trim() !== '' ||
-      accountNumber.trim() !== '' ||
-      checkDigit.trim() !== '',
+    initial ? `account-form-${initial.id}` : 'account-form',
+    name.trim() !== baselineName ||
+      kind !== baselineKind ||
+      bankCode !== baselineBank ||
+      agency.trim() !== baselineAgency ||
+      accountNumber.trim() !== baselineNumber ||
+      checkDigit.trim() !== baselineDigit,
   )
 
   async function submit(event: FormEvent) {
@@ -54,25 +73,27 @@ export function AccountForm({ onSaved, title = 'Nova conta', submitLabel = 'Cria
       action.setError('Selecione o banco.')
       return
     }
-    if (
-      await action.run(() =>
-        accountsApi.create({
-          name: name.trim(),
-          kind,
-          bankCode: needsBank ? bankCode || undefined : undefined,
-          agency: needsBank ? agency.trim() || undefined : undefined,
-          accountNumber: needsBank ? accountNumber.trim() || undefined : undefined,
-          checkDigit: needsBank ? checkDigit.trim() || undefined : undefined,
-        }),
-      )
-    ) {
-      showSaveToast('Conta criada.')
-      setName('')
-      setKind('Checking')
-      setBankCode('')
-      setAgency('')
-      setAccountNumber('')
-      setCheckDigit('')
+    const payload = {
+      name: name.trim(),
+      kind,
+      bankCode: needsBank ? bankCode || undefined : undefined,
+      agency: needsBank ? agency.trim() || undefined : undefined,
+      accountNumber: needsBank ? accountNumber.trim() || undefined : undefined,
+      checkDigit: needsBank ? checkDigit.trim() || undefined : undefined,
+    }
+    const ok = await action.run(() =>
+      initial ? accountsApi.update(initial.id, payload) : accountsApi.create(payload),
+    )
+    if (ok) {
+      showSaveToast(initial ? 'Conta atualizada.' : 'Conta criada.')
+      if (!initial) {
+        setName('')
+        setKind('Checking')
+        setBankCode('')
+        setAgency('')
+        setAccountNumber('')
+        setCheckDigit('')
+      }
       onSaved()
     }
   }
@@ -152,6 +173,11 @@ export function AccountForm({ onSaved, title = 'Nova conta', submitLabel = 'Cria
           >
             {submitLabel}
           </Button>
+          {onCancel ? (
+            <Button type="button" variant="secondary" disabled={action.busy} onClick={onCancel}>
+              Cancelar
+            </Button>
+          ) : null}
         </div>
       </form>
     </section>

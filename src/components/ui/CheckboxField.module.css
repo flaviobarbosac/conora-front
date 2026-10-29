@@ -1,0 +1,37 @@
+.field {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+  cursor: pointer;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.input {
+  width: 1.15rem;
+  height: 1.15rem;
+  min-width: 1.15rem;
+  margin: 0.2rem 0 0;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+
+.description {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  color: var(--text-muted);
+}

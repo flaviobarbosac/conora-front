@@ -1,22 +1,37 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import styles from '../pages/page.module.css'
+import styles from '../pages/pageStyles'
+
+type BackLink = {
+  to: string
+  label: string
+}
 
 type Props = {
   title: string
   kicker?: string
   actions?: ReactNode
-  /** Shows a "back to Relatórios" link for secondary pages. */
+  /**
+   * Secondary page chrome: back link. Prefer explicit `backTo`.
+   * Legacy `secondary` alone no longer hardcodes Relatórios.
+   */
   secondary?: boolean
+  backTo?: BackLink
 }
 
-export function PageHeader({ title, kicker, actions, secondary = false }: Props) {
+export function PageHeader({ title, kicker, actions, secondary = false, backTo }: Props) {
+  const link =
+    backTo ??
+    (secondary
+      ? { to: '/relatorios', label: '← Relatórios' }
+      : null)
+
   return (
     <div className={styles.header}>
       <div>
-        {secondary ? (
-          <Link to="/relatorios" className={styles.kicker}>
-            ← Relatórios
+        {link ? (
+          <Link to={link.to} className={styles.kicker}>
+            {link.label}
           </Link>
         ) : kicker ? (
           <div className={styles.kicker}>{kicker}</div>

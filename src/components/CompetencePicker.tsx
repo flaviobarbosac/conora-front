@@ -1,6 +1,6 @@
 import { formatCompetence, shiftCompetence } from '../lib/format'
 import { Button } from './ui/Button'
-import styles from '../pages/page.module.css'
+import styles from '../pages/pageStyles'
 
 type Props = {
   value: string

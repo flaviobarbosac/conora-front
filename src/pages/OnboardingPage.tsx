@@ -16,7 +16,10 @@ import {
   type OnboardingStep,
 } from '../lib/onboardingFlow'
 import { showSaveToast } from '../lib/saveToast'
-import styles from './page.module.css'
+import pageStyles from './pageStyles'
+import onboardingStyles from './onboarding/onboarding.module.css'
+
+const styles = { ...pageStyles, ...onboardingStyles }
 
 type Step = OnboardingStep
 

@@ -1,27 +1,35 @@
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import { resetMobileViewport } from '../lib/resetMobileViewport'
 import { setPendingShare, type PendingShare } from '../share/pendingShare'
 
 export async function scanReceipt(): Promise<PendingShare> {
-  const photo = await Camera.getPhoto({
-    quality: 80,
-    resultType: CameraResultType.DataUrl,
-    source: CameraSource.Prompt,
-    promptLabelHeader: 'Escanear recibo',
-    promptLabelPhoto: 'Galeria',
-    promptLabelPicture: 'Câmera',
-  })
-  if (!photo.dataUrl) {
-    throw new Error('Nenhuma imagem selecionada.')
+  try {
+    const photo = await Camera.getPhoto({
+      quality: 80,
+      resultType: CameraResultType.DataUrl,
+      source: CameraSource.Prompt,
+      promptLabelHeader: 'Escanear recibo',
+      promptLabelPhoto: 'Galeria',
+      promptLabelPicture: 'Câmera',
+    })
+    if (!photo.dataUrl) {
+      throw new Error('Nenhuma imagem selecionada.')
+    }
+    const mime = photo.format === 'png' ? 'image/png' : 'image/jpeg'
+    const share: PendingShare = {
+      fileName: `recibo.${photo.format || 'jpg'}`,
+      mimeType: mime,
+      dataUrl: photo.dataUrl,
+    }
+    setPendingShare(share)
+    return share
+  } finally {
+    // Camera/file picker often leaves WKWebView / Chrome scaled above 100%.
+    resetMobileViewport()
+    requestAnimationFrame(() => resetMobileViewport())
   }
-  const mime = photo.format === 'png' ? 'image/png' : 'image/jpeg'
-  const share: PendingShare = {
-    fileName: `recibo.${photo.format || 'jpg'}`,
-    mimeType: mime,
-    dataUrl: photo.dataUrl,
-  }
-  setPendingShare(share)
-  return share
 }
+
 
 export async function fileFromPending(share: PendingShare): Promise<File> {
   const response = await fetch(share.dataUrl)

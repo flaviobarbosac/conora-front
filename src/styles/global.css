@@ -20,6 +20,8 @@ body,
 html {
   color-scheme: light;
   overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 html[data-theme='dark'] {
@@ -44,6 +46,15 @@ input,
 select,
 textarea {
   font-family: inherit;
+}
+
+/* iOS Safari zooms focused controls under 16px and often leaves the page scaled. */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
 }
 
 a {

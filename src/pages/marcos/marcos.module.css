@@ -1,0 +1,141 @@
+
+
+/* --- extracted from page.module.css --- */
+.marcoGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.marcoCard {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: 1px solid var(--border-subtle);
+}
+
+.marcoCardEarned {
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border-subtle));
+  background: color-mix(in srgb, var(--success) 6%, var(--surface));
+}
+
+.marcoCardPending {
+  opacity: 1;
+}
+
+.marcoCardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.marcoCardTitle {
+  flex: 1 1 12rem;
+  font-size: var(--text-lg);
+  line-height: 1.3;
+}
+
+.marcoCardMeta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+  line-height: 1.4;
+}
+
+.marcoCardHead .badge {
+  min-height: 24px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-md);
+}
+
+.marcoStatusPending {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.marcoCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: var(--space-1);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+
+.marcoCta:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.marcoProgress {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.marcoProgressHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.marcoProgressNext {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--text-muted);
+}
+
+.marcoProgressNext a {
+  color: var(--primary);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+
+.marcoSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.marcoSectionTitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}

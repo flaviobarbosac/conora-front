@@ -1,0 +1,97 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4, 1rem);
+  background: rgb(0 0 0 / 48%);
+}
+
+.budget {
+  --receipt-dest: #2563eb;
+  --receipt-dest-soft: #dbeafe;
+}
+
+.expense {
+  --receipt-dest: #dc2626;
+  --receipt-dest-soft: #fee2e2;
+}
+
+.card {
+  width: min(100%, 22rem);
+  display: grid;
+  gap: 0.55rem;
+  padding: 1.25rem 1.15rem 1.1rem;
+  border-radius: var(--radius-md, 0.75rem);
+  border: 2px solid var(--receipt-dest);
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-md, 0 16px 40px rgb(0 0 0 / 18%));
+  text-align: center;
+}
+
+.kicker {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #5a6b80);
+}
+
+.destination {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--receipt-dest);
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text-secondary, #3e4f66);
+  line-height: 1.35;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.45;
+}
+
+.chipBudget {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.chipExpense {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.budget .chipBudget,
+.expense .chipExpense {
+  opacity: 1;
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
+.wordBudget {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.wordExpense {
+  color: #dc2626;
+  font-weight: 700;
+}

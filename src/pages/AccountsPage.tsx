@@ -29,7 +29,7 @@ import { useLookups } from '../hooks/useLookups'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import { currentCompetence, dateToApi, formatDate, formatMoney, parseMoney, todayInput } from '../lib/format'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 const KIND_LABEL: Record<AccountKind, string> = {
   Checking: 'Conta corrente',
@@ -61,6 +61,7 @@ export function AccountsPage() {
   const showCards = view === 'cards'
   const { plan } = usePlanAccess()
   const fullAccess = hasFullAccess(plan)
+  const [editing, setEditing] = useState<Account | null>(null)
 
   const lookups = useLookups()
   const accounts = useLoad(() => accountsApi.list(true), [])
@@ -93,19 +94,17 @@ export function AccountsPage() {
   const canAddAccount = fullAccess || activeAccounts.length < 1
 
   const pageTitle = showCards ? 'Cartões' : 'Contas'
-  const pageKicker = showCards ? 'Crédito' : 'Dinheiro'
 
   return (
     <div className={styles.page}>
-      <PageHeader kicker={pageKicker} title={pageTitle} />
+      <PageHeader title={pageTitle} />
 
       {showAccounts ? (
         <>
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Contas</h2>
-            {!fullAccess ? (
+          <section className={styles.section} aria-label="Contas bancárias">
+            {!fullAccess && accountList.length === 0 ? (
               <p className={styles.muted}>
-                No Conora grátis você cadastra uma conta — ela recebe os lançamentos de despesa.
+                No Conora grátis você cadastra uma conta bancária para os lançamentos.
               </p>
             ) : null}
             <ErrorText message={accounts.error ?? archive.error} />
@@ -123,16 +122,38 @@ export function AccountsPage() {
                           {account.bankCode
                             ? ` · ${account.bankCode}${account.bankName ? ` ${account.bankName}` : ''}`
                             : ''}
-                          {account.agency ? ` · Ag ${account.agency}` : ''}
-                          {account.accountNumber
-                            ? ` · Conta ${account.accountNumber}${account.checkDigit ? `-${account.checkDigit}` : ''}`
-                            : ''}
                         </span>
+                        {account.agency || account.accountNumber ? (
+                          <span className={styles.rowSub}>
+                            {account.agency ? `Ag ${account.agency}` : null}
+                            {account.agency && account.accountNumber ? ' · ' : null}
+                            {account.accountNumber
+                              ? `Conta ${account.accountNumber}${account.checkDigit ? `-${account.checkDigit}` : ''}`
+                              : null}
+                          </span>
+                        ) : null}
                       </span>
                       <span className={styles.rowEnd}>
                         {account.isArchived ? <Badge tone="warning">Arquivada</Badge> : null}
-                        <span className={styles.amount}>{formatMoney(account.balance)}</span>
-                        <Button variant="ghost" disabled={archive.busy} onClick={() => void toggleArchive(account)}>
+                        <span className={styles.amount} aria-label="Saldo atual">
+                          {formatMoney(account.balance)}
+                        </span>
+                        <Button
+                          variant="secondary"
+                          disabled={archive.busy}
+                          aria-label={`Editar ${account.name}`}
+                          onClick={() => setEditing(account)}
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          disabled={archive.busy}
+                          aria-label={
+                            account.isArchived ? `Reativar ${account.name}` : `Arquivar ${account.name}`
+                          }
+                          onClick={() => void toggleArchive(account)}
+                        >
                           {account.isArchived ? 'Reativar' : 'Arquivar'}
                         </Button>
                       </span>
@@ -150,13 +171,21 @@ export function AccountsPage() {
             ) : null}
           </section>
 
-          {canAddAccount ? (
+          {editing ? (
+            <AccountForm
+              key={editing.id}
+              initial={editing}
+              onCancel={() => setEditing(null)}
+              onSaved={() => {
+                setEditing(null)
+                refresh()
+              }}
+            />
+          ) : canAddAccount ? (
             <AccountForm onSaved={refresh} />
-          ) : (
-            <p className={styles.muted}>
-              Limite de uma conta no plano grátis. Assine para cadastrar mais contas.
-            </p>
-          )}
+          ) : !fullAccess ? (
+            <p className={styles.muted}>No plano grátis só uma conta bancária.</p>
+          ) : null}
         </>
       ) : null}
 
@@ -220,10 +249,18 @@ function CardPanel({ card, accounts, categories, tree, onChanged }: PanelProps) 
           <span className={styles.rowSub}>
             Usado {formatMoney(card.usedLimit)} · disponível {formatMoney(card.availableLimit)}
           </span>
-          <Button variant="secondary" className={styles.compact} onClick={() => setPanel(panel === 'purchase' ? 'none' : 'purchase')}>
+          <Button
+            variant="secondary"
+            className={styles.compact}
+            onClick={() => setPanel(panel === 'purchase' ? 'none' : 'purchase')}
+          >
             Nova compra
           </Button>
-          <Button variant="secondary" className={styles.compact} onClick={() => setPanel(panel === 'invoices' ? 'none' : 'invoices')}>
+          <Button
+            variant="secondary"
+            className={styles.compact}
+            onClick={() => setPanel(panel === 'invoices' ? 'none' : 'invoices')}
+          >
             Faturas
           </Button>
         </span>

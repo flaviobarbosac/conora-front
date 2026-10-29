@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { familyApi, planApi, type FamilyInvite, type FamilyMemberUser, type FamilyNotice } from '../api/finance'
-import { PaidModuleBadge } from '../components/PaidModuleBadge'
 import { PageHeader } from '../components/PageHeader'
 import { usePlanAccess } from '../hooks/usePlanAccess'
 import { hasFullAccess } from '../lib/freeTier'
@@ -16,16 +15,17 @@ import { familyInviteLimit } from '../lib/planAccess'
 import { formatDateTime } from '../lib/format'
 import { cameraAvailable, renderQrDataUrl, startQrScan, type QrKind, type QrScanSession } from '../lib/qrInvite'
 import { showSaveToast } from '../lib/saveToast'
-import styles from './page.module.css'
+import pageStyles from './pageStyles'
+import membersStyles from './members/members.module.css'
+
+const styles = { ...pageStyles, ...membersStyles }
 
 export function MembersPage() {
   const navigate = useNavigate()
   const { plan: accessPlan } = usePlanAccess()
   const canWriteMembers = hasFullAccess(accessPlan)
-  const profile = useLoad(() => familyApi.profile(), [])
   const group = useLoad(() => familyApi.group(), [])
   const plan = useLoad(() => planApi.get(), [])
-  const [displayName, setDisplayName] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [transferQr, setTransferQr] = useState<string | null>(null)
@@ -35,14 +35,11 @@ export function MembersPage() {
   const [qrError, setQrError] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const scanRef = useRef<QrScanSession | null>(null)
-  const profileAction = useAction()
   const inviteAction = useAction()
   const qrAction = useAction()
   const rowAction = useAction()
 
-  const profileData = profile.data
   const groupData = group.data
-  const nameDraft = displayName || profileData?.name || ''
 
   useEffect(() => {
     return () => {
@@ -66,27 +63,16 @@ export function MembersPage() {
     }
   }, [transferUrl, groupData?.pendingOwnerTransfer?.isAuthorized])
 
-  async function saveProfile(event: FormEvent) {
-    event.preventDefault()
-    const name = nameDraft.trim()
-    if (!name) {
-      profileAction.setError('Informe um nome.')
-      return
-    }
-    if (await profileAction.run(() => familyApi.updateProfile(name))) {
-      showSaveToast('Perfil salvo.')
-      setDisplayName('')
-      profile.reload()
-      group.reload()
-      window.dispatchEvent(new Event('conora:profile-changed'))
-    }
-  }
-
   async function sendInvite(event: FormEvent) {
     event.preventDefault()
     const email = inviteEmail.trim()
     if (!email) {
       inviteAction.setError('Informe o e-mail do convite.')
+      return
+    }
+    // Basic format check (local@domain.tld) — blocks clear typos before the API.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      inviteAction.setError('Informe um e-mail válido, como pessoa@email.com.')
       return
     }
     if (seatFull && seat) {
@@ -271,54 +257,24 @@ export function MembersPage() {
   const occupiedExtra = Math.max(0, (groupData?.members.length ?? 1) - 1) + openInvites.length
   const seatFull = seat !== null && occupiedExtra >= seat.maxExtra
   const hasGroup = Boolean(groupData?.groupId)
-  const canInvite = canWriteMembers && (!hasGroup || Boolean(groupData?.isBudgetOwner))
+  const isOwnerOrSolo = !hasGroup || Boolean(groupData?.isBudgetOwner)
+  const planAllowsSeats = (seat?.maxExtra ?? 0) > 0
+  const canInvite = canWriteMembers && isOwnerOrSolo
   const canScan = canWriteMembers && !hasGroup
+  const inviteEnabled = canInvite && planAllowsSeats && !seatFull
+  const scanEnabled = canScan && planAllowsSeats
+  const inviteLockedByPlan = Boolean(seat) && !planAllowsSeats
+  const inviteLockedByRole = planAllowsSeats && canWriteMembers && !isOwnerOrSolo
 
   return (
     <div className={styles.page}>
-      <PageHeader
-        kicker="Família"
-        title="Grupo e perfil"
-        actions={!canWriteMembers ? <PaidModuleBadge /> : undefined}
-      />
-      {!canWriteMembers ? (
-        <p className={styles.muted}>Você pode ver o grupo. Convites e alterações ficam nos planos pagos.</p>
-      ) : null}
+      <PageHeader kicker="Cadastros" title="Membros" />
       <ErrorText
         message={
-          profile.error ??
-          group.error ??
-          profileAction.error ??
-          inviteAction.error ??
-          qrAction.error ??
-          rowAction.error ??
-          qrError
+          group.error ?? inviteAction.error ?? qrAction.error ?? rowAction.error ?? qrError
         }
       />
-      {(profile.loading && !profileData) || (group.loading && !groupData) ? <Loading /> : null}
-
-      {profileData ? (
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Seu perfil</h2>
-          <p className={styles.muted}>{profileData.email}</p>
-          <form className={styles.form} onSubmit={(event) => void saveProfile(event)}>
-            <div className={styles.formWide}>
-              <Field
-                label="Nome exibido"
-                name="profileName"
-                required
-                value={nameDraft}
-                onChange={(event) => setDisplayName(event.target.value)}
-              />
-            </div>
-            <div className={styles.formActions}>
-              <Button type="submit" disabled={profileAction.busy}>
-                Salvar perfil
-              </Button>
-            </div>
-          </form>
-        </section>
-      ) : null}
+      {group.loading && !groupData ? <Loading /> : null}
 
       {groupData ? (
         <>
@@ -330,7 +286,7 @@ export function MembersPage() {
             {groupData.members.length === 0 ? <Empty>Nenhum membro.</Empty> : null}
             <ul className={styles.list}>
               {groupData.members.map((member) => (
-                <li key={member.usuarioId} className={styles.row}>
+                <li key={member.usuarioId} className={`${styles.row} ${styles.membersRow}`}>
                   <span className={styles.rowMain}>
                     <strong>
                       {member.name}
@@ -338,7 +294,7 @@ export function MembersPage() {
                     </strong>
                     <span className={styles.rowSub}>{member.email}</span>
                   </span>
-                  <span className={styles.rowEnd}>
+                  <span className={`${styles.rowEnd} ${styles.membersRowEnd}`}>
                     {member.isBudgetOwner ? <Badge tone="ok">Orçamento</Badge> : null}
                     {groupData.isBudgetOwner && !member.isSelf && hasGroup ? (
                       <Button
@@ -408,89 +364,145 @@ export function MembersPage() {
             ) : null}
           </section>
 
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Convite por QR code</h2>
-            <p className={styles.muted}>
-              O responsável mostra o QR. Quem ainda não está em grupo lê o código nesta mesma tela.
-            </p>
-            {seatFull && seat && canInvite ? (
-              <p className={styles.muted}>
-                {seat.message} <Link to="/plano">Ver planos</Link>
+          <section className={styles.section} aria-label="Convidar para o grupo">
+            <h2 className={styles.sectionTitle}>Convidar para o grupo</h2>
+            <p className={styles.muted}>Duas formas de chamar alguém para a família.</p>
+            {inviteLockedByPlan && seat ? (
+              <p className={styles.invitePlanNotice}>
+                <span>{seat.message}</span>
+                <Link to="/plano" className={styles.invitePlanLink}>
+                  Ver planos
+                </Link>
               </p>
             ) : null}
-            <div className={styles.actions}>
-              {canInvite ? (
-                qrDataUrl ? (
-                  <Button variant="secondary" disabled={qrAction.busy} onClick={() => void hideQr()}>
-                    Fechar QR
-                  </Button>
-                ) : (
-                  <Button disabled={qrAction.busy} onClick={() => void showQr()}>
-                    Mostrar QR
-                  </Button>
-                )
-              ) : null}
-              {canScan ? (
-                scanning ? (
-                  <Button variant="secondary" onClick={stopScan}>
-                    Parar câmera
-                  </Button>
-                ) : (
-                  <Button variant="secondary" disabled={qrAction.busy} onClick={() => void beginScan()}>
-                    Ler QR code
-                  </Button>
-                )
-              ) : null}
-            </div>
-            {qrDataUrl ? (
-              <div className={styles.qrPanel}>
-                <img className={styles.qrImage} src={qrDataUrl} alt="QR code do convite do grupo" />
-                {qrExpiresAt ? (
-                  <p className={styles.muted}>Válido até {formatDateTime(qrExpiresAt)} · uso único</p>
-                ) : null}
-              </div>
-            ) : null}
-            {scanning ? (
-              <div className={styles.qrPanel}>
-                <video ref={videoRef} className={styles.qrVideo} muted playsInline />
-                <p className={styles.muted}>Aponte para o QR do responsável pelo grupo.</p>
-              </div>
-            ) : null}
-          </section>
-
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Convidar por e-mail</h2>
-            {seatFull && seat && canInvite ? (
-              <p className={styles.muted}>
-                {seat.message} <Link to="/plano">Ver planos</Link>
+            {seatFull && seat && planAllowsSeats ? (
+              <p className={styles.invitePlanNotice}>
+                <span>{seat.message}</span>
+                <Link to="/plano" className={styles.invitePlanLink}>
+                  Ver planos
+                </Link>
               </p>
             ) : null}
-            {canInvite ? (
-              <form className={styles.form} onSubmit={(event) => void sendInvite(event)}>
-                <div className={styles.formWide}>
-                  <Field
-                    label="E-mail"
-                    name="inviteEmail"
-                    type="email"
-                    required
-                    value={inviteEmail}
-                    onChange={(event) => setInviteEmail(event.target.value)}
-                    placeholder="pessoa@email.com"
-                  />
-                </div>
-                <div className={styles.formActions}>
-                  <Button type="submit" disabled={inviteAction.busy}>
-                    Enviar convite
-                  </Button>
-                </div>
-              </form>
-            ) : (
+            {inviteLockedByRole ? (
               <p className={styles.muted}>
                 Só o responsável pelo grupo pode convidar. Se a responsabilidade for transferida para você, o
-                convite passa a aparecer aqui.
+                convite fica disponível aqui.
               </p>
-            )}
-            {canInvite && openInvites.length > 0 ? (
+            ) : null}
+
+            <div className={styles.inviteOptions}>
+              <div className={`${styles.inviteOption} ${inviteEnabled ? '' : styles.inviteOptionLocked}`}>
+                <div className={styles.inviteOptionHead}>
+                  <h3 className={styles.inviteOptionTitle}>Por e-mail</h3>
+                  <p className={styles.inviteOptionHint}>Para quem está longe — envia o convite pelo e-mail.</p>
+                </div>
+                <form
+                  className={styles.form}
+                  onSubmit={(event) => {
+                    if (!inviteEnabled) {
+                      event.preventDefault()
+                      return
+                    }
+                    void sendInvite(event)
+                  }}
+                >
+                  <div className={styles.formWide}>
+                    <Field
+                      label="E-mail"
+                      name="inviteEmail"
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      required
+                      value={inviteEmail}
+                      disabled={!inviteEnabled}
+                      onChange={(event) => {
+                        setInviteEmail(event.target.value)
+                        if (inviteAction.error) {
+                          inviteAction.setError(null)
+                        }
+                      }}
+                      placeholder="pessoa@email.com"
+                    />
+                  </div>
+                  <div className={styles.formActions}>
+                    <Button type="submit" className={styles.inviteOptionCta} disabled={!inviteEnabled || inviteAction.busy}>
+                      Enviar convite
+                    </Button>
+                  </div>
+                </form>
+              </div>
+
+              <div
+                className={`${styles.inviteOption} ${inviteEnabled || scanEnabled || qrDataUrl || scanning ? '' : styles.inviteOptionLocked}`}
+              >
+                <div className={styles.inviteOptionHead}>
+                  <h3 className={styles.inviteOptionTitle}>Por QR code</h3>
+                  <p className={styles.inviteOptionHint}>
+                    Para quem está do seu lado — você mostra o QR no celular; a outra pessoa lê e entra na família.
+                  </p>
+                </div>
+                <div className={styles.inviteOptionActions}>
+                  {qrDataUrl ? (
+                    <Button
+                      variant="secondary"
+                      className={styles.inviteOptionCta}
+                      disabled={qrAction.busy}
+                      onClick={() => void hideQr()}
+                    >
+                      Fechar QR
+                    </Button>
+                  ) : (
+                    <Button
+                      className={styles.inviteOptionCta}
+                      disabled={!inviteEnabled || qrAction.busy}
+                      onClick={() => void showQr()}
+                    >
+                      Mostrar QR
+                    </Button>
+                  )}
+                  {!hasGroup ? (
+                    scanning ? (
+                      <Button variant="secondary" className={styles.inviteOptionCta} onClick={stopScan}>
+                        Parar câmera
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          variant="secondary"
+                          className={styles.inviteOptionCta}
+                          disabled={!scanEnabled || qrAction.busy}
+                          onClick={() => void beginScan()}
+                        >
+                          Ler QR code
+                        </Button>
+                        {!scanEnabled ? (
+                          <p className={styles.inviteOptionHint}>
+                            Use quando alguém mostrar o QR para você.
+                          </p>
+                        ) : null}
+                      </>
+                    )
+                  ) : null}
+                </div>
+                {qrDataUrl ? (
+                  <div className={styles.qrPanel}>
+                    <img className={styles.qrImage} src={qrDataUrl} alt="QR code do convite do grupo" />
+                    {qrExpiresAt ? (
+                      <p className={styles.muted}>Válido até {formatDateTime(qrExpiresAt)} · uso único</p>
+                    ) : null}
+                  </div>
+                ) : null}
+                {scanning ? (
+                  <div className={styles.qrPanel}>
+                    <video ref={videoRef} className={styles.qrVideo} muted playsInline />
+                    <p className={styles.muted}>Aponte para o QR do responsável pelo grupo.</p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {openInvites.length > 0 ? (
               <>
                 <h3 className={styles.sectionTitle}>Convites pendentes</h3>
                 <ul className={styles.list}>
@@ -502,7 +514,7 @@ export function MembersPage() {
                       </span>
                       <DeleteIconButton
                         label="Cancelar convite"
-                        disabled={rowAction.busy}
+                        disabled={rowAction.busy || !inviteEnabled}
                         onClick={() => void cancelInvite(invite)}
                       />
                     </li>

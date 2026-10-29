@@ -10,7 +10,7 @@ import { useAction } from '../../hooks/useAction'
 import { useRegisterDirty } from '../../hooks/useUnsavedChanges'
 import { parseMoney } from '../../lib/format'
 import { showSaveToast } from '../../lib/saveToast'
-import styles from '../../pages/page.module.css'
+import styles from '../../pages/pageStyles'
 
 type Props = {
   accounts: Account[]

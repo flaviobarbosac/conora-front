@@ -10,29 +10,38 @@ const TRIAL_WARNING_DAYS = 15
 export function PlanBanner() {
   const { plan } = usePlanAccess()
   const { pathname } = useLocation()
-  if (!plan || pathname === '/plano') {
+  // Pages that already show a free-tier line — skip the global banner there.
+  if (
+    !plan ||
+    pathname === '/plano' ||
+    pathname === '/categorias' ||
+    pathname.startsWith('/categorias/') ||
+    pathname === '/marcos' ||
+    pathname === '/membros'
+  ) {
     return null
   }
 
   let tone: 'info' | 'warning' = 'info'
-  let text: string
+  let lines: string[]
   let cta: string
 
   if (plan.isTrainingStudent && plan.phase === 'Trial' && plan.daysLeft <= TRIAL_WARNING_DAYS) {
-    text =
+    lines = [
       plan.daysLeft <= 1
         ? 'Seu acesso completo gratuito termina hoje. Assine para continuar com todas as categorias.'
-        : `Seu acesso completo gratuito termina em ${plan.daysLeft} dias. Escolha seu plano e continue sem interrupção.`
+        : `Seu acesso completo gratuito termina em ${plan.daysLeft} dias. Escolha seu plano e continue sem interrupção.`,
+    ]
     cta = 'Ver planos'
   } else if (isFreeLimited(plan) && !hasFullAccess(plan)) {
     tone = 'warning'
     if (plan.everSubscribed) {
-      text =
-        'Seu plano venceu. Você continua no Conora grátis, com aluguel, luz, água e escola. Renove para voltar ao acesso completo.'
+      lines = [
+        'Seu plano venceu. Você continua no Conora grátis, com aluguel, luz, água e escola. Renove para voltar ao acesso completo.',
+      ]
       cta = 'Renovar plano'
     } else {
-      text =
-        'Você está no plano gratuito. Assine e libere o Conora completo.'
+      lines = ['Você está no plano gratuito.', 'Assine e libere o Conora completo.']
       cta = 'Assinar plano'
     }
   } else {
@@ -41,7 +50,13 @@ export function PlanBanner() {
 
   return (
     <div className={`${styles.banner} ${styles[tone]}`} role="status">
-      <span>{text}</span>
+      <span className={styles.copy}>
+        {lines.map((line) => (
+          <span key={line} className={styles.line}>
+            {line}
+          </span>
+        ))}
+      </span>
       {cta ? (
         <Link to="/plano" className={styles.cta}>
           {cta}

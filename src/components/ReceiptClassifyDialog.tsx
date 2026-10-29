@@ -1,7 +1,9 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { receiptsApi, type Category, type ReceiptIntake } from '../api/finance'
+import type { ReceiptRerouteHint } from '../lib/receiptFlow'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
+import { WordLancamento, WordOrcamento } from './ReceiptReadingOverlay'
 import { Button } from './ui/Button'
 import { ErrorText, Loading } from './ui/Feedback'
 import styles from './IanAnalyzeDialog.module.css'
@@ -9,11 +11,13 @@ import styles from './IanAnalyzeDialog.module.css'
 type Props = {
   open: boolean
   intake: ReceiptIntake | null
+  /** Set when the photo arrived from the wrong screen (cupom↔boleto). */
+  rerouteHint?: ReceiptRerouteHint | null
   onClose: () => void
   onClassified: (intake: ReceiptIntake) => void
 }
 
-export function ReceiptClassifyDialog({ open, intake, onClose, onClassified }: Props) {
+export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClose, onClassified }: Props) {
   const titleId = useId()
   const action = useAction()
   const categories = useLoad(() => receiptsApi.categories(), [])
@@ -84,16 +88,18 @@ export function ReceiptClassifyDialog({ open, intake, onClose, onClassified }: P
   }
 
   const isBoleto = intake.purpose === 'BudgetBoleto'
+  const destClass = isBoleto ? styles.destBudget : styles.destExpense
 
   return (
     <div className={styles.overlay} role="presentation" onClick={onClose}>
       <div
-        className={styles.dialog}
+        className={`${styles.dialog} ${destClass}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         onClick={(event) => event.stopPropagation()}
       >
+        <p className={styles.destBadge}>{isBoleto ? 'Orçamento' : 'Lançamento'}</p>
         <header className={styles.head}>
           <h2 id={titleId} className={styles.title}>
             {isBoleto ? 'Classificar boleto' : 'Classificar fornecedor'}
@@ -102,6 +108,18 @@ export function ReceiptClassifyDialog({ open, intake, onClose, onClassified }: P
             ×
           </button>
         </header>
+        {rerouteHint === 'to-budget' ? (
+          <p className={styles.hint}>
+            Sem valor pago: você está lançando um <WordOrcamento />. Escolha a conta e a categoria do{' '}
+            <WordOrcamento /> antes de registrar.
+          </p>
+        ) : null}
+        {rerouteHint === 'to-expense' ? (
+          <p className={styles.hint}>
+            Com valor pago: isso é um <WordLancamento />, não um <WordOrcamento />. Escolha a conta e a
+            categoria do <WordLancamento /> antes de registrar.
+          </p>
+        ) : null}
         <p className={styles.hint}>
           {intake.extractedName
             ? `Fornecedor: ${intake.extractedName}${intake.extractedCnpj ? ` (CNPJ ${intake.extractedCnpj})` : ''}.`

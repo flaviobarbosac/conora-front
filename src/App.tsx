@@ -33,6 +33,7 @@ import { MonthPage } from './pages/MonthPage'
 import { MorePage } from './pages/MorePage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { OwnerTransferPage } from './pages/OwnerTransferPage'
+import { PatrimonyDetailPage } from './pages/PatrimonyDetailPage'
 import { PatrimonyPage } from './pages/PatrimonyPage'
 import { ContractPage } from './pages/ContractPage'
 import { PlanPage } from './pages/PlanPage'
@@ -181,6 +182,7 @@ export default function App() {
                 <Route path="/categorias" element={<CategoriesPage />} />
                 <Route path="/plano-de-contas" element={<Navigate to="/categorias" replace />} />
                 <Route path="/patrimonio" element={<PatrimonyPage />} />
+                <Route path="/patrimonio/:id" element={<PatrimonyDetailPage />} />
                 <Route path="/membros" element={<MembersPage />} />
                 <Route path="/plano" element={<PlanPage />} />
                 <Route path="/plano/contrato" element={<ContractPage />} />

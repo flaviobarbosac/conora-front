@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   entriesApi,
   entryDisplayDescription,
@@ -13,6 +13,11 @@ import {
   type ReceiptIntake,
 } from '../api/finance'
 import { ReceiptClassifyDialog } from '../components/ReceiptClassifyDialog'
+import {
+  ReceiptReadingOverlay,
+  WordLancamento,
+  WordOrcamento,
+} from '../components/ReceiptReadingOverlay'
 import { CASH_FLOW_SECTIONS, isPatrimonySection } from '../lib/categoryOrder'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
@@ -39,22 +44,27 @@ import {
   parseMoney,
   todayInput,
 } from '../lib/format'
-import { isCategoryWritable } from '../lib/freeTier'
+import { FREE_TIER_INCOME_ENTRY_HINT, isCategoryWritable, PAID_MODULE_BADGE } from '../lib/freeTier'
 import { isNativeApp } from '../lib/platform'
+import { safeRaioXReturnTo } from '../lib/raioXReturn'
 import { readSharingView } from '../lib/sharingView'
 import { takeVoiceDraft, subscribeVoiceFill } from '../lib/voiceDraft'
 import { matchByName, resolveSpokenDate } from '../lib/voiceEntry'
 import { peekPendingShare, setPendingShare, takePendingShare } from '../share/pendingShare'
 import { usePlanAccess } from '../hooks/usePlanAccess'
 import {
+  pauseForDestinationCue,
   peekPendingIntakeId,
   pickReceiptMedia,
   pollReceipt,
   setPendingIntakeId,
+  setReceiptRerouteHint,
   takePendingIntakeId,
+  takeReceiptRerouteHint,
   uploadPendingShare,
 } from '../lib/receiptFlow'
-import styles from './page.module.css'
+import { resetMobileViewport } from '../lib/resetMobileViewport'
+import styles from './pageStyles'
 
 type ReceiptPrefill = {
   description: string
@@ -96,7 +106,9 @@ function toDateInput(iso: string): string {
 }
 
 export function EntriesPage() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const returnToRaioX = safeRaioXReturnTo(searchParams.get('returnTo'))
   const { confirmLeave, isDirty } = useUnsavedChanges()
   const [ym, setYm] = useState(currentCompetence)
   const [typeFilter, setTypeFilter] = useState<EntryType | ''>('')
@@ -108,7 +120,10 @@ export function EntriesPage() {
   const [formDirty, setFormDirty] = useState(false)
   const [openError, setOpenError] = useState<string | null>(null)
   const [receiptBusy, setReceiptBusy] = useState(false)
+  const [readingPurpose, setReadingPurpose] = useState<'Expense' | 'BudgetBoleto'>('Expense')
+  const [readingRerouted, setReadingRerouted] = useState(false)
   const [classifyOpen, setClassifyOpen] = useState(false)
+  const [classifyRerouteHint, setClassifyRerouteHint] = useState<'to-budget' | 'to-expense' | null>(null)
   const [receiptIntake, setReceiptIntake] = useState<ReceiptIntake | null>(null)
   const [receiptPrefill, setReceiptPrefill] = useState<ReceiptPrefill | null>(null)
   const [receiptIntakeId, setReceiptIntakeId] = useState<string | null>(null)
@@ -141,7 +156,10 @@ export function EntriesPage() {
   async function bootstrapReceipt(channel: 'App' | 'ShareTarget' = 'App') {
     if (receiptBusy) return
     setReceiptBusy(true)
+    setReadingPurpose('Expense')
+    setReadingRerouted(false)
     setOpenError(null)
+    resetMobileViewport()
     try {
       let intakeId = peekPendingIntakeId()
       if (!intakeId) {
@@ -153,6 +171,16 @@ export function EntriesPage() {
         intakeId = created.id
       }
       const intake = await pollReceipt(intakeId)
+      setReadingPurpose(intake.purpose)
+      if (intake.purpose === 'BudgetBoleto') {
+        setReadingRerouted(true)
+        setPendingIntakeId(intake.id)
+        setReceiptRerouteHint('to-budget')
+        takePendingShare()
+        await pauseForDestinationCue()
+        navigate('/orcamento?recibo=1', { replace: true })
+        return
+      }
       if (intake.status === 'Failed') {
         setOpenError(intake.failureReason ?? 'Não foi possível ler o recibo.')
         takePendingIntakeId()
@@ -166,6 +194,7 @@ export function EntriesPage() {
         return
       }
       if (intake.needsClassification || intake.status === 'NeedsClassification') {
+        setClassifyRerouteHint(takeReceiptRerouteHint())
         setReceiptIntake(intake)
         setClassifyOpen(true)
         setShowForm(false)
@@ -190,6 +219,8 @@ export function EntriesPage() {
       setOpenError(error instanceof Error ? error.message : 'Falha ao processar o recibo.')
     } finally {
       setReceiptBusy(false)
+      setReadingRerouted(false)
+      resetMobileViewport()
     }
   }
 
@@ -471,6 +502,16 @@ export function EntriesPage() {
         title="Lançamentos"
         actions={
           <>
+            {returnToRaioX ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  navigate(returnToRaioX)
+                }}
+              >
+                Voltar pro Raio-X
+              </Button>
+            ) : null}
             <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
             <Button
               disabled={!showForm && monthClosed}
@@ -524,7 +565,23 @@ export function EntriesPage() {
       />
 
       {monthClosed ? <p className={styles.muted}>{closedMonthMessage}</p> : null}
-      {receiptBusy ? <p className={styles.muted}>Lendo o recibo…</p> : null}
+      <ReceiptReadingOverlay
+        open={receiptBusy}
+        purpose={readingPurpose}
+        rerouted={readingRerouted}
+        message={
+          readingRerouted ? (
+            <>
+              Sem valor pago: você está lançando um <WordOrcamento />. Abrindo para escolher conta e
+              categoria…
+            </>
+          ) : (
+            <>
+              Identificando se é cupom (<WordLancamento />) ou boleto (<WordOrcamento />).
+            </>
+          )
+        }
+      />
       <ErrorText message={openError ?? monthStatus.error ?? rowAction.error} />
 
       {showForm ? (
@@ -557,9 +614,14 @@ export function EntriesPage() {
       <ReceiptClassifyDialog
         open={classifyOpen}
         intake={receiptIntake}
-        onClose={() => setClassifyOpen(false)}
+        rerouteHint={classifyRerouteHint}
+        onClose={() => {
+          setClassifyOpen(false)
+          setClassifyRerouteHint(null)
+        }}
         onClassified={(intake) => {
           setClassifyOpen(false)
+          setClassifyRerouteHint(null)
           if (intake.status === 'Confirmed') {
             takePendingIntakeId()
             showSaveToast('Lançamento gravado.')
@@ -775,6 +837,8 @@ function EntryForm({
   }
 
   const kindCategories = categories.filter((category) => matchesEntryType(category.section, type))
+  const writableKindCategories = kindCategories.filter((category) => isCategoryWritable(plan, category))
+  const noWritableCategories = !editing && kindCategories.length > 0 && writableKindCategories.length === 0
 
   useEffect(() => {
     if (skipDirtyRef.current) {
@@ -824,6 +888,22 @@ function EntryForm({
     const value = parseMoney(amount)
     if (!Number.isFinite(value) || value <= 0) {
       action.setError('Informe um valor maior que zero.')
+      return
+    }
+    if (noWritableCategories) {
+      action.setError(
+        type === 'Income'
+          ? FREE_TIER_INCOME_ENTRY_HINT
+          : 'Nenhuma categoria disponível neste plano para este tipo de lançamento.',
+      )
+      return
+    }
+    if (!accountId) {
+      action.setError('Selecione a conta bancária para concluir o lançamento.')
+      return
+    }
+    if (!categoryId) {
+      action.setError('Selecione a categoria para concluir o lançamento.')
       return
     }
 
@@ -912,6 +992,12 @@ function EntryForm({
       </div>
       <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
         {receiptPreview ? <img className={styles.sharePreview} src={receiptPreview} alt="Recibo anexado" /> : null}
+        {noWritableCategories ? (
+          <p className={`${styles.muted} ${styles.formWide}`} role="status">
+            {type === 'Income' ? FREE_TIER_INCOME_ENTRY_HINT : `${PAID_MODULE_BADGE}.`}{' '}
+            <Link to="/plano">Ver planos</Link>
+          </p>
+        ) : null}
         <MoneyField
           label="Valor (R$)"
           name="amount"
@@ -928,11 +1014,17 @@ function EntryForm({
           onChange={setCategoryId}
           options={kindCategories}
           tree={tree}
-          emptyLabel="Sem conta"
+          emptyLabel="Selecione a categoria"
           isOptionDisabled={(account) => !isCategoryWritable(plan, account)}
         />
-        <Select label="Conta bancária" name="accountId" required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
-          <option value="">Selecione</option>
+        <Select
+          label="Conta bancária"
+          name="accountId"
+          value={accountId}
+          onChange={(event) => setAccountId(event.target.value)}
+          aria-required
+        >
+          <option value="">Selecione conta bancária</option>
           {accounts.map((account) => (
             <option key={account.id} value={account.id}>
               {account.name}

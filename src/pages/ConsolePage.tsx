@@ -11,7 +11,7 @@ import { KpiBarChart, KpiLineChart, KpiMultiLineChart, KpiPieChart, type KpiPoin
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
 import type { ConsoleSectionId } from '../lib/consoleNav'
-import layout from './page.module.css'
+import layout from './pageStyles'
 import styles from './ConsolePage.module.css'
 
 const MONTHS_MIN = 1

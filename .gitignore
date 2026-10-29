@@ -38,3 +38,8 @@ mobile/ios/App/Pods
 mobile/ios/App/App/capacitor.config.json
 mobile/android/app/src/main/assets/public
 mobile/ios/App/App/public
+
+# Generated/twin JS beside TypeScript sources
+src/**/*.js
+!src/**/*.config.js
+

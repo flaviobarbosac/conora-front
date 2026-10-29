@@ -21,6 +21,37 @@
   box-shadow: var(--shadow-md, 0 16px 40px rgb(0 0 0 / 18%));
 }
 
+.destBudget {
+  border-color: #2563eb;
+  border-width: 2px;
+}
+
+.destExpense {
+  border-color: #dc2626;
+  border-width: 2px;
+}
+
+.destBadge {
+  margin: 0;
+  width: fit-content;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.destBudget .destBadge {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.destExpense .destBadge {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
 .head {
   display: flex;
   align-items: center;

@@ -6,7 +6,7 @@ import { Field } from '../../components/ui/Field'
 import { IntegerField } from '../../components/ui/IntegerField'
 import { MoneyField } from '../../components/ui/MoneyField'
 import { IAN_AGES, type IanAge } from '../../lib/speakPt'
-import page from '../page.module.css'
+import page from '../pageStyles'
 import styles from './JornadaIanPropostaPage.module.css'
 
 type StepId = 'budget' | 'debt' | 'patrimony' | 'projects'

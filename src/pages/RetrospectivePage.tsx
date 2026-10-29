@@ -6,7 +6,7 @@ import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useLoad } from '../hooks/useLoad'
 import { formatMoney, formatPercent } from '../lib/format'
 import { showSaveToast } from '../lib/saveToast'
-import styles from './page.module.css'
+import styles from './pageStyles'
 
 async function shareText(payload: { title: string; text: string }) {
   if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
