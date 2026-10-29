@@ -81,19 +81,20 @@ export function listenAppLinks(onRoute: (route: string) => void): () => void {
 }
 
 /**
- * Fallback when a HTTPS e-mail link opens in the browser instead of the app
- * (App/Universal Link not claimed yet). Offers conora:// handoff.
+ * When a HTTPS e-mail link opens in the browser (Gmail in-app browser, App Link
+ * chooser → Chrome, Universal Link miss), do NOT call the API — hand off to
+ * conora:// so the native app consumes the token. Pure web users tap Continuar.
  */
 export function useAppHandoff(page: AppLinkPage) {
   const [searchParams] = useSearchParams()
   const token = (searchParams.get('token') ?? '').trim()
-  const [handoff, setHandoff] = useState(() => searchParams.get('app') === '1' && !isNativeApp() && !!token)
+  const [handoff, setHandoff] = useState(() => !isNativeApp() && !!token)
   const url = appUrl(page, token)
 
   useEffect(() => {
     // Try once on load; mail apps may block it without a tap, so the button stays available.
     if (handoff) window.location.href = url
-  }, [])
+  }, [handoff, url])
 
   return { handoff, url, continueInBrowser: () => setHandoff(false) }
 }
