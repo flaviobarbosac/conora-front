@@ -220,6 +220,31 @@ export async function apiFormData<T>(path: string, form: FormData, method = 'POS
   return (await response.json()) as T
 }
 
+export async function apiGetBlob(path: string): Promise<Blob | null> {
+  const send = async (): Promise<Response> => {
+    const headers = new Headers()
+    headers.set('Accept', 'image/*,application/octet-stream')
+    const token = getAccessToken()
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+    return fetch(`${apiBase()}${path}`, { method: 'GET', headers })
+  }
+
+  try {
+    let response = await send()
+    if (response.status === 401 && (await refreshAccessToken())) {
+      response = await send()
+    }
+    if (response.status === 404 || !response.ok) {
+      return null
+    }
+    return response.blob()
+  } catch {
+    return null
+  }
+}
+
 export async function apiPostBlob(path: string, body: unknown, signal?: AbortSignal): Promise<Blob | null> {
   const send = async (): Promise<Response> => {
     const headers = new Headers()

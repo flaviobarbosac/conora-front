@@ -1,4 +1,4 @@
-import { apiFetch } from '../client'
+import { apiFetch, apiFormData, apiGetBlob } from '../client'
 import { json } from './helpers'
 import type {
   Member,
@@ -28,6 +28,13 @@ export const familyApi = {
     apiFetch<FamilyProfile>('/family/preferences', json('PUT', input)),
   completeOnboarding: () => apiFetch<FamilyProfile>('/family/onboarding/complete', json('POST')),
   acknowledgeContract: () => apiFetch<FamilyProfile>('/family/profile/contract-acknowledgment', json('POST')),
+  uploadPhoto: (file: Blob, fileName = 'photo.jpg') => {
+    const form = new FormData()
+    form.append('file', file, fileName)
+    return apiFormData<FamilyProfile>('/family/profile/photo', form)
+  },
+  deletePhoto: () => apiFetch<FamilyProfile>('/family/profile/photo', json('DELETE')),
+  photoBlob: () => apiGetBlob('/family/profile/photo'),
   group: () => apiFetch<FamilyGroupResponse>('/family/group'),
   invite: (email: string) => apiFetch<FamilyInvite>('/family/invites', json('POST', { email })),
   createQrInvite: () =>

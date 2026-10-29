@@ -520,6 +520,8 @@ export type FamilyProfile = {
   phone?: string | null
   cep?: string | null
   contractAcknowledgedAt?: string | null
+  hasPhoto?: boolean
+  photoContentHash?: string | null
 }
 
 export type LgpdExportStatus = {

@@ -36,12 +36,35 @@ export function AppShell() {
   const email = session?.email || 'conta'
   const profile = useLoad(() => familyApi.profile(), [session?.email])
   const displayName = profile.data?.name?.trim() || email
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
 
   useEffect(() => {
     const onProfileChanged = () => profile.reload()
     window.addEventListener('conora:profile-changed', onProfileChanged)
     return () => window.removeEventListener('conora:profile-changed', onProfileChanged)
   }, [profile.reload])
+
+  useEffect(() => {
+    let revoked: string | null = null
+    let cancelled = false
+    if (!profile.data?.hasPhoto) {
+      setPhotoUrl(null)
+      return
+    }
+    void familyApi.photoBlob().then((blob) => {
+      if (cancelled || !blob) {
+        if (!cancelled) setPhotoUrl(null)
+        return
+      }
+      const url = URL.createObjectURL(blob)
+      revoked = url
+      setPhotoUrl(url)
+    })
+    return () => {
+      cancelled = true
+      if (revoked) URL.revokeObjectURL(revoked)
+    }
+  }, [profile.data?.hasPhoto, profile.data?.photoContentHash])
 
   useEffect(() => {
     if (profile.data?.themeId) {
@@ -356,7 +379,11 @@ export function AppShell() {
               }
             >
               <span className={styles.avatar} aria-hidden="true">
-                {initialsFrom(displayName, email)}
+                {photoUrl ? (
+                  <img className={styles.avatarImage} src={photoUrl} alt="" />
+                ) : (
+                  initialsFrom(displayName, email)
+                )}
               </span>
             </button>
             <div className={styles.profileMeta}>

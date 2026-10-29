@@ -1,5 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { familyApi } from '../api/finance'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import { familyApi, planApi } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
@@ -7,6 +8,7 @@ import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
+import { planSummary } from '../lib/planAccess'
 import { showSaveToast } from '../lib/saveToast'
 import styles from './pageStyles'
 
@@ -40,13 +42,17 @@ function formatCep(value: string): string {
 
 export function ProfilePage() {
   const profile = useLoad(() => familyApi.profile(), [])
+  const plan = useLoad(() => planApi.get(), [])
   const saveProfile = useAction()
+  const photoAction = useAction()
+  const fileRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [cep, setCep] = useState('')
   const [savedName, setSavedName] = useState('')
   const [savedPhone, setSavedPhone] = useState('')
   const [savedCep, setSavedCep] = useState('')
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const dirty =
     name.trim() !== savedName.trim() ||
     digitsOnly(phone) !== digitsOnly(savedPhone) ||
@@ -63,6 +69,28 @@ export function ProfilePage() {
       setSavedCep(profile.data.cep ? formatCep(profile.data.cep) : '')
     }
   }, [profile.data])
+
+  useEffect(() => {
+    let revoked: string | null = null
+    let cancelled = false
+    if (!profile.data?.hasPhoto) {
+      setPhotoUrl(null)
+      return
+    }
+    void familyApi.photoBlob().then((blob) => {
+      if (cancelled || !blob) {
+        if (!cancelled) setPhotoUrl(null)
+        return
+      }
+      const url = URL.createObjectURL(blob)
+      revoked = url
+      setPhotoUrl(url)
+    })
+    return () => {
+      cancelled = true
+      if (revoked) URL.revokeObjectURL(revoked)
+    }
+  }, [profile.data?.hasPhoto, profile.data?.photoContentHash])
 
   async function onSave(event: FormEvent) {
     event.preventDefault()
@@ -90,24 +118,81 @@ export function ProfilePage() {
     setCep(savedCep)
   }
 
+  async function onPickPhoto(file: File | undefined) {
+    if (!file) return
+    if (
+      await photoAction.run(() => familyApi.uploadPhoto(file, file.name || 'photo.jpg'))
+    ) {
+      showSaveToast(profile.data?.hasPhoto ? 'Foto atualizada.' : 'Foto enviada.')
+      profile.reload()
+      window.dispatchEvent(new Event('conora:profile-changed'))
+    }
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  async function onRemovePhoto() {
+    if (!(await photoAction.run(() => familyApi.deletePhoto()))) return
+    showSaveToast('Foto removida.')
+    profile.reload()
+    window.dispatchEvent(new Event('conora:profile-changed'))
+  }
+
   const data = profile.data
 
   return (
     <div className={styles.page}>
       <PageHeader title="Perfil" backTo={{ to: '/', label: '← Início' }} />
-      <ErrorText message={profile.error ?? saveProfile.error} />
+      <ErrorText message={profile.error ?? saveProfile.error ?? photoAction.error} />
       {profile.loading && !data ? <Loading /> : null}
 
       {data ? (
         <section className={styles.section}>
           <div className={styles.sectionHead}>
             <span className={styles.avatarLarge} aria-hidden="true">
-              {initialsFrom(name || data.name, data.email)}
+              {photoUrl ? (
+                <img className={styles.avatarImage} src={photoUrl} alt="" />
+              ) : (
+                initialsFrom(name || data.name, data.email)
+              )}
             </span>
             <div className={styles.profileIdentity}>
               <strong>{name.trim() || data.name}</strong>
               <span className={styles.profileLogin}>{data.email}</span>
+              <div className={styles.photoActions}>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  hidden
+                  onChange={(event) => void onPickPhoto(event.target.files?.[0])}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={photoAction.busy}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {data.hasPhoto ? 'Trocar foto' : 'Enviar foto'}
+                </Button>
+                {data.hasPhoto ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={photoAction.busy}
+                    onClick={() => void onRemovePhoto()}
+                  >
+                    Remover
+                  </Button>
+                ) : null}
+              </div>
             </div>
+          </div>
+
+          <div className={styles.accountLinks}>
+            <Link to="/plano" className={styles.accountLink}>
+              <strong>Plano</strong>
+              <span>{planSummary(plan.data)}</span>
+            </Link>
           </div>
 
           <form className={styles.form} onSubmit={(event) => void onSave(event)}>
