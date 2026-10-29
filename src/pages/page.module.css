@@ -1403,10 +1403,6 @@ button.compact {
     width: 100%;
   }
 
-  .homePageSolo {
-    min-height: calc(100dvh - 8.5rem);
-  }
-
   .homePage .header,
   .homeUrgent,
   .homeJourney {
