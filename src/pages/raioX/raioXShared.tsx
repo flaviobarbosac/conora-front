@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   entryDisplayDescription,
   type Budget,
@@ -7,10 +6,7 @@ import {
   type Category,
   type CategorySection,
   type Entry,
-  type LifeProject,
 } from '../../api/finance'
-import { LIFE_HORIZONS } from '../../lib/lifeHorizon'
-import { Loading } from '../../components/ui/Feedback'
 import { ProgressToneLegend } from '../../components/ProgressToneLegend'
 import {
   categoryLabel,
@@ -105,12 +101,10 @@ export function TotalsCell({
   totals,
   stock = false,
   onUnbudgetedClick,
-  onActualClick,
 }: {
   totals: RaioXTotals
   stock?: boolean
   onUnbudgetedClick?: () => void
-  onActualClick?: () => void
 }) {
   if (stock) {
     const has = Math.abs(totals.actual) > 0.001
@@ -133,21 +127,7 @@ export function TotalsCell({
   return (
     <span className={styles.raioxTotals}>
       <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.planned)}</span>
-      {onActualClick && Math.abs(totals.actual) > 0.001 ? (
-        <button
-          type="button"
-          className={`${actualClass} ${styles.raioxPercentLink}`}
-          title="Abrir lançamentos"
-          onClick={(event) => {
-            event.stopPropagation()
-            onActualClick()
-          }}
-        >
-          {formatMoney(totals.actual)}
-        </button>
-      ) : (
-        <span className={actualClass}>{formatMoney(totals.actual)}</span>
-      )}
+      <span className={actualClass}>{formatMoney(totals.actual)}</span>
       {tone === 'unbudgeted' && onUnbudgetedClick ? (
         <button
           type="button"
@@ -411,11 +391,6 @@ export function RaioXAccountBlock({
           onUnbudgetedClick={
             unlocked && account.level === 'Analytical' ? () => onUnbudgetedClick(account.id) : undefined
           }
-          onActualClick={
-            unlocked && account.level === 'Analytical'
-              ? () => onOpenActual(account, launchEntries)
-              : undefined
-          }
         />
       </button>
       {expanded
@@ -546,67 +521,12 @@ export function RaioXHero({
   )
 }
 
-function sectionTotals(
-  accounts: Category[],
-  byParent: Map<string | null, Category[]>,
-  planned: Map<string, number>,
-  actual: Map<string, number>,
-  section: CategorySection,
-): RaioXTotals {
-  const head = sectionHead(accounts, section)
-  if (!head) return { planned: 0, actual: 0 }
-  return sumBranch(head.id, byParent, planned, actual)
-}
-
-const HORIZON_BAR_COLOR: Record<string, string> = {
-  short: '#3F8F82',
-  medium: '#5C7194',
-  long: '#A6843A',
-}
-
-function PairCard({
-  label,
-  totals,
-  active,
-  amountClass,
-  note,
-  onClick,
-}: {
-  label: string
-  totals: RaioXTotals
-  active: boolean
-  amountClass: string
-  note?: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      className={`${styles.heroCard} ${active ? styles.heroCardPatrimonyActive : ''}`}
-      aria-pressed={active}
-      onClick={onClick}
-    >
-      <span>{label}</span>
-      <strong className={`${styles.moneyValue} ${amountClass}`}>{formatMoney(totals.actual)}</strong>
-      <span className={`${styles.muted} ${styles.pairCardMeta}`}>
-        {formatMoney(totals.planned)} prev · {formatMoney(totals.actual)} real
-      </span>
-      {note ? <span className={styles.muted}>{note}</span> : null}
-    </button>
-  )
-}
-
 export function RaioXSideCards({
   budget,
   accounts,
   byParent,
   planned,
   actual,
-  projects,
-  projectsLoading,
-  scope,
-  focus,
-  onFocus,
   onExpandSection,
 }: {
   budget: Budget
@@ -614,27 +534,10 @@ export function RaioXSideCards({
   byParent: Map<string | null, Category[]>
   planned: Map<string, number>
   actual: Map<string, number>
-  projects: LifeProject[]
-  projectsLoading: boolean
-  scope: 'Family' | 'Personal'
-  focus: RaioXFocus
-  onFocus: (next: RaioXFocus) => void
   onExpandSection: (section: CategorySection, options?: { accountId?: string }) => void
 }) {
   const [macroOpen, setMacroOpen] = useState<Set<CategorySection>>(() => new Set())
   const bars = buildBudgetMacroBars(budget).filter((bar) => isRaioXMacroSection(bar.section))
-
-  const assets = sectionTotals(accounts, byParent, planned, actual, 'Asset')
-  const liabilities = sectionTotals(accounts, byParent, planned, actual, 'Liability')
-  const net = {
-    planned: assets.planned - liabilities.planned,
-    actual: assets.actual - liabilities.actual,
-  }
-  const patrimonyActive = focus === 'patrimony'
-
-  const filteredProjects = projects.filter((project) =>
-    scope === 'Family' ? true : project.scope === 'Personal',
-  )
 
   function toggleMacroBar(section: CategorySection) {
     setMacroOpen((current) => {
@@ -747,62 +650,6 @@ export function RaioXSideCards({
           </ul>
         )}
       </section>
-      <div className={styles.macroSplit}>
-        <section className={styles.macroCard} aria-label="Patrimônio" onClick={(event) => event.stopPropagation()}>
-          <div className={styles.macroHead}>
-            <strong>Patrimônio</strong>
-          </div>
-          <div className={styles.heroCards}>
-            <PairCard
-              label="Ativo"
-              totals={assets}
-              active={patrimonyActive}
-              amountClass={styles.positive}
-              onClick={() => onFocus('patrimony')}
-            />
-            <PairCard
-              label="Passivo"
-              totals={liabilities}
-              active={patrimonyActive}
-              amountClass={styles.negative}
-              onClick={() => onFocus('patrimony')}
-            />
-            <PairCard
-              label="Patrimônio líquido"
-              totals={net}
-              active={patrimonyActive}
-              amountClass={net.actual < 0 ? styles.negative : ''}
-              note="Ativo − passivo"
-              onClick={() => onFocus('patrimony')}
-            />
-          </div>
-        </section>
-        <section
-          className={styles.macroCard}
-          aria-label="Projetos de vida"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className={styles.macroHead}>
-            <strong>Projetos de vida</strong>
-          </div>
-          {projectsLoading ? <Loading /> : null}
-          {LIFE_HORIZONS.map((horizon) => {
-            const items = filteredProjects.filter((project) => project.horizon === horizon.key)
-            const goal = items.reduce((sum, project) => sum + project.goalAmount, 0)
-            const accumulated = items.reduce((sum, project) => sum + project.accumulatedAmount, 0)
-            const percent = goal <= 0 ? 0 : Math.min(100, (accumulated / goal) * 100)
-            return (
-              <Link key={horizon.key} className={styles.horizonRow} to={`/projetos?horizonte=${horizon.key}`}>
-                <span className={styles.horizonMeta}>
-                  <strong>{horizon.label}</strong>
-                  <span>{consumptionLabel(goal, accumulated)}</span>
-                </span>
-                <ConsumptionBar percent={percent} color={HORIZON_BAR_COLOR[horizon.key] ?? '#5B7194'} />
-              </Link>
-            )
-          })}
-        </section>
-      </div>
     </div>
   )
 }
