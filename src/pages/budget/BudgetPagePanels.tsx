@@ -778,7 +778,7 @@ function BudgetAccountBlock({
         onClick={() => (expandable ? onToggle(account.id) : undefined)}
         aria-expanded={expandable ? expanded : undefined}
       >
-        <span className={styles.raioxToggle} aria-hidden>
+        <span className={`${styles.raioxToggle} ${styles.budgetToggle}`} aria-hidden>
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
         <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>

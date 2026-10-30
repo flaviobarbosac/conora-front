@@ -147,7 +147,7 @@ export function ProfilePage() {
 
       {data ? (
         <section className={styles.section}>
-          <div className={styles.sectionHead}>
+          <div className={styles.profileHead}>
             <span className={styles.avatarLarge} aria-hidden="true">
               {photoUrl ? (
                 <img className={styles.avatarImage} src={photoUrl} alt="" />
@@ -158,33 +158,33 @@ export function ProfilePage() {
             <div className={styles.profileIdentity}>
               <strong>{name.trim() || data.name}</strong>
               <span className={styles.profileLogin}>{data.email}</span>
-              <div className={styles.photoActions}>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  hidden
-                  onChange={(event) => void onPickPhoto(event.target.files?.[0])}
-                />
+            </div>
+            <div className={styles.photoActions}>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                hidden
+                onChange={(event) => void onPickPhoto(event.target.files?.[0])}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={photoAction.busy}
+                onClick={() => fileRef.current?.click()}
+              >
+                {data.hasPhoto ? 'Trocar foto' : 'Enviar foto'}
+              </Button>
+              {data.hasPhoto ? (
                 <Button
                   type="button"
                   variant="secondary"
                   disabled={photoAction.busy}
-                  onClick={() => fileRef.current?.click()}
+                  onClick={() => void onRemovePhoto()}
                 >
-                  {data.hasPhoto ? 'Trocar foto' : 'Enviar foto'}
+                  Remover
                 </Button>
-                {data.hasPhoto ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={photoAction.busy}
-                    onClick={() => void onRemovePhoto()}
-                  >
-                    Remover
-                  </Button>
-                ) : null}
-              </div>
+              ) : null}
             </div>
           </div>
 
@@ -213,7 +213,6 @@ export function ProfilePage() {
               readOnly
               disabled
               autoComplete="username"
-              hint="Login da conta. Somente leitura — não pode ser alterado."
             />
             <Field
               label="Telefone"

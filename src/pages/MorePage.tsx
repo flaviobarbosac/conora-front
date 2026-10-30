@@ -17,7 +17,6 @@ const TILES: ReadonlyArray<{ to: string; title: string; text: string }> = [
   { to: '/retrospectiva', title: 'Retrospectiva', text: 'Resumo do ano' },
   { to: '/plano', title: 'Plano', text: 'Assinatura e situação' },
   { to: '/operacao', title: 'Operação', text: 'Auditoria e saúde da API' },
-  { to: '/ajuda', title: 'Central de ajuda', text: 'Módulos, campos e glossário' },
   { to: '/importar', title: 'Importar extrato', text: 'CSV ou OFX' },
 ]
 

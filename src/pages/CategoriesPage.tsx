@@ -140,7 +140,7 @@ export function CategoriesPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader secondary title="Categorias" />
+      <PageHeader kicker="Cadastros" title="Categorias" />
       <ErrorText message={accounts.error ?? action.error} />
       {accounts.loading && !accounts.data ? <Loading /> : null}
       {!accounts.loading && roots.length === 0 ? <Empty>Nenhuma categoria.</Empty> : null}
