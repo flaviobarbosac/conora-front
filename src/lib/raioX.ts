@@ -6,7 +6,11 @@ export type RaioXTotals = { planned: number; actual: number }
 
 export type ProgressTone = 'ok' | 'over' | 'muted' | 'unbudgeted'
 
-/** Rolls up planned/actual from analytical leaves through the category tree. */
+/**
+ * Rolls up planned/actual from analytical leaves through the category tree.
+ * Parents are synthetic: any amount stored on the parent itself is ignored when
+ * children exist; only leaf values (and their rollups) count.
+ */
 export function sumBranch(
   accountId: string,
   byParent: Map<string | null, Category[]>,

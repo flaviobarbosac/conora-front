@@ -4,7 +4,7 @@
   "version": "26.1.81",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 5175 --strictPort",
+    "dev": "vite --host localhost --port 5175 --strictPort",
     "build": "tsc -b && vite build && node scripts/bump-version.mjs",
     "build:android": "tsc -b && vite build --mode android && node scripts/bump-version.mjs",
     "build:ios": "tsc -b && vite build --mode ios && node scripts/bump-version.mjs",

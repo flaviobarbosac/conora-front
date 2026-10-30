@@ -267,7 +267,10 @@
 .raioxList {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  overflow-x: hidden;
+  /* Scroll sideways only when the full money columns do not fit. */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   background: var(--surface);
   width: 100%;
   min-width: 0;
@@ -287,13 +290,13 @@
 
 .raioxRow {
   display: grid;
-  /* Name flexes; money columns size to content — no fixed min-width (avoids lateral scroll). */
-  grid-template-columns: 1.5rem minmax(0, 1fr) max-content;
-  gap: var(--space-2);
+  /* Name capped so Previsto / Realizado / % keep room for R$ 123.456,68. */
+  grid-template-columns: 1.25rem minmax(0, 5.5rem) max-content;
+  gap: 4px;
   align-items: center;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
   box-sizing: border-box;
   padding: var(--space-3) var(--space-3);
   border: 0;
@@ -347,8 +350,8 @@
 
 .raioxTotals {
   display: grid;
-  /* Locked to the full "R$ 100.000,00" and "999,9%" at --text-sm. Same on every width. */
-  grid-template-columns: 6.25rem 6.25rem 3.5rem;
+  /* Full "R$ 123.456,68" and "999,9%" at --text-sm. Same on every width. */
+  grid-template-columns: 6.5rem 6.5rem 3.25rem;
   gap: 4px;
   align-items: center;
   justify-items: stretch;
@@ -357,7 +360,8 @@
   font-feature-settings: 'tnum';
   letter-spacing: 0;
   white-space: nowrap;
-  min-width: 0;
+  min-width: 16.75rem;
+  flex-shrink: 0;
 }
 
 .raioxAmount,
@@ -365,13 +369,25 @@
 .raioxPercentLink {
   width: 100%;
   min-width: 0;
-  overflow: hidden;
-  text-align: left;
-  justify-content: flex-start;
+  overflow: visible;
   white-space: nowrap;
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
+  letter-spacing: 0;
+}
+
+.raioxAmount,
+.raioxPercent,
+.raioxPercentLink {
+  text-align: right;
+  justify-content: flex-end;
+}
+
+.raioxTotals :global(.moneyValue),
+.raioxAmount.moneyValue {
+  font-size: inherit;
+  max-width: none;
   letter-spacing: 0;
 }
 
@@ -384,8 +400,8 @@
 .raioxHead .raioxTotals > span {
   width: 100%;
   overflow: hidden;
-  text-align: left;
   white-space: nowrap;
+  text-align: right;
 }
 
 /* --- extracted from page.module.css --- */

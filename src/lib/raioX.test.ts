@@ -190,6 +190,22 @@ describe('sumBranch', () => {
 
     expect(sumBranch('root', byParent, planned, actual)).toEqual({ planned: 250, actual: 50 })
   })
+
+  it('ignores amounts stored on a synthetic parent when children exist', () => {
+    const root = account({ id: 'root', parentId: null, name: 'Root', level: 'Root' })
+    const leaf = account({ id: 'rent', parentId: 'root', name: 'Aluguel', level: 'Analytical' })
+    const byParent = groupAccountsByParent([root, leaf])
+    const planned = new Map([
+      ['root', 9999],
+      ['rent', 800],
+    ])
+    const actual = new Map([
+      ['root', 5000],
+      ['rent', 200],
+    ])
+
+    expect(sumBranch('root', byParent, planned, actual)).toEqual({ planned: 800, actual: 200 })
+  })
 })
 
 describe('patrimonyStockMap', () => {

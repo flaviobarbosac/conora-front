@@ -1,9 +1,36 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Category } from '../../api/finance'
 import { categoryLabel } from '../../lib/categoryLabel'
-import { useNarrowPhone } from '../../hooks/useNarrowPhone'
+import { isNativeApp } from '../../lib/platform'
 import { formatClickCrumb } from './categoryCrumb'
 import styles from './raioX.module.css'
+
+/** Portrait ≤719px, or phone landscape (short height), or native shell. */
+const PHONE_CHROME =
+  '(max-width: 719px), (orientation: landscape) and (max-height: 500px)'
+
+function usePhoneChrome(): boolean {
+  const [phone, setPhone] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false
+    }
+    return isNativeApp() || window.matchMedia(PHONE_CHROME).matches
+  })
+
+  useEffect(() => {
+    if (isNativeApp()) {
+      setPhone(true)
+      return
+    }
+    const media = window.matchMedia(PHONE_CHROME)
+    const onChange = () => setPhone(media.matches)
+    onChange()
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+
+  return phone
+}
 
 function pathNames(accountId: string, byId: Map<string, Category>): string[] {
   const names: string[] = []
@@ -30,7 +57,7 @@ function labelFor(names: string[], nav: HTMLElement): string {
   return formatClickCrumb(names, (text) => ctx.measureText(text).width <= max + 0.5)
 }
 
-/** Mobile trail of the clicked category path. Text changes only on click. */
+/** Phone trail of the clicked category path. Text changes only on click. Same in portrait and landscape. */
 export function RaioXCrumb({
   accounts,
   selectedId,
@@ -38,7 +65,7 @@ export function RaioXCrumb({
   accounts: Category[]
   selectedId: string | null
 }) {
-  const narrow = useNarrowPhone()
+  const phone = usePhoneChrome()
   const slotRef = useRef<HTMLDivElement>(null)
   const navRef = useRef<HTMLElement>(null)
   const [stuck, setStuck] = useState(false)
@@ -48,7 +75,7 @@ export function RaioXCrumb({
   const names = useMemo(() => (selectedId ? pathNames(selectedId, byId) : []), [selectedId, byId])
 
   useEffect(() => {
-    if (!narrow) {
+    if (!phone) {
       return
     }
     let frame = 0
@@ -75,10 +102,10 @@ export function RaioXCrumb({
       document.removeEventListener('scroll', schedule, true)
       window.removeEventListener('resize', schedule)
     }
-  }, [narrow])
+  }, [phone])
 
   useEffect(() => {
-    if (!narrow) {
+    if (!phone) {
       return
     }
     const nav = navRef.current
@@ -99,9 +126,9 @@ export function RaioXCrumb({
       cancelAnimationFrame(frame)
       window.removeEventListener('resize', measure)
     }
-  }, [narrow, names, stuck])
+  }, [phone, names, stuck])
 
-  if (!narrow) {
+  if (!phone) {
     return null
   }
 
