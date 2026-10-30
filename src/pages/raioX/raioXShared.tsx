@@ -252,7 +252,7 @@ export function EntrySubRow({
       <span />
       <span className={styles.rowMain}>
         <strong>{headline}</strong>
-        <span className={styles.rowSub}>{entryDisplayDescription(entry)}</span>
+        <span className={`${styles.rowSub} ${styles.raioxLaunchNote}`}>{entryDisplayDescription(entry)}</span>
       </span>
       <span className={styles.raioxTotals}>
         <span className={styles.raioxAmount} />
@@ -297,6 +297,7 @@ export function RaioXAccountBlock({
   freeLimited,
   categoryUnlocked,
   onToggle,
+  onSelect,
   onOpenEntry,
   onOpenActual,
   onUnbudgetedClick,
@@ -315,6 +316,7 @@ export function RaioXAccountBlock({
   freeLimited: boolean
   categoryUnlocked: (account: Category) => boolean
   onToggle: (id: string) => void
+  onSelect: (id: string) => void
   onOpenEntry: (entry: Entry) => void
   onOpenActual: (account: Category, launchEntries: Entry[]) => void
   onUnbudgetedClick: (accountId: string) => void
@@ -363,6 +365,7 @@ export function RaioXAccountBlock({
         }}
         onClick={(event) => {
           event.stopPropagation()
+          onSelect(account.id)
           if (expandable) {
             onToggle(account.id)
           }
@@ -405,6 +408,7 @@ export function RaioXAccountBlock({
               freeLimited={freeLimited}
               categoryUnlocked={categoryUnlocked}
               onToggle={onToggle}
+              onSelect={onSelect}
               onOpenEntry={onOpenEntry}
               onOpenActual={onOpenActual}
               onUnbudgetedClick={onUnbudgetedClick}
@@ -429,7 +433,7 @@ export function RaioXAccountBlock({
           style={{ paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }}
         >
           <span />
-          <span className={styles.muted}>Nenhum lançamento nesta conta.</span>
+          <span className={`${styles.muted} ${styles.raioxLaunchNote}`}>Nenhum lançamento nesta conta.</span>
           <span />
         </div>
       ) : null}

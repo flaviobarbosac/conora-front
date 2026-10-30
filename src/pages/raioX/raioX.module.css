@@ -281,7 +281,7 @@
 .raioxHead {
   background: var(--surface);
   color: var(--text-muted);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   cursor: default;
 }
 
@@ -347,11 +347,15 @@
 
 .raioxTotals {
   display: grid;
-  grid-template-columns: 11rem 11rem 4.5rem;
-  gap: var(--space-3);
+  /* Locked to the full "R$ 100.000,00" and "999,9%" at --text-sm. Same on every width. */
+  grid-template-columns: 6.25rem 6.25rem 3.5rem;
+  gap: 4px;
   align-items: center;
   justify-items: stretch;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  letter-spacing: 0;
   white-space: nowrap;
   min-width: 0;
 }
@@ -362,14 +366,18 @@
   width: 100%;
   min-width: 0;
   overflow: hidden;
-  text-align: right;
-  justify-content: flex-end;
+  text-align: left;
+  justify-content: flex-start;
   white-space: nowrap;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
+  letter-spacing: 0;
 }
 
-.raioxHead .raioxTotals {
+.raioxHead,
+.raioxHead .raioxTotals,
+.raioxHead .raioxTotals > span {
   font-size: var(--text-sm);
 }
 
@@ -621,7 +629,6 @@
   .heroCardsRaioX .heroCardStatic:last-child {
     grid-column: 1 / -1;
   }
-  /* Fit Previsto / Realizado / % in 390px without lateral scroll. */
   .raioxRow {
     gap: 4px;
     padding: var(--space-2) var(--space-2);
@@ -629,24 +636,42 @@
   .raioxAccountName {
     font-size: var(--text-sm);
   }
-  .raioxTotals {
-    grid-template-columns: 5.4rem 5.4rem 2.8rem;
-    gap: 3px;
-    font-size: 0.6875rem;
-    letter-spacing: -0.02em;
-  }
-  .raioxHead .raioxTotals {
-    font-size: 0.625rem;
-    letter-spacing: 0;
-  }
-  .raioxAmount,
-  .raioxPercent,
-  .raioxPercentLink {
-    font-size: inherit;
-  }
-  .raioxAmount :global(.moneyValue),
-  .moneyValue {
-    font-size: inherit;
+}
+
+.raioxCrumbSlot {
+  min-height: 2.125rem;
+}
+
+.raioxLaunchNote {
+  color: var(--primary);
+}
+
+.raioxCrumb,
+.raioxCrumbFixed {
+  margin: 0 0 var(--space-2);
+  padding: 8px 0;
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.raioxCrumbFixed {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 21;
+  margin: 0;
+  padding: 8px var(--space-5);
+}
+
+@media (max-width: 719px) {
+  .raioxAnchors {
+    position: static;
   }
 }
 

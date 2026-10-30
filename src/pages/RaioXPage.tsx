@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { type Category, type Entry } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
@@ -15,6 +15,7 @@ import {
 } from '../lib/raioX'
 import { saveRaioXReturn } from '../lib/raioXReturn'
 import pageStyles from './pageStyles'
+import { RaioXCrumb } from './raioX/RaioXCrumb.tsx'
 import {
   RaioXAnchorsNav,
   RaioXNoLeakageCelebrate,
@@ -70,6 +71,7 @@ export function RaioXPage() {
     entriesByAccount,
     projects,
   } = useRaioXPageController()
+  const [crumbId, setCrumbId] = useState<string | null>(null)
 
   function toggle(id: string) {
     setFocus(null)
@@ -288,6 +290,8 @@ export function RaioXPage() {
       {freeLimited && !fullAccess ? <p className={styles.muted}>{FREE_TIER_CATEGORY_LABEL}</p> : null}
       {rootRows.length > 0 && leakageOnly && !hasLeakage ? <RaioXNoLeakageCelebrate /> : null}
       {rootRows.length > 0 && !(leakageOnly && !hasLeakage) ? (
+        <>
+        <RaioXCrumb accounts={list} selectedId={crumbId} />
         <RaioXTreeList
           rootRows={rootRows}
           byParent={byParent}
@@ -302,10 +306,12 @@ export function RaioXPage() {
           freeLimited={freeLimited}
           categoryUnlocked={categoryUnlocked}
           onToggle={toggle}
+          onSelect={setCrumbId}
           onOpenEntry={openEntry}
           onOpenActual={openActualForAccount}
           onUnbudgetedClick={openBudgetForAccount}
         />
+        </>
       ) : null}
     </div>
   )
