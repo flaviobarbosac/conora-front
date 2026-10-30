@@ -203,6 +203,7 @@ export function RaioXTreeList({
   freeLimited,
   categoryUnlocked,
   onToggle,
+  onSelect,
   onOpenEntry,
   onOpenActual,
   onUnbudgetedClick,
@@ -220,6 +221,7 @@ export function RaioXTreeList({
   freeLimited: boolean
   categoryUnlocked: (account: Category) => boolean
   onToggle: (id: string) => void
+  onSelect: (id: string) => void
   onOpenEntry: (entry: Entry) => void
   onOpenActual: (account: Category, launchEntries: Entry[]) => void
   onUnbudgetedClick: (accountId: string) => void
@@ -252,6 +254,7 @@ export function RaioXTreeList({
           freeLimited={freeLimited}
           categoryUnlocked={categoryUnlocked}
           onToggle={onToggle}
+          onSelect={onSelect}
           onOpenEntry={onOpenEntry}
           onOpenActual={onOpenActual}
           onUnbudgetedClick={onUnbudgetedClick}

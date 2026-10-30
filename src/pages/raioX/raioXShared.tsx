@@ -120,6 +120,7 @@ export function TotalsCell({
 
   const percent = progressPercent(totals)
   const tone = progressTone(percent, totals)
+  // No planned base: show 0,0% in the unbudgeted (yellow) tone — same as the product rule.
   const shown = percent === null ? 0 : percent
   const percentClass = `${styles.raioxPercent} ${toneClass(tone)}`
   const actualClass = `${styles.raioxAmount} ${styles.moneyValue}${tone === 'over' ? ` ${styles.negative}` : ''}`
@@ -127,8 +128,7 @@ export function TotalsCell({
     <span className={styles.raioxTotals}>
       <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.planned)}</span>
       {onActualClick && Math.abs(totals.actual) > 0.001 ? (
-        <button
-          type="button"
+        <span
           className={`${actualClass} ${styles.raioxPercentLink}`}
           title="Abrir lançamentos"
           onClick={(event) => {
@@ -137,13 +137,12 @@ export function TotalsCell({
           }}
         >
           {formatMoney(totals.actual)}
-        </button>
+        </span>
       ) : (
         <span className={actualClass}>{formatMoney(totals.actual)}</span>
       )}
       {tone === 'unbudgeted' && onUnbudgetedClick ? (
-        <button
-          type="button"
+        <span
           className={`${percentClass} ${styles.raioxPercentLink}`}
           title="Definir orçamento desta conta"
           onClick={(event) => {
@@ -152,7 +151,7 @@ export function TotalsCell({
           }}
         >
           {formatPercent(shown)}
-        </button>
+        </span>
       ) : (
         <span className={percentClass}>{formatPercent(shown)}</span>
       )}
@@ -252,7 +251,7 @@ export function EntrySubRow({
       <span />
       <span className={styles.rowMain}>
         <strong>{headline}</strong>
-        <span className={styles.rowSub}>{entryDisplayDescription(entry)}</span>
+        <span className={`${styles.rowSub} ${styles.raioxLaunchNote}`}>{entryDisplayDescription(entry)}</span>
       </span>
       <span className={styles.raioxTotals}>
         <span className={styles.raioxAmount} />
@@ -297,6 +296,7 @@ export function RaioXAccountBlock({
   freeLimited,
   categoryUnlocked,
   onToggle,
+  onSelect,
   onOpenEntry,
   onOpenActual,
   onUnbudgetedClick,
@@ -315,6 +315,7 @@ export function RaioXAccountBlock({
   freeLimited: boolean
   categoryUnlocked: (account: Category) => boolean
   onToggle: (id: string) => void
+  onSelect: (id: string) => void
   onOpenEntry: (entry: Entry) => void
   onOpenActual: (account: Category, launchEntries: Entry[]) => void
   onUnbudgetedClick: (accountId: string) => void
@@ -363,6 +364,7 @@ export function RaioXAccountBlock({
         }}
         onClick={(event) => {
           event.stopPropagation()
+          onSelect(account.id)
           if (expandable) {
             onToggle(account.id)
           }
@@ -405,6 +407,7 @@ export function RaioXAccountBlock({
               freeLimited={freeLimited}
               categoryUnlocked={categoryUnlocked}
               onToggle={onToggle}
+              onSelect={onSelect}
               onOpenEntry={onOpenEntry}
               onOpenActual={onOpenActual}
               onUnbudgetedClick={onUnbudgetedClick}
@@ -429,7 +432,7 @@ export function RaioXAccountBlock({
           style={{ paddingLeft: `calc(var(--space-4) + ${(depth + 1) * 1}rem)` }}
         >
           <span />
-          <span className={styles.muted}>Nenhum lançamento nesta conta.</span>
+          <span className={`${styles.muted} ${styles.raioxLaunchNote}`}>Nenhum lançamento nesta conta.</span>
           <span />
         </div>
       ) : null}
