@@ -16,7 +16,7 @@ import { usePlanAccess } from './usePlanAccess'
 import { categoryLabel } from '../lib/categoryLabel'
 import { compareCategorySiblings } from '../lib/categoryOrder'
 import { currentCompetence, shiftCompetence } from '../lib/format'
-import { filterCategoriesForPlan, hasFullAccess, isFreeLimited } from '../lib/freeTier'
+import { hasFullAccess, isFreeLimited } from '../lib/freeTier'
 import {
   aggregateYearMonths,
   buildAmountMaps,
@@ -99,12 +99,13 @@ export function useRaioXPageController() {
     return aggregateYearMonths(yearsBudget.data ?? [], monthList)
   }, [months, budget.data, yearsBudget.data, monthList])
 
-  const list = useMemo(() => {
-    const filtered = filterCategoriesForPlan(accounts.data ?? [], plan, { keepPendingReview: false })
-    return chartWithAmounts(filtered, idsWithAmount([planned, actual]), false).filter(
-      isRaioXVisibleAccount,
-    )
-  }, [accounts.data, plan, planned, actual])
+  const list = useMemo(
+    () =>
+      chartWithAmounts(accounts.data ?? [], idsWithAmount([planned, actual]), false).filter(
+        isRaioXVisibleAccount,
+      ),
+    [accounts.data, planned, actual],
+  )
   const byParent = useMemo(() => {
     const map = groupAccountsByParent(list)
     for (const bucket of map.values()) {
