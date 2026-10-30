@@ -117,3 +117,40 @@
   white-space: pre-wrap;
   line-height: var(--leading-normal, 1.5);
 }
+
+/* Portrait-first: stack project forms full-width on phone; avoid landscape-only grids. */
+.projectFormPortrait {
+  width: 100%;
+  max-width: 100%;
+}
+
+.projectFormStack {
+  grid-template-columns: 1fr !important;
+  align-items: stretch;
+}
+
+.projectDescriptionField {
+  width: 100%;
+  max-width: 100%;
+  grid-column: 1 / -1;
+}
+
+.projectDescriptionField :global(textarea) {
+  width: 100%;
+  min-height: 9rem;
+}
+
+@media (max-width: 719px) {
+  .projectDashCard {
+    gap: var(--space-3);
+    padding: var(--space-3);
+  }
+
+  .projectsHorizonFilter {
+    flex-wrap: wrap;
+  }
+
+  .projectsHorizonFilter button {
+    flex: 1 1 calc(50% - var(--space-1));
+  }
+}

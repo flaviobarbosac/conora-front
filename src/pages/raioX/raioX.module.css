@@ -1,3 +1,10 @@
+.raioxIntro {
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.35;
+}
+
 .raioxAnchors {
   position: sticky;
   top: calc(56px + env(safe-area-inset-top, 0px));
@@ -333,14 +340,18 @@
 }
 
 .raioxAccountName {
-  display: block;
+  display: -webkit-box;
   width: 100%;
   min-width: 0;
   text-align: left;
   justify-self: start;
+  /* Subcategory names must stay readable on phone — wrap instead of single-line ellipsis. */
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 
 .categoryPendingTrail .raioxAccountName,

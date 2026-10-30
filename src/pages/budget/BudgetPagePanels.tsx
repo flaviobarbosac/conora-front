@@ -476,6 +476,8 @@ export function BudgetTreeEditor({
               key={root.id}
               account={root}
               depth={0}
+              ym={ym}
+              projects={projects}
               byParent={byParent}
               planned={planned}
               shownPlanned={shownPlanned}
@@ -599,6 +601,8 @@ const noActual = new Map<string, number>()
 function BudgetAccountBlock({
   account,
   depth,
+  ym,
+  projects,
   byParent,
   planned,
   shownPlanned,
@@ -620,6 +624,8 @@ function BudgetAccountBlock({
 }: {
   account: Category
   depth: number
+  ym: string
+  projects: LifeProject[]
   byParent: Map<string | null, Category[]>
   planned: Map<string, number>
   shownPlanned: Map<string, number>
@@ -674,8 +680,16 @@ function BudgetAccountBlock({
     const isFocused = focusedId === account.id
     const fieldDisabled = busy || !canEdit || locked || needsProject
     const showDay = EXPENSE_SECTIONS.includes(account.section)
-    const displayAmount = locked ? formatMoneyInput(planned.get(account.id) ?? 0) : draft
-    const lockHint = projectLocked ? 'Rateio do projeto' : locked ? PAID_MODULE_HINT_SHORT : null
+    const plannedAmount = planned.get(account.id) ?? 0
+    const displayAmount = locked ? formatMoneyInput(plannedAmount) : draft
+    const linkedProjects = projects.filter((project) => project.categoryId === account.id)
+    const lockHint = projectLocked
+      ? linkedProjects.length > 0
+        ? null
+        : 'Rateio do projeto'
+      : locked
+        ? PAID_MODULE_HINT_SHORT
+        : null
 
     return (
       <div
@@ -694,6 +708,25 @@ function BudgetAccountBlock({
             >
               Criar projeto de vida
             </button>
+          ) : null}
+          {linkedProjects.length > 0 ? (
+            <span className={styles.muted}>
+              {linkedProjects.map((project) => {
+                const months = monthsInclusive(project.contributionStartYm, project.dueDate.slice(0, 7))
+                const parcel = months.length > 0 ? project.goalAmount / months.length : 0
+                const inWindow = ym >= project.contributionStartYm && ym <= project.dueDate.slice(0, 7)
+                return (
+                  <span key={project.id} style={{ display: 'block' }}>
+                    {project.name}: {formatMoney(parcel)}/mês
+                    {inWindow
+                      ? plannedAmount > 0.001
+                        ? ` · neste mês ${formatMoney(plannedAmount)}`
+                        : ' · neste mês (rateio pendente)'
+                      : ` · a partir de ${formatCompetence(project.contributionStartYm)}`}
+                  </span>
+                )
+              })}
+            </span>
           ) : null}
           {lockHint ? <span className={styles.muted}>{lockHint}</span> : null}
         </span>
@@ -798,6 +831,8 @@ function BudgetAccountBlock({
               key={group.id}
               account={group}
               depth={depth + 1}
+              ym={ym}
+              projects={projects}
               byParent={byParent}
               planned={planned}
               shownPlanned={shownPlanned}
@@ -825,6 +860,8 @@ function BudgetAccountBlock({
               key={leaf.id}
               account={leaf}
               depth={depth + 1}
+              ym={ym}
+              projects={projects}
               byParent={byParent}
               planned={planned}
               shownPlanned={shownPlanned}
