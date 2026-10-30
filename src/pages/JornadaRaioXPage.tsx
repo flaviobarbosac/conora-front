@@ -10,7 +10,7 @@ import {
   readHomeJourneyTimeline,
   writeHomeJourneyTimeline,
 } from '../lib/preferences'
-import page from './pageStyles'
+import page from './page.module.css'
 import styles from './JornadaRaioXPage.module.css'
 
 export function JornadaRaioXPage() {
