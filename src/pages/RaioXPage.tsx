@@ -6,7 +6,7 @@ import { PageHeader } from '../components/PageHeader'
 import { SharingViewToggle } from '../components/SharingViewToggle'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useRaioXPageController } from '../hooks/useRaioXPageController'
-import { FREE_TIER_CATEGORY_LABEL, isFreeCategoryCode } from '../lib/freeTier'
+import { isFreeCategoryCode } from '../lib/freeTier'
 import {
   focusSections,
   sectionHead,
@@ -48,7 +48,6 @@ export function RaioXPage() {
     setFocus,
     open,
     setOpen,
-    scope,
     setScope,
     leakageOnly,
     setLeakageOnly,
@@ -71,7 +70,6 @@ export function RaioXPage() {
     categoryNameById,
     bankNameById,
     entriesByAccount,
-    projects,
   } = useRaioXPageController()
 
   function toggle(id: string) {
@@ -252,11 +250,6 @@ export function RaioXPage() {
           byParent={byParent}
           planned={planned}
           actual={actual}
-          projects={projects.data ?? []}
-          projectsLoading={projects.loading && !projects.data}
-          scope={scope}
-          focus={focus}
-          onFocus={toggleFocus}
           onExpandSection={(section, options) => {
             setFocus(null)
             if (!isRaioXMacroSection(section) && section !== 'Expense') {
@@ -291,7 +284,6 @@ export function RaioXPage() {
         />
       ) : null}
       {accounts.loading && !accounts.data ? <Loading /> : null}
-      {freeLimited && !fullAccess ? <p className={styles.muted}>{FREE_TIER_CATEGORY_LABEL}</p> : null}
       {rootRows.length > 0 && leakageOnly && !hasLeakage ? <RaioXNoLeakageCelebrate /> : null}
       {rootRows.length > 0 && !(leakageOnly && !hasLeakage) ? (
         <RaioXTreeList

@@ -267,7 +267,7 @@
 .raioxList {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  overflow-x: hidden;
+  overflow-x: auto;
   background: var(--surface);
   width: 100%;
   min-width: 0;
@@ -287,15 +287,18 @@
 
 .raioxRow {
   display: grid;
-  /* Name flexes; money columns size to content — no fixed min-width (avoids lateral scroll). */
-  grid-template-columns: 1.5rem minmax(0, 1fr) max-content;
-  gap: var(--space-2);
+  grid-template-columns:
+    2rem
+    minmax(8rem, 1fr)
+    calc(var(--money-display-w) + var(--money-display-w) + var(--money-percent-w) + 2 * var(--space-4));
+  gap: var(--space-3);
   align-items: center;
   width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-  padding: var(--space-3) var(--space-3);
+  min-width: calc(
+    2rem + 8rem + var(--money-display-w) + var(--money-display-w) + var(--money-percent-w) + 2 * var(--space-4) +
+      2 * var(--space-4)
+  );
+  padding: var(--space-3) var(--space-4);
   border: 0;
   border-bottom: 1px solid var(--border-subtle);
   background: transparent;
@@ -330,14 +333,8 @@
 }
 
 .raioxAccountName {
-  display: block;
-  width: 100%;
   min-width: 0;
-  text-align: left;
-  justify-self: start;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .categoryPendingTrail .raioxAccountName,
@@ -347,19 +344,18 @@
 
 .raioxTotals {
   display: grid;
-  grid-template-columns: auto auto auto;
-  gap: var(--space-2);
+  grid-template-columns: var(--money-display-w) var(--money-display-w) var(--money-percent-w);
+  gap: var(--space-4);
   align-items: baseline;
   justify-items: end;
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  min-width: 0;
 }
 
 .raioxAmount,
 .raioxPercent {
-  width: auto;
+  width: 100%;
   min-width: 0;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -385,12 +381,6 @@
 
 .heroCardsRaioX {
   grid-template-columns: 1fr;
-}
-
-.pairCardMeta {
-  white-space: nowrap;
-  font-size: var(--text-xs);
-  font-variant-numeric: tabular-nums;
 }
 
 .periodSlider {
@@ -611,32 +601,6 @@
 .heroCardsRaioX .heroCardStatic:first-child,
   .heroCardsRaioX .heroCardStatic:last-child {
     grid-column: 1 / -1;
-  }
-  /* Fit Previsto / Realizado / % in 390px without lateral scroll. */
-  .raioxRow {
-    gap: 4px;
-    padding: var(--space-2) var(--space-2);
-  }
-  .raioxAccountName {
-    font-size: var(--text-sm);
-  }
-  .raioxTotals {
-    gap: 3px;
-    font-size: 0.6875rem;
-    letter-spacing: -0.02em;
-  }
-  .raioxHead .raioxTotals {
-    font-size: 0.625rem;
-    letter-spacing: 0;
-  }
-  .raioxAmount,
-  .raioxPercent,
-  .raioxPercentLink {
-    font-size: inherit;
-  }
-  .raioxAmount :global(.moneyValue),
-  .moneyValue {
-    font-size: inherit;
   }
 }
 
