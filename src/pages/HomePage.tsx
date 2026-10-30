@@ -6,6 +6,7 @@ import { HomeLaunchO } from '../components/HomeLaunchO'
 import { JornadaTimeline } from '../components/JornadaTimeline'
 import { PaidModuleBadge } from '../components/PaidModuleBadge'
 import { PageHeader } from '../components/PageHeader'
+import { ScanPurposeSheet, type ScanPurposeChoice } from '../components/ScanPurposeSheet'
 import { Button } from '../components/ui/Button'
 import { ErrorText } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
@@ -39,6 +40,7 @@ export function HomePage() {
   const dashboard = useLoad(() => dashboardApi.get(currentCompetence()), [])
   const [voiceError, setVoiceError] = useState<string | null>(null)
   const [showJourney, setShowJourney] = useState(readHomeJourneyTimeline)
+  const [scanSheetOpen, setScanSheetOpen] = useState(false)
   const name = firstName(profile.data?.name)
   const pendingCategories = dashboard.data?.alerts.find((alert) => alert.code === 'CATEGORY_PENDING_REVIEW')
   const showPaidModulesTag = isFreeLimited(plan) && !hasFullAccess(plan)
@@ -59,6 +61,22 @@ export function HomePage() {
   }
 
   function openScan() {
+    setScanSheetOpen(true)
+  }
+
+  function onScanPurpose(choice: ScanPurposeChoice) {
+    if (choice === 'contracheque') {
+      void scanReceipt({ header: 'Contracheque / renda' })
+        .then(() => navigate('/diagnostico?foto=1'))
+        .catch(() => undefined)
+      return
+    }
+    if (choice === 'boleto') {
+      void scanReceipt({ header: 'Boleto' })
+        .then(() => navigate('/orcamento?recibo=1'))
+        .catch(() => undefined)
+      return
+    }
     void scanReceipt()
       .then(() => navigate('/lancamentos?novo=1&recibo=1'))
       .catch(() => undefined)
@@ -112,7 +130,16 @@ export function HomePage() {
           onVoice={openVoice}
           onManual={openManual}
         />
+        <p className={styles.muted}>
+          Câmera: cupom, boleto ou contracheque. Lápis: lançamento manual.
+        </p>
       </section>
+      <ScanPurposeSheet
+        open={scanSheetOpen}
+        includeCupom
+        onClose={() => setScanSheetOpen(false)}
+        onChoose={onScanPurpose}
+      />
 
       {showJourney ? (
         <section className={styles.homeJourney} aria-label="Jornada Raio X">

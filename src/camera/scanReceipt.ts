@@ -2,15 +2,21 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { resetMobileViewport } from '../lib/resetMobileViewport'
 import { setPendingShare, type PendingShare } from '../share/pendingShare'
 
-export async function scanReceipt(): Promise<PendingShare> {
+export type ScanReceiptLabels = {
+  header?: string
+  photo?: string
+  picture?: string
+}
+
+export async function scanReceipt(labels?: ScanReceiptLabels): Promise<PendingShare> {
   try {
     const photo = await Camera.getPhoto({
       quality: 80,
       resultType: CameraResultType.DataUrl,
       source: CameraSource.Prompt,
-      promptLabelHeader: 'Escanear recibo',
-      promptLabelPhoto: 'Galeria',
-      promptLabelPicture: 'Câmera',
+      promptLabelHeader: labels?.header ?? 'Escanear foto',
+      promptLabelPhoto: labels?.photo ?? 'Galeria',
+      promptLabelPicture: labels?.picture ?? 'Câmera',
     })
     if (!photo.dataUrl) {
       throw new Error('Nenhuma imagem selecionada.')

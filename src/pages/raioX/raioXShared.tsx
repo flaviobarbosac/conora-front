@@ -444,6 +444,7 @@ export function RaioXHero({
   previousMonthBalance,
   incomeActual,
   discountActual,
+  discountIsPlannedOnly = false,
   monthBalance,
   focus,
   onFocus,
@@ -453,6 +454,7 @@ export function RaioXHero({
   previousMonthBalance: number
   incomeActual: number
   discountActual: number
+  discountIsPlannedOnly?: boolean
   monthBalance: number
   focus: RaioXFocus
   onFocus: (next: RaioXFocus) => void
@@ -491,7 +493,7 @@ export function RaioXHero({
           aria-pressed={focus === 'discount'}
           onClick={() => onFocus('discount')}
         >
-          <span>Descontos</span>
+          <span>{discountIsPlannedOnly ? 'Descontos (previsto)' : 'Descontos'}</span>
           <strong className={`${styles.moneyValue} ${discountActual > 0 ? styles.negative : ''}`}>
             {formatMoney(discountActual)}
           </strong>

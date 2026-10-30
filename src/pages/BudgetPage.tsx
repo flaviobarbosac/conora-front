@@ -16,11 +16,14 @@ import {
   setReceiptRerouteHint,
   takePendingIntakeId,
   takeReceiptRerouteHint,
+  uploadPendingShare,
 } from '../lib/receiptFlow'
+import { peekPendingShare, takePendingShare } from '../share/pendingShare'
 import { resetMobileViewport } from '../lib/resetMobileViewport'
 import { scanReceipt, fileFromPending } from '../camera/scanReceipt'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
+import { ScanPurposeSheet, type ScanPurposeChoice } from '../components/ScanPurposeSheet'
 import { SharingViewToggle } from '../components/SharingViewToggle'
 import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
@@ -68,6 +71,7 @@ export function BudgetPage() {
   const [boletoRerouteHint, setBoletoRerouteHint] = useState<'to-budget' | 'to-expense' | null>(null)
   const [readingPurpose, setReadingPurpose] = useState<'Expense' | 'BudgetBoleto'>('BudgetBoleto')
   const [readingRerouted, setReadingRerouted] = useState(false)
+  const [scanSheetOpen, setScanSheetOpen] = useState(false)
 
   async function finishBoleto(intake: ReceiptIntake) {
     if (intake.purpose === 'Expense') {
@@ -124,6 +128,25 @@ export function BudgetPage() {
     setBoletoError('Classifique o boleto para gravar no orçamento.')
   }
 
+  async function runContrachequeScan() {
+    if (boletoBusy || !canEdit || monthClosed) return
+    setBoletoError(null)
+    resetMobileViewport()
+    try {
+      await scanReceipt({
+        header: 'Contracheque / renda',
+        photo: 'Galeria',
+        picture: 'Câmera',
+      })
+      resetMobileViewport()
+      navigate('/diagnostico?foto=1')
+    } catch {
+      /* user cancelled camera */
+    } finally {
+      resetMobileViewport()
+    }
+  }
+
   async function runBoletoScan(source: 'camera' | 'file') {
     if (boletoBusy || !canEdit || monthClosed) return
     setBoletoBusy(true)
@@ -133,7 +156,15 @@ export function BudgetPage() {
     resetMobileViewport()
     try {
       const file =
-        source === 'camera' ? await fileFromPending(await scanReceipt()) : await pickReceiptMedia()
+        source === 'camera'
+          ? await fileFromPending(
+              await scanReceipt({
+                header: 'Boleto',
+                photo: 'Galeria',
+                picture: 'Câmera',
+              }),
+            )
+          : await pickReceiptMedia()
       resetMobileViewport()
       const created = await receiptsApi.upload(file, file.name || 'boleto.jpg', 'App', 'BudgetBoleto')
       const intake = await pollReceipt(created.id)
@@ -148,16 +179,37 @@ export function BudgetPage() {
     }
   }
 
+  function onScanPurpose(choice: ScanPurposeChoice) {
+    if (choice === 'contracheque') {
+      void runContrachequeScan()
+      return
+    }
+    if (choice === 'cupom') {
+      void scanReceipt()
+        .then(() => navigate('/lancamentos?novo=1&recibo=1'))
+        .catch(() => undefined)
+      return
+    }
+    void runBoletoScan('camera')
+  }
+
   async function bootstrapPendingBoleto() {
     if (boletoBusy) return
-    const intakeId = peekPendingIntakeId()
-    if (!intakeId) return
+    let intakeId = peekPendingIntakeId()
+    if (!intakeId && !peekPendingShare()) return
     setBoletoBusy(true)
     setReadingPurpose('BudgetBoleto')
     setReadingRerouted(false)
     setBoletoError(null)
     resetMobileViewport()
     try {
+      if (!intakeId) {
+        const share = peekPendingShare()
+        if (!share) return
+        const created = await uploadPendingShare(share, 'App', 'BudgetBoleto')
+        takePendingShare()
+        intakeId = created.id
+      }
       const intake = await pollReceipt(intakeId)
       setReadingPurpose(intake.purpose)
       await finishBoleto(intake)
@@ -225,9 +277,16 @@ export function BudgetPage() {
             <Button
               variant="secondary"
               disabled={boletoBusy || !canEdit || monthClosed}
+              onClick={() => setScanSheetOpen(true)}
+            >
+              {boletoBusy ? 'Lendo foto…' : 'Escanear foto'}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={boletoBusy || !canEdit || monthClosed}
               onClick={() => void runBoletoScan('file')}
             >
-              {boletoBusy ? 'Lendo boleto…' : 'Escanear boleto'}
+              Arquivo / PDF
             </Button>
             <Button variant="secondary" disabled={copy.busy || !canEdit} onClick={() => void copyPrevious()}>
               Copiar mês anterior
@@ -269,6 +328,12 @@ export function BudgetPage() {
           projects.error ??
           monthStatus.error
         }
+      />
+      <ScanPurposeSheet
+        open={scanSheetOpen}
+        includeCupom
+        onClose={() => setScanSheetOpen(false)}
+        onChoose={onScanPurpose}
       />
       <ReceiptClassifyDialog
         open={boletoClassifyOpen}

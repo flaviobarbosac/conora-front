@@ -183,10 +183,17 @@ export function RaioXPage() {
   const rangeIncome = sumYearField(yearsBudget.data ?? [], monthList, 'receivedIncome')
   const rangeBalance = sumYearField(yearsBudget.data ?? [], monthList, 'monthResult')
   const incomeActual = months === 1 ? Math.abs(data?.receivedIncome ?? 0) : rangeIncome
+  const discountMonth =
+    months === 1 && data ? sectionPlannedActual(data, 'Discount') : null
+  // Prefer realized discounts; if none yet, show planned so INSS/IR orçados não somem do hero.
   const discountActual =
-    months === 1 && data
-      ? sectionPlannedActual(data, 'Discount').actual
+    discountMonth != null
+      ? discountMonth.actual > 0.001
+        ? discountMonth.actual
+        : discountMonth.planned
       : sumYearSection(yearsBudget.data ?? [], monthList, 'Discount')
+  const discountIsPlannedOnly =
+    discountMonth != null && discountMonth.actual <= 0.001 && discountMonth.planned > 0.001
   const monthBalance = months === 1 ? (data?.monthResult ?? 0) : rangeBalance
 
   const treeMenuItems = useMemo(
@@ -211,6 +218,9 @@ export function RaioXPage() {
           </>
         }
       />
+      <p className={styles.raioxIntro} role="note">
+        Resumo no topo · árvore abaixo. Toque em Renda ou Descontos para destacar a seção.
+      </p>
       <RaioXPeriodLeakageControls
         months={months}
         leakageOnly={leakageOnly}
@@ -232,6 +242,7 @@ export function RaioXPage() {
           previousMonthBalance={previousCash.data?.balance ?? 0}
           incomeActual={incomeActual}
           discountActual={discountActual}
+          discountIsPlannedOnly={discountIsPlannedOnly}
           monthBalance={monthBalance}
           focus={focus}
           onFocus={toggleFocus}

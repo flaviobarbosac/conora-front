@@ -38,7 +38,7 @@ const INCLUDED = [
   'Lançamentos de receitas e despesas',
   'Raio X da vida financeira',
   'Orçamento mensal e fechamento do mês',
-  'Contas e cartões de crédito',
+  'Contas bancárias e cartões de crédito (despesas)',
   'Projetos de vida e patrimônio',
   'Ian, seu assistente com IA',
   'Recibos por foto e pelo WhatsApp',
@@ -46,6 +46,10 @@ const INCLUDED = [
 ]
 
 const FAQ: ReadonlyArray<{ q: string; a: string }> = [
+  {
+    q: 'Cartão de crédito já entra no Conora?',
+    a: 'Sim, como conta financeira: cadastre o cartão em Contas/Cartões para lançar faturas e gastos. Isso é diferente do pagamento da assinatura do app, que continua só pela App Store ou Google Play — não cobramos a assinatura com o cartão cadastrado no Conora.',
+  },
   {
     q: 'Sou aluno do treinamento. Preciso pagar agora?',
     a: `Não. Alunos do treinamento financeiro do Leomar Campos têm ${TRIAL_DAYS} dias de acesso completo e gratuito ao Conora. A cobrança só entra depois desse período; até lá nenhuma tela existente fica trancada.`,
@@ -213,6 +217,10 @@ export function PlanPage() {
         <span className={styles.eyebrow}>Planos Conora</span>
         <h1>Sua vida financeira organizada, com quem você ama</h1>
         <p>Todas as funcionalidades em todos os planos. Escolha só quantas pessoas vão usar com você.</p>
+        <p className={styles.planCardNote} role="note">
+          Cartão de crédito financeiro: cadastre em{' '}
+          <Link to="/contas">Contas</Link>. Pagamento da assinatura: só App Store / Google Play.
+        </p>
       </header>
 
       <ErrorText message={plan.error ?? subscribe.error ?? restorer.error ?? exporter.error} />

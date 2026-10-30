@@ -264,7 +264,9 @@ export function ProjectsPage() {
             setFormDirty(false)
             projects.reload()
             setShowForm(false)
-            navigate(`/projetos/${id}`)
+            window.scrollTo(0, 0)
+            document.getElementById('conteudo-principal')?.scrollTo(0, 0)
+            navigate(`/projetos/${id}`, { replace: true })
           }}
         />
       ) : null}
@@ -353,17 +355,17 @@ function ProjectForm({
   }
 
   return (
-    <section className={styles.section}>
+    <section className={`${styles.section} ${styles.projectFormPortrait}`}>
       <h2 className={styles.sectionTitle}>Novo projeto</h2>
-      <form className={styles.form} onSubmit={(event) => void submit(event)}>
+      <form className={`${styles.form} ${styles.projectFormStack}`} onSubmit={(event) => void submit(event)}>
         <div className={styles.formWide}>
           <Field label="Nome" name="projectName" required value={name} onChange={(event) => setName(event.target.value)} />
         </div>
-        <div className={styles.formWide}>
+        <div className={`${styles.formWide} ${styles.projectDescriptionField}`}>
           <TextArea
             label="Descrição detalhada"
             name="projectDescription"
-            rows={4}
+            rows={6}
             value={detailedDescription}
             onChange={(event) => setDetailedDescription(event.target.value)}
             maxLength={4000}

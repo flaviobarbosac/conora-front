@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { diagnosisApi, type IncomeSource } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
@@ -12,6 +13,7 @@ import { useLoad } from '../hooks/useLoad'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import { currentCompetence, formatMoney, parseMoney } from '../lib/format'
+import { peekPendingShare, takePendingShare } from '../share/pendingShare'
 import styles from './pageStyles'
 
 function amountOrZero(text: string): number {
@@ -19,10 +21,23 @@ function amountOrZero(text: string): number {
 }
 
 export function DiagnosisPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [ym, setYm] = useState(currentCompetence)
+  const [payslipPreview, setPayslipPreview] = useState<string | null>(null)
   const diagnosis = useLoad(() => diagnosisApi.get(ym), [ym])
   const remove = useAction()
   const data = diagnosis.data
+
+  useEffect(() => {
+    if (searchParams.get('foto') !== '1') return
+    const share = peekPendingShare()
+    if (share?.dataUrl) {
+      setPayslipPreview(share.dataUrl)
+    }
+    const next = new URLSearchParams(searchParams)
+    next.delete('foto')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
 
   async function removeSource(source: IncomeSource) {
     if (!(await confirmDestructive(`Excluir a fonte "${source.name}"?`, { title: 'Excluir fonte' }))) {
@@ -41,6 +56,31 @@ export function DiagnosisPage() {
         actions={<CompetencePicker value={ym} onChange={setYm} />}
       />
       <ErrorText message={diagnosis.error ?? remove.error} />
+      {payslipPreview ? (
+        <section className={styles.section} aria-label="Contracheque fotografado">
+          <h2 className={styles.sectionTitle}>Contracheque</h2>
+          <p className={styles.muted}>
+            Digite bruto, INSS e IR abaixo com base na foto. Isso alimenta a renda do mês; os descontos entram no
+            orçamento/Raio-X quando lançados na seção Descontos.
+          </p>
+          <img
+            src={payslipPreview}
+            alt="Contracheque fotografado"
+            style={{ display: 'block', width: '100%', maxHeight: 280, objectFit: 'contain', borderRadius: 8 }}
+          />
+          <div className={styles.formActions}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                takePendingShare()
+                setPayslipPreview(null)
+              }}
+            >
+              Descartar foto
+            </Button>
+          </div>
+        </section>
+      ) : null}
       {diagnosis.loading && !data ? <Loading /> : null}
       {data ? (
         <>
@@ -75,7 +115,14 @@ export function DiagnosisPage() {
           </section>
         </>
       ) : null}
-      <SourceForm ym={ym} onSaved={diagnosis.reload} />
+      <SourceForm
+        ym={ym}
+        onSaved={() => {
+          takePendingShare()
+          setPayslipPreview(null)
+          diagnosis.reload()
+        }}
+      />
     </div>
   )
 }

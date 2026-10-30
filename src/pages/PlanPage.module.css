@@ -28,6 +28,22 @@
   line-height: var(--leading-tight);
 }
 
+.planCardNote {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  border: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.planCardNote a {
+  color: var(--primary);
+  font-weight: var(--weight-semibold);
+}
+
 .intro p {
   color: var(--text-muted);
   font-size: var(--text-lg);

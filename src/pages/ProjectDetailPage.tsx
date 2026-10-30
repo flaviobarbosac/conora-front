@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { familyApi, projectsApi, type LifeProject, type LifeProjectScope } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
@@ -48,6 +48,11 @@ export function ProjectDetailPage() {
   const remove = useAction()
   const data = project.data
   const horizonLabel = LIFE_HORIZONS.find((item) => item.key === data?.horizon)?.label
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 })
+    document.getElementById('conteudo-principal')?.scrollTo({ top: 0, left: 0 })
+  }, [id])
 
   async function removeProject() {
     if (!data || !canWrite) {
@@ -165,26 +170,28 @@ function ProjectEditForm({ data, onSaved }: { data: LifeProject; onSaved: () => 
       )
     ) {
       showSaveToast('Projeto salvo.')
+      window.scrollTo({ top: 0, left: 0 })
+      document.getElementById('conteudo-principal')?.scrollTo({ top: 0, left: 0 })
       onSaved()
     }
   }
 
   return (
-    <section className={styles.section}>
+    <section className={`${styles.section} ${styles.projectFormPortrait}`}>
       <h2 className={styles.sectionTitle}>Editar projeto</h2>
       <p className={styles.muted}>
         Meta, prazo, início das parcelas e categoria não podem ser alterados depois da criação. O valor previsto no
         orçamento vem do rateio automático mensal.
       </p>
-      <form className={styles.form} onSubmit={(event) => void submit(event)}>
+      <form className={`${styles.form} ${styles.projectFormStack}`} onSubmit={(event) => void submit(event)}>
         <div className={styles.formWide}>
           <Field label="Nome" name="projectName" required value={name} onChange={(event) => setName(event.target.value)} />
         </div>
-        <div className={styles.formWide}>
+        <div className={`${styles.formWide} ${styles.projectDescriptionField}`}>
           <TextArea
             label="Descrição"
             name="projectDescription"
-            rows={5}
+            rows={6}
             value={detailedDescription}
             onChange={(event) => setDetailedDescription(event.target.value)}
             maxLength={4000}

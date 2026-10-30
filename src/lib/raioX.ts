@@ -263,8 +263,7 @@ export function focusSections(focus: RaioXFocus): CategorySection[] {
     case 'income':
       return ['Income']
     case 'discount':
-      // Hero "Descontos realizados" highlights the Despesa master in the tree (not Descontos).
-      return ['Expense']
+      return ['Discount']
     case 'spendable':
       return ['Income', 'Expense']
     case 'life':

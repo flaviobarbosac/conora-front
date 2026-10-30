@@ -6,6 +6,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
+import { Icon } from '../components/ui/Icon'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
@@ -55,6 +56,7 @@ export function OnboardingPage() {
   const [cep, setCep] = useState('')
   const [savedPhone, setSavedPhone] = useState('')
   const [savedCep, setSavedCep] = useState('')
+  const [editAccount, setEditAccount] = useState(false)
 
   const activeAccounts = (accounts.data ?? []).filter((a) => !a.isArchived)
   const hasAccount = activeAccounts.length > 0
@@ -228,7 +230,7 @@ export function OnboardingPage() {
 
       {step === 'account' ? (
         <>
-          {hasAccount ? (
+          {hasAccount && !editAccount ? (
             <section className={styles.section}>
               <h2 className={styles.sectionTitle}>Conta cadastrada</h2>
               <ul className={styles.list}>
@@ -237,21 +239,33 @@ export function OnboardingPage() {
                     <span className={styles.rowMain}>
                       <strong>{account.name}</strong>
                     </span>
+                    <Button
+                      variant="ghost"
+                      aria-label={`Editar ${account.name}`}
+                      title="Editar conta"
+                      onClick={() => setEditAccount(true)}
+                    >
+                      <Icon name="pen" size={20} decorative />
+                    </Button>
                   </li>
                 ))}
               </ul>
+              <p className={styles.muted}>Use o lápis para ajustar a conta antes de continuar.</p>
               <div className={styles.formActions}>
                 <Button onClick={() => setStep('video')}>Continuar</Button>
               </div>
             </section>
           ) : (
             <AccountForm
-              title="Conta bancária"
-              submitLabel="Salvar conta e continuar"
+              title={editAccount ? 'Editar conta bancária' : 'Conta bancária'}
+              submitLabel={editAccount ? 'Salvar conta' : 'Salvar conta e continuar'}
+              initial={editAccount ? activeAccounts[0] : undefined}
               onSaved={() => {
                 accounts.reload()
-                setStep('video')
+                setEditAccount(false)
+                if (!editAccount) setStep('video')
               }}
+              onCancel={editAccount ? () => setEditAccount(false) : undefined}
             />
           )}
         </>
@@ -269,6 +283,11 @@ export function OnboardingPage() {
               allowFullScreen
             />
           </div>
+          <ul className={styles.onboardVideoPoints} aria-label="O que você vai ver no app">
+            <li>No Início, o círculo tem três jeitos: foto, voz e WhatsApp (e o lápis para lançar na mão).</li>
+            <li>Dá para inativar categoria que não usa.</li>
+            <li>O Ian acompanha como narrador adulto da jornada.</li>
+          </ul>
           <div className={styles.formActions}>
             <Button variant="secondary" onClick={() => setStep('account')}>
               Voltar
