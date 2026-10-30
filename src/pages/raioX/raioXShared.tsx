@@ -206,7 +206,9 @@ export function sumYearSection(years: BudgetYear[], monthList: string[], section
         if (!wanted.has(cell.competenceYm)) {
           continue
         }
-        sum += Math.abs(cell.actualAmount)
+        const actual = Math.abs(cell.actualAmount)
+        const planned = Math.abs(cell.plannedAmount)
+        sum += actual > 0.001 ? actual : planned
       }
     }
   }
@@ -444,6 +446,7 @@ export function RaioXHero({
   previousMonthBalance,
   incomeActual,
   discountActual,
+  discountForSpendable,
   discountIsPlannedOnly = false,
   monthBalance,
   focus,
@@ -454,6 +457,8 @@ export function RaioXHero({
   previousMonthBalance: number
   incomeActual: number
   discountActual: number
+  /** Realized discounts only — used for Gastável so planned INSS/IR are not double-counted. */
+  discountForSpendable?: number
   discountIsPlannedOnly?: boolean
   monthBalance: number
   focus: RaioXFocus
@@ -461,7 +466,7 @@ export function RaioXHero({
   months: number
   ym: string
 }) {
-  const gastavel = incomeActual - discountActual
+  const gastavel = incomeActual - (discountForSpendable ?? discountActual)
   const periodLabel = months === 1 ? formatCompetence(ym) : `${months} meses até ${formatCompetence(ym)}`
 
   return (

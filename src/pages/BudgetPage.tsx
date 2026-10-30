@@ -368,10 +368,9 @@ export function BudgetPage() {
           yearData={yearData.data}
           focusCategoryId={focusCategoryId}
           onSaved={() => {
-            budget.reload()
-            yearData.reload()
-            projects.reload()
-            if (returnTo) navigate(returnTo)
+            void Promise.all([budget.reload(), yearData.reload(), projects.reload()]).then(() => {
+              if (returnTo) navigate(returnTo)
+            })
           }}
         />
       ) : null}
