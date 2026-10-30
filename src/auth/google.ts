@@ -53,6 +53,40 @@ function loadScript(): Promise<void> {
   })
 }
 
+let nativeGoogleReady: Promise<void> | null = null
+
+/** Initializes Capgo SocialLogin Google provider on native (iOS/Android). */
+export function ensureNativeGoogleAuth(): Promise<void> {
+  if (nativeGoogleReady) {
+    return nativeGoogleReady
+  }
+
+  nativeGoogleReady = (async () => {
+    const { Capacitor } = await import('@capacitor/core')
+    if (!Capacitor.isNativePlatform()) {
+      return
+    }
+
+    const webClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim()
+    const iOSClientId = (import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID as string | undefined)?.trim()
+    if (!webClientId) {
+      throw new Error('Google ainda não está configurado neste ambiente.')
+    }
+
+    const { SocialLogin } = await import('@capgo/capacitor-social-login')
+    await SocialLogin.initialize({
+      google: {
+        webClientId,
+        iOSClientId: iOSClientId || undefined,
+        iOSServerClientId: webClientId,
+        mode: 'online',
+      },
+    })
+  })()
+
+  return nativeGoogleReady
+}
+
 export async function requestGoogleIdToken(): Promise<string> {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
   if (!clientId) {
@@ -61,13 +95,23 @@ export async function requestGoogleIdToken(): Promise<string> {
 
   const { Capacitor } = await import('@capacitor/core')
   if (Capacitor.isNativePlatform()) {
-    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
-    const user = await GoogleAuth.signIn()
-    const token = user.authentication?.idToken
-    if (!token) {
+    await ensureNativeGoogleAuth()
+    const { SocialLogin } = await import('@capgo/capacitor-social-login')
+    const response = await SocialLogin.login({
+      provider: 'google',
+      options: {
+        scopes: ['email', 'profile'],
+      },
+    })
+    if (response.provider !== 'google') {
       throw new Error('Token Google ausente.')
     }
-    return token
+    const result = response.result
+    const idToken = 'idToken' in result ? result.idToken : null
+    if (!idToken) {
+      throw new Error('Token Google ausente.')
+    }
+    return idToken
   }
 
   await loadScript()

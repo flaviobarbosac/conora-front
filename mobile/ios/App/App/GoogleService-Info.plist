@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Google Sign-In (iOS). Bundle must match PRODUCT_BUNDLE_IDENTIFIER: br.com.conora.app.
+  Google Sign-In (iOS) via @capgo/capacitor-social-login.
+  Bundle must match PRODUCT_BUNDLE_IDENTIFIER: br.com.conora.app.
   CLIENT_ID / REVERSED_CLIENT_ID come from the iOS OAuth client in Google Cloud
   (project conora-app / 943760588490). If you rotate the iOS client, update:
   - this file

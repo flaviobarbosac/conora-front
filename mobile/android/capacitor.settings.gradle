@@ -11,17 +11,23 @@ project(':capacitor-app').projectDir = new File('../../node_modules/@capacitor/a
 include ':capacitor-camera'
 project(':capacitor-camera').projectDir = new File('../../node_modules/@capacitor/camera/android')
 
+include ':capacitor-filesystem'
+project(':capacitor-filesystem').projectDir = new File('../../node_modules/@capacitor/filesystem/android')
+
+include ':capacitor-share'
+project(':capacitor-share').projectDir = new File('../../node_modules/@capacitor/share/android')
+
 include ':capacitor-splash-screen'
 project(':capacitor-splash-screen').projectDir = new File('../../node_modules/@capacitor/splash-screen/android')
+
+include ':capgo-capacitor-social-login'
+project(':capgo-capacitor-social-login').projectDir = new File('../../node_modules/@capgo/capacitor-social-login/android')
 
 include ':capgo-capacitor-speech-recognition'
 project(':capgo-capacitor-speech-recognition').projectDir = new File('../../node_modules/@capgo/capacitor-speech-recognition/android')
 
 include ':capgo-native-purchases'
 project(':capgo-native-purchases').projectDir = new File('../../node_modules/@capgo/native-purchases/android')
-
-include ':codetrix-studio-capacitor-google-auth'
-project(':codetrix-studio-capacitor-google-auth').projectDir = new File('../../node_modules/@codetrix-studio/capacitor-google-auth/android')
 
 include ':send-intent'
 project(':send-intent').projectDir = new File('../../node_modules/send-intent/android')
