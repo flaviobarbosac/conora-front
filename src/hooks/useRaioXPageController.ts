@@ -7,7 +7,6 @@ import {
   entriesApi,
   projectsApi,
   type BudgetYear,
-  type Category,
   type Entry,
   type SharingScope,
 } from '../api/finance'
