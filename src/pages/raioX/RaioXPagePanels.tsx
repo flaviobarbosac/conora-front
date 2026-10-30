@@ -9,7 +9,6 @@ import {
   MONTH_MARKS,
   RAIOX_ANCHORS,
   RaioXAccountBlock,
-  isRaioXVisibleAccount,
   scrollToRaioXAnchor,
 } from './raioXShared'
 
