@@ -28,7 +28,7 @@ export function VerifyEmailPage() {
   const token = (searchParams.get('token') ?? '').trim()
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(true)
-  const { handoff, url, continueInBrowser } = useAppHandoff('validar-email')
+  const { handoff, redirectingToApp, url, continueInBrowser } = useAppHandoff('validar-email')
 
   function goLogin(event?: { preventDefault: () => void }) {
     event?.preventDefault()
@@ -39,8 +39,8 @@ export function VerifyEmailPage() {
   }
 
   useEffect(() => {
-    // Keep the token for the app until the user picks Continuar no navegador.
-    if (handoff) return
+    // Don't call API while redirecting to app or showing handoff UI
+    if (handoff || redirectingToApp) return
     let cancelled = false
 
     async function run() {
@@ -73,8 +73,20 @@ export function VerifyEmailPage() {
     return () => {
       cancelled = true
     }
-  }, [token, handoff, acceptSession, navigate])
+  }, [token, handoff, redirectingToApp, acceptSession, navigate])
 
+  // Mobile web: redirecting to app, show loading state
+  if (redirectingToApp) {
+    return (
+      <AuthLayout title="Abrindo o app Conora" subtitle="Aguarde um momento...">
+        <p className={styles.notice} role="status">
+          Redirecionando para o aplicativo.
+        </p>
+      </AuthLayout>
+    )
+  }
+
+  // Mobile web: redirect failed (app not installed), show fallback options
   if (handoff) return <AppHandoff url={url} onContinue={continueInBrowser} />
 
   return (

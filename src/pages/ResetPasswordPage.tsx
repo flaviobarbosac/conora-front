@@ -15,7 +15,7 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [busy, setBusy] = useState(false)
-  const { handoff, url, continueInBrowser } = useAppHandoff('redefinir-senha')
+  const { handoff, redirectingToApp, url, continueInBrowser } = useAppHandoff('redefinir-senha')
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -40,6 +40,18 @@ export function ResetPasswordPage() {
     }
   }
 
+  // Mobile web: redirecting to app, show loading state
+  if (redirectingToApp) {
+    return (
+      <AuthLayout title="Abrindo o app Conora" subtitle="Aguarde um momento...">
+        <p className={styles.notice} role="status">
+          Redirecionando para o aplicativo.
+        </p>
+      </AuthLayout>
+    )
+  }
+
+  // Mobile web: redirect failed (app not installed), show fallback options
   if (handoff) return <AppHandoff url={url} onContinue={continueInBrowser} />
 
   return (
