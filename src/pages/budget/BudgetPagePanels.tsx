@@ -467,7 +467,7 @@ export function BudgetTreeEditor({
             <span />
             <span>Categoria</span>
             <span className={`${styles.raioxTotals} ${styles.budgetTotals} ${styles.budgetTotalsHead}`}>
-              <span />
+              <span>Orçamento</span>
               <span>Dia</span>
             </span>
           </div>

@@ -159,6 +159,12 @@
   justify-items: end;
 }
 
+.budgetRow .budgetTotalsHead {
+  text-align: right;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
 .budgetPlannedCell {
   display: flex;
   align-items: center;

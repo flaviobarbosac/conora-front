@@ -12,6 +12,12 @@ export type AppLinkPage = 'validar-email' | 'redefinir-senha'
 const APP_LINK_PAGES: readonly string[] = ['validar-email', 'redefinir-senha'] satisfies AppLinkPage[]
 const APP_LINK_HOSTS = new Set(['conora.com.br', 'www.conora.com.br'])
 
+/** Detect mobile browser (not native app, but mobile web). */
+function isMobileBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+}
+
 /** Same cold-start URL must not re-route after Voltar ao login / second appUrlOpen. */
 const handledAppRoutes = new Set<string>()
 
@@ -81,27 +87,50 @@ export function listenAppLinks(onRoute: (route: string) => void): () => void {
 }
 
 /**
- * When a HTTPS e-mail link opens in the browser (Gmail in-app browser, App Link
- * chooser → Chrome, Universal Link miss), do NOT call the API — hand off to
- * conora:// so the native app consumes the token. Pure web users tap Continuar.
+ * When a HTTPS e-mail link opens in the browser:
+ * - Desktop web: consume token directly, never show app option
+ * - Mobile web: redirect to conora:// immediately, show fallback UI after timeout
+ * - Native app: consume token directly (handled by VerifyEmailPage)
+ *
+ * This ensures the token is used only once: either by the browser or the app,
+ * never by both. Mobile web redirects to the app without calling the API first.
  */
 export function useAppHandoff(page: AppLinkPage) {
   const [searchParams] = useSearchParams()
   const token = (searchParams.get('token') ?? '').trim()
-  // Caddy serves a static handoff for these URLs unless ?web=1 (explicit browser).
   const forceWeb = searchParams.get('web') === '1'
-  const [handoff] = useState(() => !isNativeApp() && !!token && !forceWeb)
+  const mobile = isMobileBrowser()
   const url = appUrl(page, token)
 
+  // Desktop web or forceWeb: no handoff, consume token in browser
+  // Mobile web without forceWeb: redirect to app, show fallback UI if redirect fails
+  const shouldHandoff = !isNativeApp() && !!token && !forceWeb && mobile
+  const [handoff, setHandoff] = useState(shouldHandoff)
+  const [showFallback, setShowFallback] = useState(false)
+
   useEffect(() => {
-    // Try once on load; mail apps may block it without a tap, so the button stays available.
-    if (handoff) window.location.href = url
-  }, [handoff, url])
+    if (!shouldHandoff) return
+
+    // Mobile web: redirect to app immediately
+    window.location.href = url
+
+    // If the page is still here after 1.5s, the app probably isn't installed
+    // or the redirect was blocked. Show fallback UI.
+    const timeout = setTimeout(() => {
+      setShowFallback(true)
+    }, 1500)
+
+    return () => clearTimeout(timeout)
+  }, [shouldHandoff, url])
 
   return {
-    handoff,
+    // Show handoff UI only as fallback when redirect didn't work
+    handoff: handoff && showFallback,
+    // Block API call while redirecting to app (before fallback timeout)
+    redirectingToApp: handoff && !showFallback,
     url,
     continueInBrowser: () => {
+      setHandoff(false)
       const next = new URL(window.location.href)
       next.searchParams.set('web', '1')
       window.location.replace(next.toString())

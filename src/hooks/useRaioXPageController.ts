@@ -5,6 +5,7 @@ import {
   budgetsApi,
   categoriesApi,
   entriesApi,
+  projectsApi,
   type BudgetYear,
   type Category,
   type Entry,
@@ -83,6 +84,7 @@ export function useRaioXPageController() {
     [ym, months, scope],
   )
   const bankAccounts = useLoad(() => accountsApi.list(), [])
+  const projects = useLoad(() => projectsApi.list(), [])
 
   useEffect(() => {
     function onVoiceSaved() {
@@ -309,5 +311,6 @@ export function useRaioXPageController() {
     categoryNameById,
     bankNameById,
     entriesByAccount,
+    projects,
   }
 }

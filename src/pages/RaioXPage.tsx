@@ -48,6 +48,7 @@ export function RaioXPage() {
     setFocus,
     open,
     setOpen,
+    scope,
     setScope,
     leakageOnly,
     setLeakageOnly,
@@ -70,6 +71,7 @@ export function RaioXPage() {
     categoryNameById,
     bankNameById,
     entriesByAccount,
+    projects,
   } = useRaioXPageController()
 
   function toggle(id: string) {
@@ -250,6 +252,11 @@ export function RaioXPage() {
           byParent={byParent}
           planned={planned}
           actual={actual}
+          projects={projects.data ?? []}
+          projectsLoading={projects.loading && !projects.data}
+          scope={scope}
+          focus={focus}
+          onFocus={toggleFocus}
           onExpandSection={(section, options) => {
             setFocus(null)
             if (!isRaioXMacroSection(section) && section !== 'Expense') {
