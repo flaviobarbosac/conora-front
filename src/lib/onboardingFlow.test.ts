@@ -6,12 +6,10 @@ import {
 } from './onboardingFlow'
 
 describe('onboarding walkthrough (ponta a ponta)', () => {
-  it('covers nome, telefone, e-mail, CEP, conta e vídeo na ordem (cartão opcional)', () => {
+  it('covers telefone, CEP, conta e vídeo na ordem (nome/e-mail vêm do cadastro)', () => {
     const collected = ONBOARDING_WALKTHROUGH.flatMap((s) => s.collects)
     expect(collected).toEqual([
-      'nome',
       'telefone',
-      'e-mail',
       'CEP',
       'conta bancária',
       'vídeo de boas-vindas',

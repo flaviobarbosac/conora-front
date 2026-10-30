@@ -4,6 +4,8 @@ export type ConfirmRequest = {
   confirmLabel?: string
   cancelLabel?: string
   danger?: boolean
+  /** Single-button informational dialog (no cancel). */
+  info?: boolean
 }
 
 type ConfirmHandler = (request: ConfirmRequest) => Promise<boolean>
@@ -18,7 +20,7 @@ export function registerConfirmHandler(next: ConfirmHandler | null) {
 /** Asks the user before a destructive (or important) action. */
 export function confirmDestructive(
   message: string,
-  options?: Omit<ConfirmRequest, 'message'>,
+  options?: Omit<ConfirmRequest, 'message' | 'info'>,
 ): Promise<boolean> {
   const request: ConfirmRequest = {
     title: options?.title ?? 'Confirmar exclusão',
@@ -30,6 +32,26 @@ export function confirmDestructive(
 
   if (!handler) {
     return Promise.resolve(window.confirm(message))
+  }
+
+  return handler(request)
+}
+
+/** Shows a blocking informational popup (one Entendi button). */
+export function confirmInfo(
+  message: string,
+  options?: { title?: string; confirmLabel?: string },
+): Promise<boolean> {
+  const request: ConfirmRequest = {
+    title: options?.title ?? 'Atenção',
+    message,
+    confirmLabel: options?.confirmLabel ?? 'Entendi',
+    info: true,
+  }
+
+  if (!handler) {
+    window.alert(message)
+    return Promise.resolve(true)
   }
 
   return handler(request)

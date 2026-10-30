@@ -10,6 +10,7 @@ import { Button } from '../components/ui/Button'
 import { Field } from '../components/ui/Field'
 import { PasswordField } from '../components/ui/PasswordField'
 import { AuthLayout } from '../layouts/AuthLayout'
+import { confirmInfo } from '../lib/confirm'
 import styles from './auth.module.css'
 
 function safeReturnTo(raw: string | null): string {
@@ -20,7 +21,13 @@ function safeReturnTo(raw: string | null): string {
 }
 
 function isAlreadyRegisteredMessage(message: string): boolean {
-  return /já existe|email duplicado|já cadastrado|conta conora com este/i.test(message)
+  return /já existe|já tem uma conta|email duplicado|já cadastrado|conta conora com este|conta existente/i.test(
+    message,
+  )
+}
+
+function isPreRegistrationEmailSent(message: string): boolean {
+  return /enviamos um e-mail de validação/i.test(message)
 }
 
 export function RegisterPage() {
@@ -39,14 +46,13 @@ export function RegisterPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [duplicateLoginTo, setDuplicateLoginTo] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   if (session) {
     return <Navigate to={afterRegister} replace />
   }
 
-  function goLoginBecauseExists(message: string, usuario?: string) {
+  async function goLoginBecauseExists(message: string, usuario?: string) {
     const base =
       loginTo.includes('?')
         ? `${loginTo}&aviso=conta-existe`
@@ -54,15 +60,25 @@ export function RegisterPage() {
     const withUser = usuario?.trim()
       ? `${base}&usuario=${encodeURIComponent(usuario.trim())}`
       : base
+    await confirmInfo(message, { title: 'Conta existente' })
+    navigate(withUser, { replace: true })
+  }
+
+  async function handleRegisterError(message: string, usuario?: string) {
+    if (isPreRegistrationEmailSent(message)) {
+      await confirmInfo(message, { title: 'Verifique seu e-mail' })
+      return
+    }
+    if (isAlreadyRegisteredMessage(message)) {
+      await goLoginBecauseExists(message, usuario)
+      return
+    }
     setError(message)
-    setDuplicateLoginTo(withUser)
-    window.setTimeout(() => navigate(withUser, { replace: true }), 1200)
   }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     setError(null)
-    setDuplicateLoginTo(null)
     if (password.length < 8) {
       setError('Senha deve ter no mínimo 8 caracteres.')
       return
@@ -77,12 +93,7 @@ export function RegisterPage() {
       await register(name, email, cpf, password)
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Não foi possível criar o acesso.'
-      if (isAlreadyRegisteredMessage(message)) {
-        goLoginBecauseExists(`${message} Vamos te levar para Entrar.`, email)
-      } else {
-        setDuplicateLoginTo(null)
-        setError(message)
-      }
+      await handleRegisterError(message, email)
     } finally {
       setBusy(false)
     }
@@ -91,16 +102,11 @@ export function RegisterPage() {
   async function onGoogle() {
     setBusy(true)
     setError(null)
-    setDuplicateLoginTo(null)
     try {
       await registerGoogle(await requestGoogleIdToken())
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Não foi possível criar com Google.'
-      if (isAlreadyRegisteredMessage(message)) {
-        goLoginBecauseExists(message)
-      } else {
-        setError(message)
-      }
+      await handleRegisterError(message)
     } finally {
       setBusy(false)
     }
@@ -109,17 +115,12 @@ export function RegisterPage() {
   async function onApple() {
     setBusy(true)
     setError(null)
-    setDuplicateLoginTo(null)
     try {
       const apple = await requestAppleIdentityToken()
       await registerApple(apple.identityToken, apple.name, apple.email)
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Não foi possível criar com Apple.'
-      if (isAlreadyRegisteredMessage(message)) {
-        goLoginBecauseExists(message)
-      } else {
-        setError(message)
-      }
+      await handleRegisterError(message)
     } finally {
       setBusy(false)
     }
@@ -204,11 +205,6 @@ export function RegisterPage() {
         {error ? (
           <p className={styles.error} role="alert">
             {error}
-          </p>
-        ) : null}
-        {duplicateLoginTo ? (
-          <p>
-            <Link to={duplicateLoginTo}>Ir para Entrar</Link>
           </p>
         ) : null}
         <div className={styles.actions}>
