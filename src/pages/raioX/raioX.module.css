@@ -387,6 +387,12 @@
   grid-template-columns: 1fr;
 }
 
+.pairCardMeta {
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
 .periodSlider {
   display: flex;
   flex-direction: column;

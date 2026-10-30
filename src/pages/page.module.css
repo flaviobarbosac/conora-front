@@ -632,19 +632,23 @@ button.compact {
 .macroCard .moneyValue {
   max-width: 100%;
   min-width: 0;
-  overflow-wrap: anywhere;
-  white-space: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .macroCard .horizonMeta {
   min-width: 0;
   max-width: 100%;
+  flex-wrap: nowrap;
 }
 
 .macroCard .horizonMeta span,
 .macroCard .horizonMeta strong {
   min-width: 0;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .macroHead {
@@ -740,16 +744,25 @@ button.compact {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: var(--space-3);
+  gap: var(--space-2);
   font-size: var(--text-sm);
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .macroBarLabel strong {
+  flex: 0 1 auto;
   font-size: var(--text-sm);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.macroBarLabel .moneyValue {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .macroBarTracks {
@@ -813,12 +826,25 @@ button.compact {
 .horizonMeta {
   display: flex;
   justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.horizonMeta strong {
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .horizonMeta span {
+  flex: 0 0 auto;
   color: var(--text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Double class beats shared .raioxRow grid from raioX.module.css. */

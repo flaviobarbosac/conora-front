@@ -588,8 +588,8 @@ function PairCard({
     >
       <span>{label}</span>
       <strong className={`${styles.moneyValue} ${amountClass}`}>{formatMoney(totals.actual)}</strong>
-      <span className={styles.muted}>
-        Previsto {formatMoney(totals.planned)} · Realizado {formatMoney(totals.actual)}
+      <span className={`${styles.muted} ${styles.pairCardMeta}`}>
+        {formatMoney(totals.planned)} prev · {formatMoney(totals.actual)} real
       </span>
       {note ? <span className={styles.muted}>{note}</span> : null}
     </button>
