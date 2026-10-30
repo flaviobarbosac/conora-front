@@ -3,6 +3,7 @@ import type { Budget, BudgetLine, Category } from '../api/finance'
 import {
   aggregateYearMonths,
   buildAmountMaps,
+  mergeEntryActuals,
   patrimonyStockMap,
   sectionHead,
   sectionRealized,
@@ -281,6 +282,22 @@ describe('spendableIncomeBox', () => {
       ],
     }
     expect(spendableIncomeBox(budget)).toEqual({ planned: 4500, actual: 3700 })
+  })
+})
+
+describe('mergeEntryActuals', () => {
+  it('shows a launch the budget has not counted yet', () => {
+    const actual = mergeEntryActuals(new Map([['rent', 0]]), [
+      { categoryId: 'rent', type: 'Expense', amount: 80 },
+    ])
+    expect(actual.get('rent')).toBe(80)
+  })
+
+  it('keeps the budget total when it is already higher', () => {
+    const actual = mergeEntryActuals(new Map([['rent', 200]]), [
+      { categoryId: 'rent', type: 'Expense', amount: 80 },
+    ])
+    expect(actual.get('rent')).toBe(200)
   })
 })
 

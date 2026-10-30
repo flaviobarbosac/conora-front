@@ -78,6 +78,37 @@ export function buildAmountMaps(lines: BudgetLine[]): {
   return { planned: plannedMap, actual: actualMap }
 }
 
+const LAUNCH_ACTUAL_TYPES = new Set(['Income', 'Expense', 'Contribution', 'ProjectContribution'])
+
+/**
+ * Puts launch amounts on the analytical category.
+ * Synthetic rows sum those leaves through the category tree.
+ * Keeps the higher of budget and launches so the same amount is not added twice.
+ */
+export function mergeEntryActuals(
+  actual: Map<string, number>,
+  entries: { categoryId: string | null; type: string; amount: number }[],
+): Map<string, number> {
+  const fromEntries = new Map<string, number>()
+  for (const entry of entries) {
+    if (!entry.categoryId || !LAUNCH_ACTUAL_TYPES.has(entry.type)) {
+      continue
+    }
+    fromEntries.set(
+      entry.categoryId,
+      (fromEntries.get(entry.categoryId) ?? 0) + Math.abs(entry.amount),
+    )
+  }
+
+  const next = new Map(actual)
+  for (const [id, amount] of fromEntries) {
+    if (amount > (next.get(id) ?? 0)) {
+      next.set(id, amount)
+    }
+  }
+  return next
+}
+
 /**
  * Active analytical accounts stay, with their parents (parents may be inactive).
  * Inactive leaves leave listing screens. Empty active roots with no live leaf drop out.

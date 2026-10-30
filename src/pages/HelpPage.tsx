@@ -7,7 +7,55 @@ import { useLoad } from '../hooks/useLoad'
 import help from './HelpPage.module.css'
 import styles from './pageStyles'
 
-const FEATURED_MODULE_KEY = 'membros'
+const HELP_GROUPS = [
+  { id: 'comecar', title: 'Começar', keys: ['onboarding'] },
+  {
+    id: 'dia-a-dia',
+    title: 'Dia a dia',
+    keys: ['inicio', 'lancamentos', 'raio-x', 'orcamento', 'diagnostico', 'mes'],
+  },
+  {
+    id: 'cadastros',
+    title: 'Cadastros',
+    keys: ['contas', 'cartoes', 'categorias', 'projetos', 'patrimonio', 'importar'],
+  },
+  { id: 'familia', title: 'Família', keys: ['membros', 'familia-primeiro'] },
+  {
+    id: 'conta',
+    title: 'Conta e app',
+    keys: ['plano', 'relatorios', 'ia', 'menu', 'configuracoes', 'whatsapp'],
+  },
+] as const
+
+function scrollToHelp(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function ModuleList({
+  modules,
+  openKey,
+  query,
+  onToggle,
+}: {
+  modules: HelpModule[]
+  openKey: string | null
+  query: string
+  onToggle: (update: (current: string | null) => string | null) => void
+}) {
+  if (modules.length === 0) return null
+  return (
+    <div className={help.modules}>
+      {modules.map((module) => (
+        <ModuleCard
+          key={module.key}
+          module={module}
+          open={openKey === module.key || Boolean(query)}
+          onToggle={() => onToggle((current) => (current === module.key ? null : module.key))}
+        />
+      ))}
+    </div>
+  )
+}
 
 function matchesQuery(module: HelpModule, query: string): boolean {
   if (!query) return true
@@ -22,16 +70,13 @@ function ModuleCard({
   module,
   open,
   onToggle,
-  featured = false,
 }: {
   module: HelpModule
   open: boolean
   onToggle: () => void
-  featured?: boolean
 }) {
   return (
-    <article className={featured ? help.moduleFeatured : help.module}>
-      {featured ? <p className={help.featuredBadge}>Destaque — leia primeiro</p> : null}
+    <article className={help.module} id={module.key}>
       <button
         type="button"
         className={help.moduleToggle}
@@ -65,7 +110,7 @@ export function HelpPage() {
   const [query, setQuery] = useState('')
   const [openKey, setOpenKey] = useState<string | null>(() => {
     const hash = typeof window === 'undefined' ? '' : window.location.hash.replace('#', '')
-    return hash || FEATURED_MODULE_KEY
+    return hash || null
   })
 
   useEffect(() => {
@@ -77,18 +122,22 @@ export function HelpPage() {
   const data = helpData.data
   const q = query.trim()
 
-  const featured = useMemo(() => {
-    if (!data?.modules) return null
-    const module = data.modules.find((item) => item.key === FEATURED_MODULE_KEY)
-    if (!module) return null
-    return matchesQuery(module, q) ? module : null
-  }, [data, q])
-
-  const modules = useMemo(() => {
-    if (!data?.modules) return []
-    return data.modules
-      .filter((module) => module.key !== FEATURED_MODULE_KEY)
-      .filter((module) => matchesQuery(module, q))
+  const groups = useMemo(() => {
+    const modules = data?.modules ?? []
+    const used = new Set<string>()
+    const grouped: { id: string; title: string; items: HelpModule[] }[] = HELP_GROUPS.map((group) => {
+      const items = group.keys
+        .map((key) => modules.find((module) => module.key === key))
+        .filter((module): module is HelpModule => Boolean(module))
+        .filter((module) => matchesQuery(module, q))
+      for (const item of items) used.add(item.key)
+      return { id: group.id, title: group.title, items }
+    })
+    const rest = modules.filter((module) => !used.has(module.key) && matchesQuery(module, q))
+    if (rest.length > 0) {
+      grouped.push({ id: 'outros', title: 'Outros', items: rest })
+    }
+    return grouped.filter((group) => group.id === 'comecar' || group.items.length > 0)
   }, [data, q])
 
   const glossary = useMemo(() => {
@@ -122,25 +171,24 @@ export function HelpPage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Como o Conora funciona</h2>
             <p className={help.lead}>
-              Cada pessoa tem a própria conta e os próprios lançamentos. Se vocês formarem um grupo familiar, algumas
-              telas mostram a soma dos dois — sem misturar o dinheiro de cada um. Veja o destaque abaixo sobre como
-              vincular e desvincular.
+              Cada pessoa tem a própria conta e os próprios lançamentos. No grupo familiar, algumas telas somam os dois
+              sem misturar o dinheiro de cada um. Escolha um assunto para ir direto ao ponto.
             </p>
+            <nav className={help.index} aria-label="Assuntos da ajuda">
+              {groups
+                .filter((group) => group.id === 'comecar' || group.items.length > 0)
+                .map((group) => (
+                  <button key={group.id} type="button" onClick={() => scrollToHelp(group.id)}>
+                    {group.title}
+                  </button>
+                ))}
+              <button type="button" onClick={() => scrollToHelp('glossario')}>
+                Glossário
+              </button>
+            </nav>
           </section>
 
-          {featured ? (
-            <section className={styles.section}>
-              <h2 className={styles.sectionTitle}>Grupo familiar</h2>
-              <ModuleCard
-                module={featured}
-                featured
-                open={openKey === featured.key || Boolean(q)}
-                onToggle={() => setOpenKey((current) => (current === featured.key ? null : featured.key))}
-              />
-            </section>
-          ) : null}
-
-          <section className={styles.section}>
+          <section id="comecar" className={`${styles.section} ${help.group}`}>
             <h2 className={styles.sectionTitle}>7 passos para começar</h2>
             <ol className={help.steps}>
               {[...data.steps]
@@ -157,27 +205,28 @@ export function HelpPage() {
                   </li>
                 ))}
             </ol>
+            <ModuleList
+              modules={groups.find((group) => group.id === 'comecar')?.items ?? []}
+              openKey={openKey}
+              query={q}
+              onToggle={setOpenKey}
+            />
           </section>
 
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Módulos e campos</h2>
-            {modules.length === 0 && !featured ? <p className={help.empty}>Nenhum módulo encontrado para essa busca.</p> : null}
-            <div className={help.modules}>
-              {modules.map((module) => {
-                const open = openKey === module.key || Boolean(q)
-                return (
-                  <ModuleCard
-                    key={module.key}
-                    module={module}
-                    open={open}
-                    onToggle={() => setOpenKey((current) => (current === module.key ? null : module.key))}
-                  />
-                )
-              })}
-            </div>
-          </section>
+          {groups
+            .filter((group) => group.id !== 'comecar' && group.items.length > 0)
+            .map((group) => (
+              <section key={group.id} id={group.id} className={`${styles.section} ${help.group}`}>
+                <h2 className={styles.sectionTitle}>{group.title}</h2>
+                <ModuleList modules={group.items} openKey={openKey} query={q} onToggle={setOpenKey} />
+              </section>
+            ))}
 
-          <section className={styles.section}>
+          {q && groups.every((group) => group.items.length === 0) ? (
+            <p className={help.empty}>Nenhum módulo encontrado para essa busca.</p>
+          ) : null}
+
+          <section id="glossario" className={`${styles.section} ${help.group}`}>
             <h2 className={styles.sectionTitle}>Glossário</h2>
             {glossary.length === 0 ? <p className={help.empty}>Nenhum termo encontrado para essa busca.</p> : null}
             <dl className={help.glossary}>
