@@ -492,9 +492,6 @@ export function BudgetTreeEditor({
               focusedId={focusedId}
               onToggle={toggle}
               onOpenYear={(id) => {
-                if (lockedCategoryIds.has(id)) {
-                  return
-                }
                 setYearAccountId(id)
               }}
               onCreateProject={(id) => setCreateCategoryId(id)}
@@ -542,12 +539,13 @@ export function BudgetTreeEditor({
             document.body,
           )
         : null}
-      {yearAccount && !lockedCategoryIds.has(yearAccount.id) ? (
+      {yearAccount ? (
         <BudgetYearSheet
           ym={ym}
           year={year}
           account={yearAccount}
           line={yearLine}
+          readOnly={lockedCategoryIds.has(yearAccount.id)}
           plannedAmount={(() => {
             const draft = drafts[yearAccount.id]
             if (draft != null && draft.trim()) {
@@ -758,9 +756,13 @@ function BudgetAccountBlock({
               <button
                 type="button"
                 className={styles.budgetSpreadIcon}
-                disabled={fieldDisabled}
-                aria-label={`Repetir ou parcelar ${categoryLabel(account)}`}
-                title="Repetir ou parcelar"
+                disabled={busy || !canEdit || needsProject}
+                aria-label={
+                  projectLocked
+                    ? `Ver parcelas de ${categoryLabel(account)}`
+                    : `Repetir ou parcelar ${categoryLabel(account)}`
+                }
+                title={projectLocked ? 'Ver rateio do projeto' : 'Repetir ou parcelar'}
                 onClick={() => onOpenYear(account.id)}
               >
                 <Icon name="repeat" size={20} />
@@ -1003,6 +1005,7 @@ function BudgetYearSheet({
   account,
   line,
   plannedAmount,
+  readOnly = false,
   onClose,
   onChanged,
 }: {
@@ -1011,6 +1014,8 @@ function BudgetYearSheet({
   account: Category
   line: BudgetYear['lines'][number] | null | undefined
   plannedAmount: number
+  /** Life-project rateio: show months, no mutate. */
+  readOnly?: boolean
   onClose: () => void
   onChanged: () => void
 }) {
@@ -1138,48 +1143,71 @@ function BudgetYearSheet({
             Fechar
           </Button>
         </div>
-        <div className={styles.budgetSpread}>
-          <div className={styles.budgetSpreadBlock}>
-            <div>
-              <h3 className={styles.budgetSpreadTitle}>Repetir o previsto</h3>
-              <p className={styles.muted}>Copia o valor deste mês para os meses seguintes.</p>
+        {readOnly ? (
+          <div className={styles.budgetSpread}>
+            <div className={styles.budgetSpreadBlock}>
+              <div>
+                <h3 className={styles.budgetSpreadTitle}>Rateio do projeto de vida</h3>
+                <p className={styles.muted}>
+                  Parcelas geradas automaticamente. Para mudar, edite o projeto — não o orçamento.
+                </p>
+              </div>
+              <AppliedMonths
+                months={
+                  line?.months
+                    .filter((month) => Math.abs(month.plannedAmount) > 0.001)
+                    .map((month) => ({
+                      ym: month.competenceYm,
+                      amount: Math.abs(month.plannedAmount),
+                    })) ?? (plannedAmount > 0.001 ? [{ ym, amount: plannedAmount }] : [])
+                }
+              />
             </div>
-            <IntegerField
-              label="Quantos meses?"
-              name="budgetRepeat"
-              maxLength={3}
-              value={repeatMonths}
-              onChange={setRepeatMonths}
-            />
-            <Button type="button" variant="secondary" disabled={action.busy} onClick={() => void runRepeat()}>
-              Repetir
-            </Button>
-            {appliedKind === 'repeat' ? <AppliedMonths months={applied} /> : null}
           </div>
-          <div className={styles.budgetSpreadBlock}>
-            <div>
-              <h3 className={styles.budgetSpreadTitle}>Parcelar um total</h3>
-              <p className={styles.muted}>Divide o valor a partir deste mês.</p>
+        ) : (
+          <div className={styles.budgetSpread}>
+            <div className={styles.budgetSpreadBlock}>
+              <div>
+                <h3 className={styles.budgetSpreadTitle}>Repetir o previsto</h3>
+                <p className={styles.muted}>Copia o valor deste mês para os meses seguintes.</p>
+              </div>
+              <IntegerField
+                label="Quantos meses?"
+                name="budgetRepeat"
+                maxLength={3}
+                value={repeatMonths}
+                onChange={setRepeatMonths}
+              />
+              <Button type="button" variant="secondary" disabled={action.busy} onClick={() => void runRepeat()}>
+                Repetir
+              </Button>
+              {appliedKind === 'repeat' ? <AppliedMonths months={applied} /> : null}
             </div>
-            <MoneyField
-              label="Valor total"
-              name="budgetInstallmentTotal"
-              value={installmentTotal}
-              onChange={setInstallmentTotal}
-            />
-            <IntegerField
-              label="Quantidade de parcelas"
-              name="budgetInstallments"
-              maxLength={3}
-              value={installmentCount}
-              onChange={setInstallmentCount}
-            />
-            <Button type="button" variant="secondary" disabled={action.busy} onClick={() => void runInstallments()}>
-              Parcelar
-            </Button>
-            {appliedKind === 'installment' ? <AppliedMonths months={applied} /> : null}
+            <div className={styles.budgetSpreadBlock}>
+              <div>
+                <h3 className={styles.budgetSpreadTitle}>Parcelar um total</h3>
+                <p className={styles.muted}>Divide o valor a partir deste mês.</p>
+              </div>
+              <MoneyField
+                label="Valor total"
+                name="budgetInstallmentTotal"
+                value={installmentTotal}
+                onChange={setInstallmentTotal}
+              />
+              <IntegerField
+                label="Quantidade de parcelas"
+                name="budgetInstallments"
+                maxLength={3}
+                value={installmentCount}
+                onChange={setInstallmentCount}
+              />
+              <Button type="button" variant="secondary" disabled={action.busy} onClick={() => void runInstallments()}>
+                Parcelar
+              </Button>
+              {appliedKind === 'installment' ? <AppliedMonths months={applied} /> : null}
+            </div>
           </div>
-        </div>
+        )}
         <ErrorText message={action.error} />
       </div>
     </div>

@@ -185,13 +185,14 @@ export function RaioXPage() {
   const incomeActual = months === 1 ? Math.abs(data?.receivedIncome ?? 0) : rangeIncome
   const discountMonth =
     months === 1 && data ? sectionPlannedActual(data, 'Discount') : null
-  // Prefer realized discounts; if none yet, show planned so INSS/IR orçados não somem do hero.
-  const discountActual =
+  // Display: planned when nothing realized yet. Gastável must NOT subtract planned (renda líquida).
+  const discountDisplay =
     discountMonth != null
       ? discountMonth.actual > 0.001
         ? discountMonth.actual
         : discountMonth.planned
       : sumYearSection(yearsBudget.data ?? [], monthList, 'Discount')
+  const discountForSpendable = discountMonth?.actual ?? 0
   const discountIsPlannedOnly =
     discountMonth != null && discountMonth.actual <= 0.001 && discountMonth.planned > 0.001
   const monthBalance = months === 1 ? (data?.monthResult ?? 0) : rangeBalance
@@ -241,7 +242,8 @@ export function RaioXPage() {
         <RaioXHero
           previousMonthBalance={previousCash.data?.balance ?? 0}
           incomeActual={incomeActual}
-          discountActual={discountActual}
+          discountActual={discountDisplay}
+          discountForSpendable={discountForSpendable}
           discountIsPlannedOnly={discountIsPlannedOnly}
           monthBalance={monthBalance}
           focus={focus}
