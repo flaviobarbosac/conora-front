@@ -15,7 +15,10 @@ let package = Package(
         .package(name: "CapacitorCommunityAppleSignIn", path: "../../../../node_modules/@capacitor-community/apple-sign-in"),
         .package(name: "CapacitorApp", path: "../../../../node_modules/@capacitor/app"),
         .package(name: "CapacitorCamera", path: "../../../../node_modules/@capacitor/camera"),
+        .package(name: "CapacitorFilesystem", path: "../../../../node_modules/@capacitor/filesystem"),
+        .package(name: "CapacitorShare", path: "../../../../node_modules/@capacitor/share"),
         .package(name: "CapacitorSplashScreen", path: "../../../../node_modules/@capacitor/splash-screen"),
+        .package(name: "CapgoCapacitorSocialLogin", path: "../../../../node_modules/@capgo/capacitor-social-login"),
         .package(name: "CapgoCapacitorSpeechRecognition", path: "../../../../node_modules/@capgo/capacitor-speech-recognition"),
         .package(name: "CapgoNativePurchases", path: "../../../../node_modules/@capgo/native-purchases"),
         .package(name: "SendIntent", path: "../../../../node_modules/send-intent")
@@ -29,7 +32,10 @@ let package = Package(
                 .product(name: "CapacitorCommunityAppleSignIn", package: "CapacitorCommunityAppleSignIn"),
                 .product(name: "CapacitorApp", package: "CapacitorApp"),
                 .product(name: "CapacitorCamera", package: "CapacitorCamera"),
+                .product(name: "CapacitorFilesystem", package: "CapacitorFilesystem"),
+                .product(name: "CapacitorShare", package: "CapacitorShare"),
                 .product(name: "CapacitorSplashScreen", package: "CapacitorSplashScreen"),
+                .product(name: "CapgoCapacitorSocialLogin", package: "CapgoCapacitorSocialLogin"),
                 .product(name: "CapgoCapacitorSpeechRecognition", package: "CapgoCapacitorSpeechRecognition"),
                 .product(name: "CapgoNativePurchases", package: "CapgoNativePurchases"),
                 .product(name: "SendIntent", package: "SendIntent")

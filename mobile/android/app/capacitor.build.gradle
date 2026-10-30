@@ -12,10 +12,12 @@ dependencies {
     implementation project(':capacitor-community-apple-sign-in')
     implementation project(':capacitor-app')
     implementation project(':capacitor-camera')
+    implementation project(':capacitor-filesystem')
+    implementation project(':capacitor-share')
     implementation project(':capacitor-splash-screen')
+    implementation project(':capgo-capacitor-social-login')
     implementation project(':capgo-capacitor-speech-recognition')
     implementation project(':capgo-native-purchases')
-    implementation project(':codetrix-studio-capacitor-google-auth')
     implementation project(':send-intent')
 
 }

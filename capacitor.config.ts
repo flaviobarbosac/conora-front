@@ -1,8 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
-const googleClientId = process.env.VITE_GOOGLE_CLIENT_ID ?? ''
-const googleIosClientId = process.env.VITE_GOOGLE_IOS_CLIENT_ID ?? ''
-
 export const iosDevelopmentTeam = process.env.IOS_DEVELOPMENT_TEAM ?? ''
 
 const config: CapacitorConfig = {
@@ -19,11 +16,17 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
   },
   plugins: {
-    GoogleAuth: {
-      scopes: ['profile', 'email'],
-      serverClientId: googleClientId,
-      iosClientId: googleIosClientId,
-      forceCodeForRefreshToken: false,
+    // Google client IDs are passed at runtime via SocialLogin.initialize (src/auth/google.ts).
+    SocialLogin: {
+      providers: {
+        google: true,
+        apple: false,
+        facebook: false,
+        twitter: false,
+        linkedin: false,
+        telegram: false,
+        tiktok: false,
+      },
     },
     SplashScreen: {
       launchAutoHide: false,

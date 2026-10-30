@@ -13,8 +13,8 @@ async function bootstrapNative(): Promise<void> {
   if (!Capacitor.isNativePlatform()) {
     return
   }
-  const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
-  await GoogleAuth.initialize()
+  const { ensureNativeGoogleAuth } = await import('./auth/google')
+  await ensureNativeGoogleAuth()
 }
 
 void bootstrapNative()
