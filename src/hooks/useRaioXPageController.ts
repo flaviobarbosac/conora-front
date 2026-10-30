@@ -77,11 +77,8 @@ export function useRaioXPageController() {
   const previousCash = useLoad(() => accountsApi.cashBalanceAtEndOfMonth(previousYm), [previousYm])
   const accounts = useLoad(() => categoriesApi.list(undefined, false, false), [])
   const entries = useLoad(
-    () =>
-      months === 1
-        ? entriesApi.list({ competenceYm: ym, take: 200, scope })
-        : Promise.resolve({ items: [], skip: 0, take: 0, totalCount: 0 }),
-    [ym, months, scope],
+    () => entriesApi.list({ competenceYm: ym, take: 500, scope }),
+    [ym, scope],
   )
   const bankAccounts = useLoad(() => accountsApi.list(), [])
   const projects = useLoad(() => projectsApi.list(), [])
