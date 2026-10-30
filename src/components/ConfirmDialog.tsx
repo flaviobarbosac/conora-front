@@ -20,6 +20,8 @@ export function ConfirmDialogHost() {
     return () => registerConfirmHandler(null)
   }, [])
 
+  const isInfo = Boolean(pending?.info)
+
   useEffect(() => {
     if (!pending) {
       return
@@ -30,7 +32,7 @@ export function ConfirmDialogHost() {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault()
-        close(false)
+        close(isInfo)
       }
     }
 
@@ -43,7 +45,7 @@ export function ConfirmDialogHost() {
       document.body.style.overflow = previousOverflow
       previous?.focus?.()
     }
-  }, [pending])
+  }, [pending, isInfo])
 
   function close(value: boolean) {
     setPending((current) => {
@@ -57,7 +59,11 @@ export function ConfirmDialogHost() {
   }
 
   return (
-    <div className={styles.overlay} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close(false)}>
+    <div
+      className={styles.overlay}
+      role="presentation"
+      onMouseDown={(event) => event.target === event.currentTarget && close(isInfo)}
+    >
       <div
         className={styles.dialog}
         role="alertdialog"
@@ -72,9 +78,11 @@ export function ConfirmDialogHost() {
           {pending.message}
         </p>
         <div className={styles.actions}>
-          <Button variant="secondary" onClick={() => close(false)}>
-            {pending.cancelLabel}
-          </Button>
+          {isInfo ? null : (
+            <Button variant="secondary" onClick={() => close(false)}>
+              {pending.cancelLabel}
+            </Button>
+          )}
           <Button
             ref={confirmRef}
             className={pending.danger ? styles.danger : undefined}

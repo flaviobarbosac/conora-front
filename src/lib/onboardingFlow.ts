@@ -32,7 +32,7 @@ export const ONBOARDING_WALKTHROUGH: ReadonlyArray<{
   collects: string[]
   persistsIn: string
 }> = [
-  { step: 'profile', collects: ['nome', 'telefone', 'e-mail', 'CEP'], persistsIn: 'perfil' },
+  { step: 'profile', collects: ['telefone', 'CEP'], persistsIn: 'perfil' },
   { step: 'account', collects: ['conta bancária'], persistsIn: 'contas' },
   { step: 'video', collects: ['vídeo de boas-vindas'], persistsIn: 'onboardingCompleted' },
 ]

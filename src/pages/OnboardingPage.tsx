@@ -24,7 +24,7 @@ const styles = { ...pageStyles, ...onboardingStyles }
 type Step = OnboardingStep
 
 const STEPS: { id: Step; title: string; hint: string }[] = [
-  { id: 'profile', title: 'Seus dados', hint: 'Nome, telefone, e-mail e CEP.' },
+  { id: 'profile', title: 'Seus dados', hint: 'Telefone e CEP.' },
   { id: 'account', title: 'Conta bancária', hint: 'Uma conta para receber os lançamentos.' },
   { id: 'video', title: 'Vídeo rápido', hint: 'Um vídeo curto para começar.' },
 ]
@@ -51,20 +51,17 @@ export function OnboardingPage() {
   const complete = useAction()
 
   const [step, setStep] = useState<Step>('profile')
-  const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [cep, setCep] = useState('')
-  const [savedName, setSavedName] = useState('')
   const [savedPhone, setSavedPhone] = useState('')
   const [savedCep, setSavedCep] = useState('')
 
   const activeAccounts = (accounts.data ?? []).filter((a) => !a.isArchived)
   const hasAccount = activeAccounts.length > 0
+  const profileName = (profile.data?.name ?? '').trim()
 
   useEffect(() => {
     if (!profile.data) return
-    setName(profile.data.name ?? '')
-    setSavedName(profile.data.name ?? '')
     setPhone(profile.data.phone ? formatPhone(profile.data.phone) : '')
     setSavedPhone(profile.data.phone ? formatPhone(profile.data.phone) : '')
     setCep(profile.data.cep ? formatCep(profile.data.cep) : '')
@@ -83,9 +80,7 @@ export function OnboardingPage() {
   }, [profile.data, hasAccount])
 
   const dirtyProfile =
-    name.trim() !== savedName.trim() ||
-    digitsOnly(phone) !== digitsOnly(savedPhone) ||
-    digitsOnly(cep) !== digitsOnly(savedCep)
+    digitsOnly(phone) !== digitsOnly(savedPhone) || digitsOnly(cep) !== digitsOnly(savedCep)
   useRegisterDirty('onboarding-profile', dirtyProfile)
 
   async function saveContact(event: FormEvent) {
@@ -93,13 +88,12 @@ export function OnboardingPage() {
     if (
       await saveProfile.run(() =>
         familyApi.updateProfile({
-          name: name.trim(),
+          name: profileName,
           phone: digitsOnly(phone),
           cep: digitsOnly(cep),
         }),
       )
     ) {
-      setSavedName(name.trim())
       setSavedPhone(formatPhone(phone))
       setSavedCep(formatCep(cep))
       showSaveToast('Dados salvos.')
@@ -141,7 +135,7 @@ export function OnboardingPage() {
   return (
     <div className={`${styles.page} ${styles.onboarding}`}>
       <PageHeader title="Bem-vindo ao Conora" kicker="Onboard obrigatório" />
-      <p className={styles.muted}>Cadastre seus dados e uma conta. Depois é só começar.</p>
+      <p className={styles.muted}>Complete telefone, CEP e uma conta. Depois é só começar.</p>
 
       <div className={styles.journeyProgress}>
         <div className={styles.journeyProgressLabel}>
@@ -193,13 +187,7 @@ export function OnboardingPage() {
           <h2 className={styles.sectionTitle}>Seus dados</h2>
           <form className={styles.form} onSubmit={(event) => void saveContact(event)}>
             <div className={styles.formWide}>
-              <Field
-                label="Nome"
-                name="name"
-                required
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
+              <Field label="Nome" name="name" value={profileName} readOnly disabled />
             </div>
             <Field label="E-mail" name="email" value={profile.data.email} readOnly disabled />
             <Field
@@ -222,7 +210,15 @@ export function OnboardingPage() {
               onChange={(event) => setCep(formatCep(event.target.value))}
             />
             <div className={styles.formActions}>
-              <Button type="submit" disabled={saveProfile.busy || !name.trim() || digitsOnly(phone).length < 10 || digitsOnly(cep).length !== 8}>
+              <Button
+                type="submit"
+                disabled={
+                  saveProfile.busy ||
+                  !profileName ||
+                  digitsOnly(phone).length < 10 ||
+                  digitsOnly(cep).length !== 8
+                }
+              >
                 Salvar e continuar
               </Button>
             </div>

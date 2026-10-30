@@ -126,7 +126,8 @@
   margin-bottom: var(--space-4);
 }
 
-.homePage {
+/* With journey: room for the timeline below the launch ring. */
+.homePage:not(.homePageSolo) {
   min-height: min(78vh, 720px);
 }
 
