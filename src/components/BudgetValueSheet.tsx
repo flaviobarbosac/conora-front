@@ -89,7 +89,6 @@ export function BudgetValueSheet({
           onChange={setDraftAmount}
           inputRef={readOnly ? undefined : amountRef}
           disabled={readOnly}
-          readOnly={readOnly}
         />
         {showDay ? (
           <IntegerField
@@ -100,7 +99,6 @@ export function BudgetValueSheet({
             value={draftDay}
             onChange={setDraftDay}
             disabled={readOnly}
-            readOnly={readOnly}
           />
         ) : null}
         {readOnly ? (

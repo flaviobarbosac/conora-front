@@ -106,14 +106,14 @@ export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClos
       createAction.setError('Escolha o grupo pai no plano de contas.')
       return
     }
-    let created: Category | null = null
+    const created: { category: Category | null } = { category: null }
     const ok = await createAction.run(async () => {
-      created = await categoriesApi.create(name, parentId)
+      created.category = await categoriesApi.create(name, parentId)
     })
-    if (ok && created) {
+    if (ok && created.category) {
       await categories.reload()
-      if (created.code) {
-        setSelectedCode(created.code)
+      if (created.category.code) {
+        setSelectedCode(created.category.code)
       }
       setShowCreate(false)
       createAction.setError(null)
