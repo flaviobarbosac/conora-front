@@ -6,16 +6,17 @@ describe('onboarding completion gate', () => {
   it('blocks when phone, cep or account is missing (card is optional)', () => {
     expect(
       canCompleteOnboarding({ phone: null, cep: null, hasAccount: false, hasCard: false }).missing,
-    ).toEqual(['phone', 'cep', 'account'])
+    ).toEqual(['phone', 'cep', 'account', 'diagnostico'])
   })
 
-  it('allows when contact and account are present without a card', () => {
+  it('allows when contact, account and diagnóstico are present without a card', () => {
     expect(
       canCompleteOnboarding({
         phone: '27999999999',
         cep: '29000-000',
         hasAccount: true,
         hasCard: false,
+        hasDiagnostico: true,
       }).ok,
     ).toBe(true)
   })
