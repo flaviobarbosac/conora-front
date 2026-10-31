@@ -156,6 +156,7 @@ export function AppShell() {
         voiceEntryConfirm: current.voiceEntryConfirm !== false,
         budgetAlertPercent: current.budgetAlertPercent ?? 70,
         photoEvolutionEnabled: current.photoEvolutionEnabled !== false,
+        homeJourneyTimelineEnabled: current.homeJourneyTimelineEnabled !== false,
       })
       profile.reload()
       window.dispatchEvent(new Event('conora:profile-changed'))
@@ -345,7 +346,7 @@ export function AppShell() {
         </div>
       </aside>
 
-      <div className={styles.content}>
+      <div className={styles.content} id="conora-shell-content">
         <header className={styles.appHeader}>
           {pathname !== '/' ? (
             <div id="conora-voice-header" className={styles.appHeaderVoice} />
@@ -459,6 +460,15 @@ export function AppShell() {
                   <Icon name="help" size={20} />
                   Central de ajuda
                 </Link>
+                <Link
+                  to="/onboarding?replay=1"
+                  className={styles.profileMenuItem}
+                  role="menuitem"
+                  onClick={() => setProfileMenuOpen(false)}
+                >
+                  <Icon name="goal" size={20} />
+                  Onboarding
+                </Link>
                 <button
                   type="button"
                   className={styles.profileMenuItem}
@@ -516,7 +526,7 @@ export function AppShell() {
           {({ isActive }) => (
             <>
               <Icon name="wallet" variant={isActive ? 'duo' : 'linear'} size={24} />
-              <span>Orçam.</span>
+              <span>Orçamento</span>
             </>
           )}
         </NavLink>

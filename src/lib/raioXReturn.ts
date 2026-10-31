@@ -7,6 +7,8 @@ export type RaioXReturnState = {
   competenceYm: string
   months: number
   leakageOnly: boolean
+  /** Analytical account that was clicked — restored into view on return. */
+  categoryId?: string
 }
 
 function isSafeRaioXPath(path: string): boolean {
@@ -49,6 +51,7 @@ export function readRaioXReturn(): RaioXReturnState | null {
       competenceYm: parsed.competenceYm,
       months: parsed.months,
       leakageOnly: Boolean(parsed.leakageOnly),
+      categoryId: typeof parsed.categoryId === 'string' ? parsed.categoryId : undefined,
     }
   } catch {
     return null

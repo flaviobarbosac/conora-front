@@ -117,7 +117,7 @@ export function HomeLaunchO({ listening = false, voiceEnabled = false, onScan, o
             d={annularSectorPath(arcs.manual.a0, arcs.manual.a1)}
             role="button"
             tabIndex={listening ? -1 : 0}
-            aria-label="Lançar manualmente"
+            aria-label="Editar lançamentos"
             aria-disabled={listening || undefined}
             onClick={listening ? undefined : onManual}
             onKeyDown={listening ? undefined : (e) => onActivate(e, onManual)}

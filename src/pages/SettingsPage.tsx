@@ -38,6 +38,7 @@ function fromProfile(
   voiceEntryConfirm: boolean,
   budgetAlertPercent: number,
   photoEvolutionEnabled: boolean,
+  homeJourneyTimelineEnabled: boolean,
 ): PrefDraft {
   return {
     quietMode,
@@ -48,6 +49,7 @@ function fromProfile(
     voiceEntryConfirm,
     budgetAlertPercent,
     photoEvolutionEnabled,
+    homeJourneyTimelineEnabled,
   }
 }
 
@@ -77,6 +79,7 @@ export function SettingsPage() {
       profile.data.voiceEntryConfirm !== false,
       profile.data.budgetAlertPercent ?? 70,
       profile.data.photoEvolutionEnabled !== false,
+      profile.data.homeJourneyTimelineEnabled !== false,
     )
     setDraft(next)
     setSaved(next)
@@ -106,6 +109,7 @@ export function SettingsPage() {
         voiceEntryConfirm: draft.voiceEntryConfirm,
         budgetAlertPercent: draft.budgetAlertPercent,
         photoEvolutionEnabled: draft.photoEvolutionEnabled,
+        homeJourneyTimelineEnabled: draft.homeJourneyTimelineEnabled,
       }),
     )
     if (!ok) return
@@ -243,6 +247,13 @@ export function SettingsPage() {
               checked={draft.photoEvolutionEnabled !== false}
               onChange={(event) => patch({ photoEvolutionEnabled: event.target.checked })}
               description="Ligado: foto e voz seguem os marcos. Desligado: ficam nos 30 anos."
+            />
+            <CheckboxField
+              label="Mostrar a Jornada Raio X na tela inicial"
+              name="homeJourneyTimelineEnabled"
+              checked={draft.homeJourneyTimelineEnabled !== false}
+              onChange={(event) => patch({ homeJourneyTimelineEnabled: event.target.checked })}
+              description="Ligado: a linha do tempo do Ian ou da Clara aparece abaixo do lançamento na inicial. Desligado: a jornada some da inicial; você escolhe Ian ou Clara ali do mesmo jeito."
             />
           </section>
 

@@ -14,6 +14,33 @@ export function formatMoney(value: number | null | undefined): string {
   return moneyFormatter.format(value ?? 0)
 }
 
+/**
+ * Display-only short form for large amounts (Raio-X / macros / Orçamento).
+ * From 10_000: "10 mil"; from 1_000_000: "1,2 mi". Below that, full currency.
+ */
+export function formatMoneyCompact(value: number | null | undefined): string {
+  const n = value ?? 0
+  const abs = Math.abs(n)
+  const sign = n < 0 ? '-' : ''
+  if (abs >= 1_000_000) {
+    const mi = abs / 1_000_000
+    const text =
+      mi >= 10
+        ? mi.toFixed(0)
+        : mi.toFixed(1).replace('.', ',').replace(/,0$/, '')
+    return `${sign}${text} mi`
+  }
+  if (abs >= 10_000) {
+    return `${sign}${Math.round(abs / 1_000).toLocaleString('pt-BR')} mil`
+  }
+  return formatMoney(n)
+}
+
+/** True when formatMoneyCompact shortens the amount (full value belongs in title / aria). */
+export function isMoneyCompact(value: number | null | undefined): boolean {
+  return Math.abs(value ?? 0) >= 10_000
+}
+
 /** pt-BR amount with two decimals, without currency symbol (for inputs). */
 export function formatMoneyInput(value: number | null | undefined): string {
   return moneyInputFormatter.format(value ?? 0)
@@ -41,8 +68,13 @@ export function sanitizeMoneyTyping(raw: string): string {
   return formatMoneyInput(Number(digits) / 100)
 }
 
+/** Percent figure without the % sign (column already labeled). */
+export function formatPercentValue(value: number | null | undefined): string {
+  return (value ?? 0).toFixed(1).replace('.', ',')
+}
+
 export function formatPercent(value: number | null | undefined): string {
-  return `${(value ?? 0).toFixed(1).replace('.', ',')}%`
+  return `${formatPercentValue(value)}%`
 }
 
 /** Brazil wall clock (UTC−3; no DST). Used for display and “today” in the app. */

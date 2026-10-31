@@ -86,6 +86,7 @@ export default defineConfig(({ mode }) => {
           '/categories',
           '/family',
           '/gamification',
+          '/journey',
           '/diagnosis',
           '/accounts',
           '/credit-cards',

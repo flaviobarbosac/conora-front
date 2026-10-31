@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import { AuthProvider } from './auth/AuthProvider'
+import { ScrollToTop } from './components/ScrollToTop'
 import { installMobileViewportGuard } from './lib/resetMobileViewport'
 import { ThemeProvider } from './theme/ThemeProvider'
 import './styles/global.css'
@@ -25,6 +26,7 @@ createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter basename={import.meta.env.BASE_URL}>
+          <ScrollToTop />
           <App />
         </BrowserRouter>
       </AuthProvider>

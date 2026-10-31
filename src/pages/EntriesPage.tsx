@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   entriesApi,
   entryDisplayDescription,
@@ -21,6 +21,7 @@ import {
 import { CASH_FLOW_SECTIONS, isPatrimonySection } from '../lib/categoryOrder'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
+import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
@@ -90,6 +91,8 @@ const FORM_TYPES: FormType[] = ['Expense', 'Income']
 const CLOSED_MONTH_MESSAGE =
   'Este mês está fechado. Por ora o Conora não permite lançamento retroativo. Reabra o mês em Fechar mês se precisar corrigir.'
 
+const ENTRIES_PAGE_SIZE = 10
+
 function isEditableType(type: EntryType): type is FormType {
   return type === 'Expense' || type === 'Income'
 }
@@ -105,17 +108,48 @@ function toDateInput(iso: string): string {
   return iso.slice(0, 10)
 }
 
+type EntriesMode = 'list' | 'novo' | 'edit' | 'busca'
+
+function parseEntriesMode(splat: string | undefined): { mode: EntriesMode; entryId: string | null } {
+  const part = (splat ?? '').replace(/^\/+|\/+$/g, '')
+  if (!part) {
+    return { mode: 'list', entryId: null }
+  }
+  if (part === 'novo') {
+    return { mode: 'novo', entryId: null }
+  }
+  if (part === 'busca') {
+    return { mode: 'busca', entryId: null }
+  }
+  const edit = /^([^/]+)\/editar$/.exec(part)
+  if (edit) {
+    return { mode: 'edit', entryId: edit[1] }
+  }
+  return { mode: 'list', entryId: null }
+}
+
 export function EntriesPage() {
   const navigate = useNavigate()
+  const { '*': splat } = useParams()
+  const { mode, entryId: routeEntryId } = parseEntriesMode(splat)
+  const showForm = mode === 'novo' || mode === 'edit'
   const [searchParams, setSearchParams] = useSearchParams()
+  // Only when Busca was opened from a Raio-X click (returnTo in the URL).
   const returnToRaioX = safeRaioXReturnTo(searchParams.get('returnTo'))
   const { confirmLeave, isDirty } = useUnsavedChanges()
+
+  function goBackToRaioX() {
+    if (!returnToRaioX) {
+      return
+    }
+    navigate(returnToRaioX)
+  }
   const [ym, setYm] = useState(currentCompetence)
   const [typeFilter, setTypeFilter] = useState<EntryType | ''>('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [search, setSearch] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
-  const [showForm, setShowForm] = useState(false)
+  const [page, setPage] = useState(1)
   const [editing, setEditing] = useState<Entry | null>(null)
   const [formDirty, setFormDirty] = useState(false)
   const [openError, setOpenError] = useState<string | null>(null)
@@ -149,8 +183,8 @@ export function EntriesPage() {
       accountId: intake.selectedBankAccountId ?? '',
     })
     setEditing(null)
-    setShowForm(true)
     setFormDirty(false)
+    navigate('/lancamentos/novo')
   }
 
   async function bootstrapReceipt(channel: 'App' | 'ShareTarget' = 'App') {
@@ -189,7 +223,7 @@ export function EntriesPage() {
       if (intake.status === 'Confirmed') {
         takePendingIntakeId()
         showSaveToast('Lançamento gravado.')
-        setShowForm(false)
+        navigate('/lancamentos')
         entries.reload()
         return
       }
@@ -197,7 +231,7 @@ export function EntriesPage() {
         setClassifyRerouteHint(takeReceiptRerouteHint())
         setReceiptIntake(intake)
         setClassifyOpen(true)
-        setShowForm(false)
+        navigate('/lancamentos')
         return
       }
       if (intake.status === 'Ready' && intake.proposedCategoryId) {
@@ -210,7 +244,7 @@ export function EntriesPage() {
         })
         takePendingIntakeId()
         showSaveToast('Lançamento gravado.')
-        setShowForm(false)
+        navigate('/lancamentos')
         entries.reload()
         return
       }
@@ -238,10 +272,12 @@ export function EntriesPage() {
     if (formDirty && !(await confirmLeave())) {
       return
     }
-    setShowForm(false)
     setEditing(null)
     setFormDirty(false)
     setOpenError(null)
+    setReceiptPrefill(null)
+    setReceiptIntakeId(null)
+    goToList()
   }
 
   async function openCreate() {
@@ -255,7 +291,7 @@ export function EntriesPage() {
     setEditing(null)
     setOpenError(null)
     setFormDirty(false)
-    setShowForm(true)
+    navigate('/lancamentos/novo')
   }
 
   async function openEdit(entry: Entry) {
@@ -276,20 +312,35 @@ export function EntriesPage() {
     setEditing(entry)
     setOpenError(null)
     setFormDirty(false)
-    setShowForm(true)
     if (entry.competenceYm) {
       setYm(entry.competenceYm)
     }
+    navigate(`/lancamentos/${entry.id}/editar`)
+  }
+
+  function goToList() {
+    setSearch('')
+    setAppliedSearch('')
+    setTypeFilter('')
+    setCategoryFilter('')
+    navigate('/lancamentos')
+  }
+
+  function goToSearch() {
+    navigate('/lancamentos/busca')
   }
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams)
     let changed = false
+    let goNovo = false
+    let goBusca = false
+    let goEditId: string | null = null
     const isRecibo = searchParams.get('recibo') === '1'
 
     if (searchParams.get('novo') === '1') {
       setEditing(null)
-      setShowForm(true)
+      goNovo = true
       next.delete('novo')
       changed = true
     }
@@ -297,12 +348,14 @@ export function EntriesPage() {
     if (isRecibo) {
       next.delete('recibo')
       changed = true
+      goNovo = true
       void bootstrapReceipt(searchParams.get('canal') === 'share' ? 'ShareTarget' : 'App')
     }
 
     if (searchParams.get('voz') === '1') {
       next.delete('voz')
       changed = true
+      goNovo = true
       const draft = takeVoiceDraft()
       if (draft) {
         setReceiptPrefill({
@@ -313,7 +366,6 @@ export function EntriesPage() {
           accountId: '',
         })
         setEditing(null)
-        setShowForm(true)
         setFormDirty(Boolean(draft.description || draft.amount))
       }
     }
@@ -330,6 +382,15 @@ export function EntriesPage() {
       setCategoryFilter(categoryId)
       next.delete('categoryId')
       changed = true
+      goBusca = true
+    }
+
+    const typeQuery = searchParams.get('type')
+    if (typeQuery === 'Expense' || typeQuery === 'Income') {
+      setTypeFilter(typeQuery)
+      next.delete('type')
+      changed = true
+      goBusca = true
     }
 
     const searchQuery = searchParams.get('search')
@@ -338,34 +399,68 @@ export function EntriesPage() {
       setAppliedSearch(searchQuery.trim())
       next.delete('search')
       changed = true
+      goBusca = true
     }
 
     const entryId = searchParams.get('entry')
     if (entryId) {
       next.delete('entry')
       changed = true
-      void entriesApi
-        .get(entryId)
-        .then((entry) => {
-          if (!isEditableType(entry.type)) {
-            setOpenError('Este tipo de lançamento não pode ser editado por aqui.')
-            return
-          }
-          setEditing(entry)
-          setYm(entry.competenceYm)
-          setShowForm(true)
-          setFormDirty(false)
-        })
-        .catch(() => {
-          setOpenError('Lançamento não encontrado.')
-        })
+      goEditId = entryId
     }
 
     if (changed) {
       setSearchParams(next, { replace: true })
     }
+    if (goEditId) {
+      navigate(`/lancamentos/${goEditId}/editar`, { replace: true })
+    } else if (goNovo) {
+      navigate('/lancamentos/novo', { replace: true })
+    } else if (goBusca && mode === 'list') {
+      navigate({ pathname: '/lancamentos/busca', search: next.toString() ? `?${next.toString()}` : '' }, { replace: true })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- bootstrap once per URL flag
   }, [searchParams, setSearchParams])
+
+  useEffect(() => {
+    if (mode !== 'edit' || !routeEntryId) {
+      return
+    }
+    if (editing?.id === routeEntryId) {
+      return
+    }
+    let cancelled = false
+    void entriesApi
+      .get(routeEntryId)
+      .then((entry) => {
+        if (cancelled) {
+          return
+        }
+        if (!isEditableType(entry.type)) {
+          setOpenError('Este tipo de lançamento não pode ser editado por aqui.')
+          navigate('/lancamentos', { replace: true })
+          return
+        }
+        setEditing(entry)
+        setYm(entry.competenceYm)
+        setFormDirty(false)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOpenError('Lançamento não encontrado.')
+          navigate('/lancamentos', { replace: true })
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [mode, routeEntryId, editing?.id, navigate])
+
+  useEffect(() => {
+    if (mode === 'novo') {
+      setEditing(null)
+    }
+  }, [mode])
 
   const lookups = useLookups()
   const filterAccountOptions = useMemo(() => {
@@ -392,6 +487,11 @@ export function EntriesPage() {
     return [...byId.values()]
   }, [lookups.categories])
   const sharingScope = readSharingView()
+
+  useEffect(() => {
+    setPage(1)
+  }, [ym, typeFilter, categoryFilter, appliedSearch, sharingScope])
+
   const entries = useLoad(
     () =>
       entriesApi.list({
@@ -399,30 +499,39 @@ export function EntriesPage() {
         type: typeFilter || undefined,
         categoryId: categoryFilter || undefined,
         search: appliedSearch || undefined,
-        take: 100,
+        skip: (page - 1) * ENTRIES_PAGE_SIZE,
+        take: ENTRIES_PAGE_SIZE,
         scope: sharingScope,
       }),
-    [ym, typeFilter, categoryFilter, appliedSearch, sharingScope],
+    [ym, typeFilter, categoryFilter, appliedSearch, sharingScope, page],
   )
+  const entriesTotal = entries.data?.totalCount ?? 0
+  const entriesPageCount = Math.max(1, Math.ceil(entriesTotal / ENTRIES_PAGE_SIZE))
   const rowAction = useAction()
+
+  useEffect(() => {
+    if (page > entriesPageCount) {
+      setPage(entriesPageCount)
+    }
+  }, [page, entriesPageCount])
 
   useEffect(() => {
     return subscribeVoiceFill(() => {
       setEditing(null)
-      setShowForm(true)
+      navigate('/lancamentos/novo')
     })
-  }, [])
+  }, [navigate])
 
   useEffect(() => {
     function openForm() {
       setEditing(null)
-      setShowForm(true)
+      navigate('/lancamentos/novo')
     }
     function onSaved(event: Event) {
       const id = (event as CustomEvent<{ id?: string }>).detail?.id ?? ''
       setFormDirty(false)
       setEditing(null)
-      setShowForm(false)
+      navigate('/lancamentos')
       if (id) {
         setSavedEntryId(id)
       }
@@ -434,7 +543,7 @@ export function EntriesPage() {
       window.removeEventListener('conora:voice-open-form', openForm)
       window.removeEventListener('conora:voice-saved', onSaved)
     }
-  }, [entries])
+  }, [entries, navigate])
 
   useEffect(() => {
     if (!savedEntryId || !entries.data?.items.some((item) => item.id === savedEntryId)) {
@@ -479,9 +588,9 @@ export function EntriesPage() {
     }
     if (await rowAction.run(() => entriesApi.remove(entry.id))) {
       if (editing?.id === entry.id) {
-        setShowForm(false)
         setEditing(null)
         setFormDirty(false)
+        navigate('/lancamentos')
       }
       entries.reload()
     }
@@ -495,150 +604,18 @@ export function EntriesPage() {
     return [category, account, formatDate(entry.occurredAt)].filter(Boolean).join(' · ')
   }
 
-  return (
-    <div className={styles.page}>
-      <PageHeader
-        kicker="Movimentações"
-        title="Lançamentos"
-        actions={
-          <>
-            {returnToRaioX ? (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  navigate(returnToRaioX)
-                }}
-              >
-                Voltar pro Raio-X
-              </Button>
-            ) : null}
-            <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
-            <Button
-              disabled={!showForm && monthClosed}
-              onClick={() => {
-                if (showForm) {
-                  void closeForm()
-                } else {
-                  void openCreate()
-                }
-              }}
-            >
-              {showForm ? 'Fechar' : '+ Novo lançamento'}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={monthClosed || receiptBusy}
-              onClick={() => {
-                void scanReceipt()
-                  .then(() => void bootstrapReceipt('App'))
-                  .catch(() => undefined)
-              }}
-            >
-              Escanear recibo
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={monthClosed || receiptBusy}
-              onClick={() => {
-                void pickReceiptMedia()
-                  .then(async (file) => {
-                    const dataUrl = await new Promise<string>((resolve, reject) => {
-                      const reader = new FileReader()
-                      reader.onload = () => resolve(String(reader.result))
-                      reader.onerror = () => reject(new Error('Falha ao ler o arquivo.'))
-                      reader.readAsDataURL(file)
-                    })
-                    setPendingShare({
-                      fileName: file.name || 'recibo.pdf',
-                      mimeType: file.type || 'application/pdf',
-                      dataUrl,
-                    })
-                    await bootstrapReceipt('App')
-                  })
-                  .catch(() => undefined)
-              }}
-            >
-              Arquivo / PDF
-            </Button>
-          </>
-        }
-      />
+  const pageTitle =
+    mode === 'novo'
+      ? 'Novo lançamento'
+      : mode === 'edit'
+        ? 'Editar lançamento'
+        : mode === 'busca'
+          ? 'Buscar lançamentos'
+          : 'Lançamentos'
 
-      {monthClosed ? <p className={styles.muted}>{closedMonthMessage}</p> : null}
-      <ReceiptReadingOverlay
-        open={receiptBusy}
-        purpose={readingPurpose}
-        rerouted={readingRerouted}
-        message={
-          readingRerouted ? (
-            <>
-              Sem valor pago: você está lançando um <WordOrcamento />. Abrindo para escolher conta e
-              categoria…
-            </>
-          ) : (
-            <>
-              Identificando se é cupom (<WordLancamento />) ou boleto (<WordOrcamento />).
-            </>
-          )
-        }
-      />
-      <ErrorText message={openError ?? monthStatus.error ?? rowAction.error} />
-
-      {showForm ? (
-        <EntryForm
-          key={editing?.id ?? receiptIntakeId ?? 'new'}
-          initial={editing}
-          receiptPrefill={editing ? null : receiptPrefill}
-          receiptIntakeId={editing ? null : receiptIntakeId}
-          accounts={lookups.accounts.map((account) => ({ id: account.id, name: account.name }))}
-          categories={filterAccountOptions.filter((account) => account.level === 'Analytical' && account.isActive)}
-          tree={lookups.categories}
-          onDirtyChange={setFormDirty}
-          onCancel={() => void closeForm()}
-          onSaved={(mode = 'close') => {
-            setFormDirty(false)
-            setEditing(null)
-            setReceiptPrefill(null)
-            setReceiptIntakeId(null)
-            takePendingIntakeId()
-            takePendingShare()
-            entries.reload()
-            lookups.reloadAccounts()
-            if (mode === 'close') {
-              setShowForm(false)
-            }
-          }}
-        />
-      ) : null}
-
-      <ReceiptClassifyDialog
-        open={classifyOpen}
-        intake={receiptIntake}
-        rerouteHint={classifyRerouteHint}
-        onClose={() => {
-          setClassifyOpen(false)
-          setClassifyRerouteHint(null)
-        }}
-        onClassified={(intake) => {
-          setClassifyOpen(false)
-          setClassifyRerouteHint(null)
-          if (intake.status === 'Confirmed') {
-            takePendingIntakeId()
-            showSaveToast('Lançamento gravado.')
-            setShowForm(false)
-            entries.reload()
-            return
-          }
-          if (intake.needsClassification || intake.status === 'NeedsClassification') {
-            setReceiptIntake(intake)
-            setClassifyOpen(true)
-            return
-          }
-          applyIntakeToForm(intake)
-        }}
-      />
-
-      <section className={styles.section}>
+  const listSection = (
+    <section className={styles.section}>
+      {mode === 'busca' ? (
         <form
           className={styles.toolbar}
           onSubmit={(event) => {
@@ -668,51 +645,215 @@ export function EntriesPage() {
             Buscar
           </Button>
         </form>
+      ) : null}
 
-        <ErrorText message={entries.error ?? rowAction.error ?? openError} />
-        {entries.loading && !entries.data ? <Loading /> : null}
-        {entries.data && entries.data.items.length === 0 ? <Empty>Nenhum lançamento nesta competência.</Empty> : null}
-        {entries.data && entries.data.items.length > 0 ? (
-          <ul className={styles.list}>
-            {entries.data.items.map((entry) => {
-              const editable = isEditableType(entry.type) && !monthClosed && entry.canEdit !== false
-              return (
-                <li key={entry.id} id={`entry-${entry.id}`} className={styles.row} style={{ scrollMarginTop: 96 }}>
-                  <button
-                    type="button"
-                    className={styles.rowMain}
-                    disabled={!editable}
-                    onClick={() => void openEdit(entry)}
-                    style={editable ? undefined : { cursor: 'default', textAlign: 'left' }}
-                  >
-                    <strong>
-                      {describe(entry)}
-                      {entry.installmentCount ? ` (${entry.installmentNumber}/${entry.installmentCount})` : ''}
-                    </strong>
-                    <span className={styles.rowSub}>{entryDisplayDescription(entry)}</span>
-                  </button>
-                  <span className={styles.rowEnd}>
-                    <Badge>{TYPE_LABEL[entry.type]}</Badge>
-                    <span className={`${styles.amount} ${amountClass(entry.type) ?? ''}`}>
-                      {entry.type === 'Expense' ? '− ' : ''}
-                      {formatMoney(entry.amount)}
-                    </span>
-                    <DeleteIconButton
-                      disabled={rowAction.busy || monthClosed || entry.canEdit === false}
-                      onClick={() => void remove(entry)}
-                    />
+      <ErrorText message={entries.error ?? rowAction.error ?? openError} />
+      {entries.loading && !entries.data ? <Loading /> : null}
+      {entries.data && entries.data.items.length === 0 ? <Empty>Nenhum lançamento nesta competência.</Empty> : null}
+      {entries.data && entries.data.items.length > 0 ? (
+        <ul className={styles.list}>
+          {entries.data.items.map((entry) => {
+            const editable = isEditableType(entry.type) && !monthClosed && entry.canEdit !== false
+            return (
+              <li key={entry.id} id={`entry-${entry.id}`} className={styles.row} style={{ scrollMarginTop: 96 }}>
+                <button
+                  type="button"
+                  className={styles.rowMain}
+                  disabled={!editable}
+                  onClick={() => void openEdit(entry)}
+                  style={editable ? undefined : { cursor: 'default', textAlign: 'left' }}
+                >
+                  <strong>
+                    {describe(entry)}
+                    {entry.installmentCount ? ` (${entry.installmentNumber}/${entry.installmentCount})` : ''}
+                  </strong>
+                  <span className={styles.rowSub}>{entryDisplayDescription(entry)}</span>
+                </button>
+                <span className={styles.rowEnd}>
+                  <Badge>{TYPE_LABEL[entry.type]}</Badge>
+                  <span className={`${styles.amount} ${amountClass(entry.type) ?? ''}`}>
+                    {entry.type === 'Expense' ? '− ' : ''}
+                    {formatMoney(entry.amount)}
                   </span>
-                </li>
-              )
-            })}
-          </ul>
-        ) : null}
-        {entries.data ? (
-          <p className={styles.rowSub}>
-            {entries.data.totalCount} lançamento(s) em {ym}
-          </p>
-        ) : null}
-      </section>
+                  <DeleteIconButton
+                    disabled={rowAction.busy || monthClosed || entry.canEdit === false}
+                    onClick={() => void remove(entry)}
+                  />
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      ) : null}
+      {entries.data ? (
+        <p className={styles.rowSub}>
+          {entries.data.totalCount} lançamento(s) em {ym}
+        </p>
+      ) : null}
+      <Pager
+        page={page}
+        pageCount={entriesPageCount}
+        total={entriesTotal}
+        pageSize={ENTRIES_PAGE_SIZE}
+        onPageChange={setPage}
+      />
+    </section>
+  )
+
+  return (
+    <div className={styles.page}>
+      <PageHeader
+        kicker="Movimentações"
+        title={pageTitle}
+        actions={
+          <>
+            {mode === 'busca' && returnToRaioX ? (
+              <Button variant="secondary" onClick={goBackToRaioX}>
+                Voltar pro Raio-X
+              </Button>
+            ) : null}
+            {showForm || mode === 'busca' ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  if (mode === 'busca') {
+                    goToList()
+                    return
+                  }
+                  void closeForm()
+                }}
+              >
+                {mode === 'busca' ? 'Voltar à lista' : 'Voltar à lista'}
+              </Button>
+            ) : null}
+            {!showForm ? (
+              <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
+            ) : null}
+            {mode === 'list' ? (
+              <>
+                <Button disabled={monthClosed} onClick={() => void openCreate()}>
+                  + Novo lançamento
+                </Button>
+                <Button variant="secondary" onClick={goToSearch}>
+                  Buscar
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={monthClosed || receiptBusy}
+                  onClick={() => {
+                    void (async () => {
+                      try {
+                        // Same rule as Orçamento: native → camera; web → file picker.
+                        if (isNativeApp()) {
+                          await scanReceipt()
+                        } else {
+                          const file = await pickReceiptMedia()
+                          const dataUrl = await new Promise<string>((resolve, reject) => {
+                            const reader = new FileReader()
+                            reader.onload = () => resolve(String(reader.result))
+                            reader.onerror = () => reject(new Error('Falha ao ler o arquivo.'))
+                            reader.readAsDataURL(file)
+                          })
+                          setPendingShare({
+                            fileName: file.name || 'recibo.jpg',
+                            mimeType: file.type || 'image/jpeg',
+                            dataUrl,
+                          })
+                        }
+                        await bootstrapReceipt('App')
+                      } catch {
+                        /* user cancelled camera/file picker */
+                      }
+                    })()
+                  }}
+                >
+                  {receiptBusy ? 'Lendo foto…' : 'Enviar Foto'}
+                </Button>
+              </>
+            ) : null}
+          </>
+        }
+      />
+
+      {monthClosed && !showForm ? <p className={styles.muted}>{closedMonthMessage}</p> : null}
+      <ReceiptReadingOverlay
+        open={receiptBusy}
+        purpose={readingPurpose}
+        rerouted={readingRerouted}
+        message={
+          readingRerouted ? (
+            <>
+              Sem valor pago: você está lançando um <WordOrcamento />. Abrindo para escolher conta e
+              categoria…
+            </>
+          ) : (
+            <>
+              Identificando se é cupom (<WordLancamento />) ou boleto (<WordOrcamento />).
+            </>
+          )
+        }
+      />
+      <ErrorText message={openError ?? monthStatus.error ?? rowAction.error} />
+
+      {showForm ? (
+        mode === 'edit' && !editing ? (
+          <Loading />
+        ) : (
+          <EntryForm
+            key={editing?.id ?? receiptIntakeId ?? 'new'}
+            initial={mode === 'edit' ? editing : null}
+            receiptPrefill={mode === 'edit' ? null : receiptPrefill}
+            receiptIntakeId={mode === 'edit' ? null : receiptIntakeId}
+            accounts={lookups.accounts.map((account) => ({ id: account.id, name: account.name }))}
+            categories={filterAccountOptions.filter((account) => account.level === 'Analytical' && account.isActive)}
+            tree={lookups.categories}
+            onDirtyChange={setFormDirty}
+            onCancel={() => void closeForm()}
+            onSaved={(saveMode = 'close') => {
+              setFormDirty(false)
+              setEditing(null)
+              setReceiptPrefill(null)
+              setReceiptIntakeId(null)
+              takePendingIntakeId()
+              takePendingShare()
+              entries.reload()
+              lookups.reloadAccounts()
+              if (saveMode === 'close') {
+                navigate('/lancamentos')
+              }
+            }}
+          />
+        )
+      ) : null}
+
+      <ReceiptClassifyDialog
+        open={classifyOpen}
+        intake={receiptIntake}
+        rerouteHint={classifyRerouteHint}
+        onClose={() => {
+          setClassifyOpen(false)
+          setClassifyRerouteHint(null)
+        }}
+        onClassified={(intake) => {
+          setClassifyOpen(false)
+          setClassifyRerouteHint(null)
+          if (intake.status === 'Confirmed') {
+            takePendingIntakeId()
+            showSaveToast('Lançamento gravado.')
+            navigate('/lancamentos')
+            entries.reload()
+            return
+          }
+          if (intake.needsClassification || intake.status === 'NeedsClassification') {
+            setReceiptIntake(intake)
+            setClassifyOpen(true)
+            return
+          }
+          applyIntakeToForm(intake)
+        }}
+      />
+
+      {!showForm ? listSection : null}
     </div>
   )
 }

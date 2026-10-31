@@ -48,11 +48,12 @@
   padding: calc(var(--space-8) + env(safe-area-inset-top)) var(--space-5) var(--space-8);
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--space-8);
   background: var(--login-panel);
   min-height: 100vh;
   min-height: 100dvh;
+  box-sizing: border-box;
 }
 
 .logo {

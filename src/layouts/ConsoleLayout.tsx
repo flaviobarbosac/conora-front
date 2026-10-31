@@ -1,10 +1,13 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { CONSOLE_NAV } from '../lib/consoleNav'
 import styles from './ConsoleLayout.module.css'
 
 export function ConsoleLayout() {
+  const { pathname } = useLocation()
+  const wide = pathname.includes('/console/jornada-tipos')
+
   return (
-    <div className={styles.shell}>
+    <div className={wide ? `${styles.shell} ${styles.shellWide}` : styles.shell}>
       <header className={styles.header}>
         <div className={styles.brand}>
           <p className={styles.kicker}>Console</p>

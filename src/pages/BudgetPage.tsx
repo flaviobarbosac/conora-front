@@ -20,6 +20,7 @@ import {
 } from '../lib/receiptFlow'
 import { peekPendingShare, takePendingShare } from '../share/pendingShare'
 import { resetMobileViewport } from '../lib/resetMobileViewport'
+import { isNativeApp } from '../lib/platform'
 import { scanReceipt, fileFromPending } from '../camera/scanReceipt'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
@@ -147,7 +148,7 @@ export function BudgetPage() {
     }
   }
 
-  async function runBoletoScan(source: 'camera' | 'file') {
+  async function runBoletoScan() {
     if (boletoBusy || !canEdit || monthClosed) return
     setBoletoBusy(true)
     setReadingPurpose('BudgetBoleto')
@@ -155,23 +156,23 @@ export function BudgetPage() {
     setBoletoError(null)
     resetMobileViewport()
     try {
-      const file =
-        source === 'camera'
-          ? await fileFromPending(
-              await scanReceipt({
-                header: 'Boleto',
-                photo: 'Galeria',
-                picture: 'Câmera',
-              }),
-            )
-          : await pickReceiptMedia()
+      // Native: camera. Web: file/PDF picker. One button covers both.
+      const file = isNativeApp()
+        ? await fileFromPending(
+            await scanReceipt({
+              header: 'Boleto',
+              photo: 'Galeria',
+              picture: 'Câmera',
+            }),
+          )
+        : await pickReceiptMedia()
       resetMobileViewport()
       const created = await receiptsApi.upload(file, file.name || 'boleto.jpg', 'App', 'BudgetBoleto')
       const intake = await pollReceipt(created.id)
       setReadingPurpose(intake.purpose)
       await finishBoleto(intake)
     } catch (error) {
-      setBoletoError(error instanceof Error ? error.message : 'Falha ao escanear o boleto.')
+      setBoletoError(error instanceof Error ? error.message : 'Falha ao enviar a foto.')
     } finally {
       setBoletoBusy(false)
       setReadingRerouted(false)
@@ -190,7 +191,7 @@ export function BudgetPage() {
         .catch(() => undefined)
       return
     }
-    void runBoletoScan('camera')
+    void runBoletoScan()
   }
 
   async function bootstrapPendingBoleto() {
@@ -264,6 +265,15 @@ export function BudgetPage() {
   }
 
   const data = budget.data
+  // Only when Orçamento was opened from Raio-X (returnTo query from that click).
+  const canReturnToRaioX = Boolean(returnTo)
+
+  function goBackToRaioX() {
+    if (!returnTo) {
+      return
+    }
+    navigate(returnTo)
+  }
 
   return (
     <div className={styles.page}>
@@ -272,6 +282,11 @@ export function BudgetPage() {
         title="Orçamento"
         actions={
           <>
+            {canReturnToRaioX ? (
+              <Button variant="secondary" onClick={goBackToRaioX}>
+                Voltar pro Raio-X
+              </Button>
+            ) : null}
             <SharingViewToggle onChange={setScope} />
             <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
             <Button
@@ -279,25 +294,20 @@ export function BudgetPage() {
               disabled={boletoBusy || !canEdit || monthClosed}
               onClick={() => setScanSheetOpen(true)}
             >
-              {boletoBusy ? 'Lendo foto…' : 'Escanear foto'}
+              {boletoBusy ? 'Lendo foto…' : 'Enviar Foto'}
             </Button>
-            <Button
-              variant="secondary"
-              disabled={boletoBusy || !canEdit || monthClosed}
-              onClick={() => void runBoletoScan('file')}
-            >
-              Arquivo / PDF
-            </Button>
-            <Button variant="secondary" disabled={copy.busy || !canEdit} onClick={() => void copyPrevious()}>
-              Copiar mês anterior
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={monthClosed}
-              onClick={() => navigate(`/mes?competenceYm=${encodeURIComponent(ym)}`)}
-            >
-              Fechar mês
-            </Button>
+            <span className={styles.budgetHeaderPair}>
+              <Button variant="secondary" disabled={copy.busy || !canEdit} onClick={() => void copyPrevious()}>
+                Copiar mês anterior
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={monthClosed}
+                onClick={() => navigate(`/mes?competenceYm=${encodeURIComponent(ym)}`)}
+              >
+                Fechar mês
+              </Button>
+            </span>
           </>
         }
       />
@@ -367,10 +377,9 @@ export function BudgetPage() {
           year={year}
           yearData={yearData.data}
           focusCategoryId={focusCategoryId}
+          onReturnToRaioX={canReturnToRaioX ? goBackToRaioX : undefined}
           onSaved={() => {
-            void Promise.all([budget.reload(), yearData.reload(), projects.reload()]).then(() => {
-              if (returnTo) navigate(returnTo)
-            })
+            void Promise.all([budget.reload(), yearData.reload(), projects.reload()])
           }}
         />
       ) : null}

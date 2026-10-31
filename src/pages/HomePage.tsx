@@ -7,19 +7,13 @@ import { JornadaTimeline } from '../components/JornadaTimeline'
 import { PaidModuleBadge } from '../components/PaidModuleBadge'
 import { PageHeader } from '../components/PageHeader'
 import { ScanPurposeSheet, type ScanPurposeChoice } from '../components/ScanPurposeSheet'
-import { Button } from '../components/ui/Button'
 import { ErrorText } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
 import { usePlanAccess } from '../hooks/usePlanAccess'
 import { currentCompetence } from '../lib/format'
 import { hasFullAccess, isFreeLimited } from '../lib/freeTier'
-import {
-  PREFERENCES_CHANGED,
-  PREF_KEYS,
-  readHomeJourneyTimeline,
-  writeHomeJourneyTimeline,
-} from '../lib/preferences'
+import { readJornadaDiagnostico } from '../lib/jornadaDiagnostico'
 import { isVoiceMicActive } from '../lib/voiceLaunch'
 import pageStyles from './pageStyles'
 import homeStyles from './home/home.module.css'
@@ -39,25 +33,22 @@ export function HomePage() {
   const profile = useLoad(() => familyApi.profile(), [])
   const dashboard = useLoad(() => dashboardApi.get(currentCompetence()), [])
   const [voiceError, setVoiceError] = useState<string | null>(null)
-  const [showJourney, setShowJourney] = useState(readHomeJourneyTimeline)
   const [scanSheetOpen, setScanSheetOpen] = useState(false)
   const name = firstName(profile.data?.name)
+  const showJourney = profile.data?.homeJourneyTimelineEnabled !== false
   const pendingCategories = dashboard.data?.alerts.find((alert) => alert.code === 'CATEGORY_PENDING_REVIEW')
   const showPaidModulesTag = isFreeLimited(plan) && !hasFullAccess(plan)
 
   useEffect(() => {
-    function onPrefs(event: Event) {
-      const detail = (event as CustomEvent<{ key?: string }>).detail
-      if (!detail?.key || detail.key === PREF_KEYS.homeJourneyTimeline) {
-        setShowJourney(readHomeJourneyTimeline())
-      }
+    function onProfileChanged() {
+      profile.reload()
     }
-    window.addEventListener(PREFERENCES_CHANGED, onPrefs)
-    return () => window.removeEventListener(PREFERENCES_CHANGED, onPrefs)
-  }, [])
+    window.addEventListener('conora:profile-changed', onProfileChanged)
+    return () => window.removeEventListener('conora:profile-changed', onProfileChanged)
+  }, [profile])
 
   function openManual() {
-    navigate('/lancamentos?novo=1')
+    navigate('/lancamentos')
   }
 
   function openScan() {
@@ -88,11 +79,6 @@ export function HomePage() {
       return
     }
     window.dispatchEvent(new Event('conora:open-voice'))
-  }
-
-  function closeJourney() {
-    writeHomeJourneyTimeline(false)
-    setShowJourney(false)
   }
 
   const pageClass = [styles.page, styles.homePage, !showJourney ? styles.homePageSolo : '']
@@ -130,9 +116,6 @@ export function HomePage() {
           onVoice={openVoice}
           onManual={openManual}
         />
-        <p className={styles.muted}>
-          Câmera: cupom, boleto ou contracheque. Lápis: lançamento manual.
-        </p>
       </section>
       <ScanPurposeSheet
         open={scanSheetOpen}
@@ -144,12 +127,7 @@ export function HomePage() {
       {showJourney ? (
         <section className={styles.homeJourney} aria-label="Jornada Raio X">
           <p className={styles.homeJourneyKicker}>Jornada Raio X</p>
-          <JornadaTimeline />
-          <div className={styles.homeJourneyFooter}>
-            <Button type="button" variant="secondary" onClick={closeJourney}>
-              Fechar
-            </Button>
-          </div>
+          <JornadaTimeline diagnostico={readJornadaDiagnostico()} />
         </section>
       ) : null}
     </div>

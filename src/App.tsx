@@ -16,6 +16,7 @@ import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { AdminPage } from './pages/AdminPage'
 import { ConsoleAbandonmentPage } from './pages/ConsoleAbandonmentPage'
 import { ConsoleFeedbackPage } from './pages/ConsoleFeedbackPage'
+import { ConsoleJornadaTiposPage } from './pages/ConsoleJornadaTiposPage'
 import { ConsolePage } from './pages/ConsolePage'
 import { FeedbackRespostaPage } from './pages/FeedbackRespostaPage'
 import { ApresentacaoPage } from './pages/ApresentacaoPage'
@@ -27,7 +28,6 @@ import { ImportPage } from './pages/ImportPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
-import { JornadaRaioXPage } from './pages/JornadaRaioXPage'
 import { MarcosPage } from './pages/MarcosPage'
 import { MonthPage } from './pages/MonthPage'
 import { MorePage } from './pages/MorePage'
@@ -167,7 +167,7 @@ export default function App() {
             <Route element={<RequirePlanAccess />}>
               <Route element={<AppShell />}>
                 <Route path="/" element={<HomePage />} />
-                <Route path="/lancamentos" element={<EntriesPage />} />
+                <Route path="/lancamentos/*" element={<EntriesPage />} />
                 <Route path="/raio-x" element={<RaioXPage />} />
                 <Route path="/orcamento" element={<BudgetPage />} />
                 <Route path="/contas" element={<AccountsPage />} />
@@ -175,7 +175,6 @@ export default function App() {
                 <Route path="/projetos" element={<ProjectsPage />} />
                 <Route path="/projetos/:id" element={<ProjectDetailPage />} />
                 <Route path="/relatorios" element={<MorePage />} />
-                <Route path="/jornada" element={<JornadaRaioXPage />} />
                 <Route path="/marcos" element={<MarcosPage />} />
                 <Route path="/retrospectiva" element={<RetrospectivePage />} />
                 <Route path="/diagnostico" element={<DiagnosisPage />} />
@@ -200,6 +199,7 @@ export default function App() {
                     <Route path="saude" element={<ConsolePage section="saude" />} />
                     <Route path="feedback" element={<ConsoleFeedbackPage />} />
                     <Route path="abandonamento" element={<ConsoleAbandonmentPage />} />
+                    <Route path="jornada-tipos" element={<ConsoleJornadaTiposPage />} />
                   </Route>
                 </Route>
                 <Route path="/whatsapp" element={<WhatsAppPage />} />

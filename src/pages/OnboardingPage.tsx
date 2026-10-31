@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { accountsApi, familyApi } from '../api/finance'
 import { AccountForm } from '../components/finance/AccountForm'
+import { JornadaDiagnosticoWizard } from '../components/JornadaDiagnosticoWizard'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
@@ -10,6 +11,10 @@ import { Icon } from '../components/ui/Icon'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
+import {
+  isJornadaDiagnosticoComplete,
+  readJornadaDiagnostico,
+} from '../lib/jornadaDiagnostico'
 import {
   canCompleteOnboarding,
   digitsOnly,
@@ -27,6 +32,11 @@ type Step = OnboardingStep
 const STEPS: { id: Step; title: string; hint: string }[] = [
   { id: 'profile', title: 'Seus dados', hint: 'Telefone e CEP.' },
   { id: 'account', title: 'Conta bancária', hint: 'Uma conta para receber os lançamentos.' },
+  {
+    id: 'diagnosis',
+    title: 'Diagnóstico',
+    hint: 'Você no comando do próximo passo. Quatro respostas simples.',
+  },
   { id: 'video', title: 'Vídeo rápido', hint: 'Um vídeo curto para começar.' },
 ]
 
@@ -46,6 +56,8 @@ function formatCep(value: string): string {
 
 export function OnboardingPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const replay = searchParams.get('replay') === '1'
   const profile = useLoad(() => familyApi.profile(), [])
   const accounts = useLoad(() => accountsApi.list(true), [])
   const saveProfile = useAction()
@@ -57,6 +69,9 @@ export function OnboardingPage() {
   const [savedPhone, setSavedPhone] = useState('')
   const [savedCep, setSavedCep] = useState('')
   const [editAccount, setEditAccount] = useState(false)
+  const [hasDiagnostico, setHasDiagnostico] = useState(() =>
+    isJornadaDiagnosticoComplete(readJornadaDiagnostico()),
+  )
 
   const activeAccounts = (accounts.data ?? []).filter((a) => !a.isArchived)
   const hasAccount = activeAccounts.length > 0
@@ -77,9 +92,10 @@ export function OnboardingPage() {
         phone: profile.data.phone,
         cep: profile.data.cep,
         hasAccount,
+        hasDiagnostico,
       }),
     )
-  }, [profile.data, hasAccount])
+  }, [profile.data, hasAccount, hasDiagnostico])
 
   const dirtyProfile =
     digitsOnly(phone) !== digitsOnly(savedPhone) || digitsOnly(cep) !== digitsOnly(savedCep)
@@ -101,7 +117,7 @@ export function OnboardingPage() {
       showSaveToast('Dados salvos.')
       window.dispatchEvent(new Event('conora:profile-changed'))
       profile.reload()
-      setStep(hasAccount ? 'video' : 'account')
+      setStep(hasAccount ? (hasDiagnostico ? 'video' : 'diagnosis') : 'account')
     }
   }
 
@@ -110,18 +126,47 @@ export function OnboardingPage() {
       phone: profile.data?.phone ?? phone,
       cep: profile.data?.cep ?? cep,
       hasAccount,
+      hasDiagnostico,
     })
     if (!gate.ok) {
-      complete.setError(
-        gate.missing.includes('account')
-          ? 'Cadastre uma conta para receber os lançamentos e tente de novo.'
-          : 'Complete telefone e CEP antes de entrar.',
+      if (gate.missing.includes('diagnostico')) {
+        complete.setError('Responda o diagnóstico antes de entrar.')
+      } else if (gate.missing.includes('account')) {
+        complete.setError('Cadastre uma conta para receber os lançamentos e tente de novo.')
+      } else {
+        complete.setError('Complete telefone e CEP antes de entrar.')
+      }
+      setStep(
+        resumeOnboardingStep({
+          phone: profile.data?.phone ?? phone,
+          cep: profile.data?.cep ?? cep,
+          hasAccount,
+          hasDiagnostico,
+        }),
       )
-      setStep(resumeOnboardingStep({ phone: profile.data?.phone ?? phone, cep: profile.data?.cep ?? cep, hasAccount }))
       return
     }
     if (!(await complete.run(() => familyApi.completeOnboarding()))) {
       return
+    }
+    const prefs = profile.data
+    if (prefs) {
+      try {
+        await familyApi.updatePreferences({
+          themeId: prefs.themeId,
+          quietMode: prefs.quietMode,
+          emailsEnabled: prefs.emailsEnabled ?? true,
+          reserveTargetMonths: prefs.reserveTargetMonths,
+          monthCloseDay: prefs.monthCloseDay,
+          includeAbsoluteValuesInRetrospective: prefs.includeAbsoluteValuesInRetrospective,
+          voiceEntryConfirm: prefs.voiceEntryConfirm !== false,
+          budgetAlertPercent: prefs.budgetAlertPercent ?? 70,
+          photoEvolutionEnabled: prefs.photoEvolutionEnabled !== false,
+          homeJourneyTimelineEnabled: true,
+        })
+      } catch {
+        // Onboard already completed; home still defaults to showing the journey.
+      }
     }
     window.dispatchEvent(new Event('conora:profile-changed'))
     showSaveToast('Onboard concluído.')
@@ -129,15 +174,25 @@ export function OnboardingPage() {
   }
 
   const stepIndex = STEPS.findIndex((s) => s.id === step)
+  /** Vídeo rápido is step 4 only — never listed on profile/account/diagnosis. */
+  const listSteps = step === 'video' ? STEPS : STEPS.filter((item) => item.id !== 'video')
 
-  if (profile.data?.onboardingCompleted) {
+  if (profile.data?.onboardingCompleted && !replay) {
     return <Navigate to="/" replace />
   }
 
   return (
     <div className={`${styles.page} ${styles.onboarding}`}>
-      <PageHeader title="Bem-vindo ao Conora" kicker="Onboard obrigatório" />
-      <p className={styles.muted}>Complete telefone, CEP e uma conta. Depois é só começar.</p>
+      <PageHeader
+        title="Bem-vindo ao Conora"
+        kicker={replay ? 'Teste do onboard' : 'Onboard obrigatório'}
+        backTo={replay ? { to: '/', label: '← Início' } : undefined}
+      />
+      <p className={styles.muted}>
+        {replay
+          ? 'Modo teste: percorra o fluxo mesmo com o onboard já concluído.'
+          : 'Complete seus dados, a conta e o diagnóstico. Depois é só começar.'}
+      </p>
 
       <div className={styles.journeyProgress}>
         <div className={styles.journeyProgressLabel}>
@@ -158,10 +213,11 @@ export function OnboardingPage() {
       </div>
 
       <ol className={styles.journeyList}>
-        {STEPS.map((item, index) => {
+        {listSteps.map((item, index) => {
           const done =
             (item.id === 'profile' && Boolean(profile.data?.phone && profile.data?.cep)) ||
             (item.id === 'account' && hasAccount) ||
+            (item.id === 'diagnosis' && hasDiagnostico) ||
             (item.id === 'video' && false)
           const tone =
             item.id === step ? styles.journeyNext : done ? styles.journeyDone : styles.journeyItem
@@ -252,7 +308,7 @@ export function OnboardingPage() {
               </ul>
               <p className={styles.muted}>Use o lápis para ajustar a conta antes de continuar.</p>
               <div className={styles.formActions}>
-                <Button onClick={() => setStep('video')}>Continuar</Button>
+                <Button onClick={() => setStep(hasDiagnostico ? 'video' : 'diagnosis')}>Continuar</Button>
               </div>
             </section>
           ) : (
@@ -263,12 +319,27 @@ export function OnboardingPage() {
               onSaved={() => {
                 accounts.reload()
                 setEditAccount(false)
-                if (!editAccount) setStep('video')
+                if (!editAccount) setStep('diagnosis')
               }}
               onCancel={editAccount ? () => setEditAccount(false) : undefined}
             />
           )}
         </>
+      ) : null}
+
+      {step === 'diagnosis' ? (
+        <JornadaDiagnosticoWizard
+          initial={readJornadaDiagnostico()}
+          kicker="Diagnóstico"
+          title="Você no comando do próximo passo"
+          hint="Quatro respostas simples. Com isso a Jornada Raio-X se organiza na ordem certa pra você. Clareza agora, maturidade financeira no caminho."
+          submitLabel="Salvar e continuar"
+          onBack={() => setStep('account')}
+          onComplete={() => {
+            setHasDiagnostico(true)
+            setStep('video')
+          }}
+        />
       ) : null}
 
       {step === 'video' ? (
@@ -289,10 +360,10 @@ export function OnboardingPage() {
             <li>O Ian acompanha como narrador adulto da jornada.</li>
           </ul>
           <div className={styles.formActions}>
-            <Button variant="secondary" onClick={() => setStep('account')}>
+            <Button variant="secondary" onClick={() => setStep('diagnosis')}>
               Voltar
             </Button>
-            <Button disabled={complete.busy || !hasAccount} onClick={() => void finish()}>
+            <Button disabled={complete.busy || !hasAccount || !hasDiagnostico} onClick={() => void finish()}>
               Concluir e entrar
             </Button>
           </div>

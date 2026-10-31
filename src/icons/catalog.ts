@@ -19,6 +19,7 @@ export type IconName =
   | 'chevron'
   | 'settings'
   | 'help'
+  | 'info'
   | 'logout'
   | 'trash'
   | 'repeat'
@@ -138,6 +139,11 @@ export const ICON_CATALOG: Record<IconName, IconDef> = {
     label: 'Central de ajuda',
     base: ['M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18z'],
     accent: ['M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1.5 1-1.5 2.2', 'M12 17h.01'],
+  },
+  info: {
+    label: 'Informação',
+    base: ['M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18z'],
+    accent: ['M12 11v6', 'M12 8h.01'],
   },
   logout: {
     label: 'Sair',

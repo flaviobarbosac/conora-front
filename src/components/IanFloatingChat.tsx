@@ -5,6 +5,7 @@ import { aiApi, familyApi, type VoiceTurn } from '../api/finance'
 import { errorMessage, currentCompetence, dateToApi, formatDate, formatMoney } from '../lib/format'
 import {
   IAN_MATURITY_CHANGED,
+  IAN_VOICE_CHANGED,
   IAN_VOICES,
   getIanAge,
   getIanVoice,
@@ -119,17 +120,19 @@ function matchCategoryOption(spoken: string, names: string[]): string | null {
 const IAN_MIC_ENABLED = VOICE_LAUNCH_ENABLED
 
 /**
- * Portrait only: aging stays visible on home (and header on other routes).
- * Mic / listen stays off — full voice UI lives in IanFloatingChatDisabled for a later revive.
+ * Portrait + "Personagem" face picker on home (header stays compact portrait only).
+ * Mic / listen stays off — full voice session lives in IanFloatingChatDisabled for a later revive.
  */
 export function IanFloatingChat() {
   const { pathname } = useLocation()
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const [, setMaturityTick] = useState(0)
-  const voiceId = getIanVoice().id
+  const [choosing, setChoosing] = useState(false)
+  const [voiceId, setVoiceId] = useState<IanVoiceId>(() => getIanVoice().id)
 
   useEffect(() => {
     setAnchor(document.getElementById('conora-voice-center') ?? document.getElementById('conora-voice-header'))
+    setChoosing(false)
   }, [pathname])
 
   useEffect(() => {
@@ -138,19 +141,74 @@ export function IanFloatingChat() {
     return () => window.removeEventListener(IAN_MATURITY_CHANGED, onMaturity)
   }, [])
 
+  useEffect(() => {
+    function onVoice() {
+      setVoiceId(getIanVoice().id)
+    }
+    window.addEventListener(IAN_VOICE_CHANGED, onVoice)
+    return () => window.removeEventListener(IAN_VOICE_CHANGED, onVoice)
+  }, [])
+
   if (!anchor) {
     return null
   }
 
   const age = getIanAge()
+  const companion = IAN_VOICES.find((voice) => voice.id === voiceId)?.label ?? 'Ian'
   const compact = anchor.id === 'conora-voice-header'
+
+  function selectVoice(next: IanVoiceId) {
+    setChoosing(false)
+    if (next === voiceId) {
+      return
+    }
+    setVoiceId(next)
+    setIanVoice(next)
+  }
 
   return createPortal(
     <div className={`${styles.dock}${compact ? ` ${styles.dockCompact}` : ''}`}>
+      {!compact ? (
+        <>
+          <button
+            type="button"
+            className={styles.voiceChoose}
+            aria-label="Escolher personagem"
+            aria-expanded={choosing}
+            onClick={() => setChoosing((open) => !open)}
+          >
+            Personagem
+          </button>
+          {choosing ? (
+            <div className={styles.bar} role="group" aria-label="Escolher Ian ou Clara">
+              <button
+                type="button"
+                className={voiceId === 'ian' ? styles.pickOn : styles.pick}
+                aria-label="Ian"
+                aria-pressed={voiceId === 'ian'}
+                onClick={() => selectVoice('ian')}
+              >
+                <img className={styles.agentFace} src={ianPortrait('ian')} alt="" />
+              </button>
+              <button
+                type="button"
+                className={voiceId === 'clara' ? styles.pickOn : styles.pick}
+                aria-label="Clara"
+                aria-pressed={voiceId === 'clara'}
+                onClick={() => selectVoice('clara')}
+              >
+                <img className={styles.agentFace} src={ianPortrait('clara')} alt="" />
+              </button>
+            </div>
+          ) : null}
+        </>
+      ) : null}
       <div
         className={styles.agent}
         role="img"
-        aria-label={age === null ? 'Ian' : `Ian · ${age === 0 ? 'bebê' : `${age} anos`}`}
+        aria-label={
+          age === null ? companion : `${companion} · ${age === 0 ? 'bebê' : `${age} anos`}`
+        }
       >
         <img className={styles.agentFace} src={ianPortrait(voiceId)} alt="" />
       </div>
@@ -506,6 +564,7 @@ export function IanFloatingChatDisabled() {
       voiceEntryConfirm: enabled,
       budgetAlertPercent: profile.budgetAlertPercent ?? 70,
       photoEvolutionEnabled: profile.photoEvolutionEnabled !== false,
+      homeJourneyTimelineEnabled: profile.homeJourneyTimelineEnabled !== false,
     })
     confirmRef.current = enabled
     await say(enabled
@@ -806,14 +865,14 @@ export function IanFloatingChatDisabled() {
       <button
         type="button"
         className={styles.voiceChoose}
-        aria-label="Escolher voz"
+        aria-label="Escolher personagem"
         aria-expanded={choosing}
         onClick={() => setChoosing((open) => !open)}
       >
-        Voz
+        Personagem
       </button>
       {choosing ? (
-        <div className={styles.bar} role="group" aria-label="Voz">
+        <div className={styles.bar} role="group" aria-label="Escolher Ian ou Clara">
           <button
             type="button"
             className={voiceId === 'ian' ? styles.pickOn : styles.pick}

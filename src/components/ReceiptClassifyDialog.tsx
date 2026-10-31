@@ -1,11 +1,13 @@
 import { useEffect, useId, useMemo, useState } from 'react'
-import { receiptsApi, type Category, type ReceiptIntake } from '../api/finance'
+import { categoriesApi, receiptsApi, type Category, type ReceiptIntake } from '../api/finance'
 import type { ReceiptRerouteHint } from '../lib/receiptFlow'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { WordLancamento, WordOrcamento } from './ReceiptReadingOverlay'
 import { Button } from './ui/Button'
 import { ErrorText, Loading } from './ui/Feedback'
+import { Field } from './ui/Field'
+import { Select } from './ui/Select'
 import styles from './IanAnalyzeDialog.module.css'
 
 type Props = {
@@ -20,15 +22,22 @@ type Props = {
 export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClose, onClassified }: Props) {
   const titleId = useId()
   const action = useAction()
+  const createAction = useAction()
   const categories = useLoad(() => receiptsApi.categories(), [])
   const [filter, setFilter] = useState('')
   const [selectedCode, setSelectedCode] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [parentId, setParentId] = useState('')
 
   useEffect(() => {
     if (!open) return
     setFilter('')
     setSelectedCode(intake?.proposedCategoryCode ?? '')
-  }, [open, intake?.proposedCategoryCode])
+    setShowCreate(false)
+    setNewName(intake?.extractedName?.trim() ?? '')
+    setParentId('')
+  }, [open, intake?.proposedCategoryCode, intake?.extractedName])
 
   useEffect(() => {
     if (!open) return
@@ -87,6 +96,30 @@ export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClos
     }
   }
 
+  async function createCategory() {
+    const name = newName.trim()
+    if (!name) {
+      createAction.setError('Informe o nome da categoria.')
+      return
+    }
+    if (!parentId) {
+      createAction.setError('Escolha o grupo pai no plano de contas.')
+      return
+    }
+    let created: Category | null = null
+    const ok = await createAction.run(async () => {
+      created = await categoriesApi.create(name, parentId)
+    })
+    if (ok && created) {
+      await categories.reload()
+      if (created.code) {
+        setSelectedCode(created.code)
+      }
+      setShowCreate(false)
+      createAction.setError(null)
+    }
+  }
+
   const isBoleto = intake.purpose === 'BudgetBoleto'
   const destClass = isBoleto ? styles.destBudget : styles.destExpense
 
@@ -123,7 +156,7 @@ export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClos
         <p className={styles.hint}>
           {intake.extractedName
             ? `Fornecedor: ${intake.extractedName}${intake.extractedCnpj ? ` (CNPJ ${intake.extractedCnpj})` : ''}.`
-            : 'Escolha a conta do plano. Com CNPJ, a classificação vale para todos os usuários.'}
+            : 'Escolha a conta do plano. Com CNPJ ou nome, a classificação vale nos próximos recibos.'}
         </p>
         {similar.length > 0 ? (
           <div className={styles.list} aria-label="Fornecedores parecidos">
@@ -162,7 +195,10 @@ export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClos
         </label>
         <div className={styles.list} aria-label="Contas do plano">
           {categories.loading && !categories.data ? <Loading /> : null}
-          <ErrorText message={categories.error ?? action.error} />
+          <ErrorText message={categories.error ?? action.error ?? createAction.error} />
+          {items.length === 0 && !categories.loading ? (
+            <p className={styles.hint}>Nenhuma categoria encontrada. Cadastre uma abaixo.</p>
+          ) : null}
           <ul className={styles.accountList}>
             {items.map((category: Category) => (
               <li key={category.id}>
@@ -182,6 +218,44 @@ export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClos
             ))}
           </ul>
         </div>
+        {showCreate ? (
+          <div className={styles.list} aria-label="Nova categoria">
+            <p className={styles.hint}>Cadastre a categoria e o fornecedor fica lembrado nos próximos lançamentos.</p>
+            <Field
+              label="Nome da categoria"
+              name="receiptNewCategory"
+              value={newName}
+              onChange={(event) => setNewName(event.target.value)}
+            />
+            <Select
+              label="Grupo pai"
+              name="receiptNewParent"
+              value={parentId}
+              onChange={(event) => setParentId(event.target.value)}
+            >
+              <option value="">Selecione</option>
+              {(categories.data ?? [])
+                .filter((c) => c.level === 'Group' || (c.level === 'Root' && c.section !== 'Asset' && c.section !== 'Liability'))
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+            </Select>
+            <div className={styles.actions}>
+              <Button type="button" variant="secondary" onClick={() => setShowCreate(false)}>
+                Cancelar
+              </Button>
+              <Button type="button" disabled={createAction.busy} onClick={() => void createCategory()}>
+                Criar categoria
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button type="button" variant="ghost" onClick={() => setShowCreate(true)}>
+            Cadastrar categoria / fornecedor
+          </Button>
+        )}
         <div className={styles.actions}>
           <Button variant="secondary" type="button" onClick={onClose}>
             Cancelar

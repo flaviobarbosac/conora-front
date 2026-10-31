@@ -12,6 +12,8 @@ import {
   type SharingScope,
 } from '../../api/finance'
 import { BudgetValueSheet } from '../../components/BudgetValueSheet'
+import { InfoHint } from '../../components/InfoHint'
+import { MoneyAbbrevLegend } from '../../components/MoneyAbbrevLegend'
 import { Button } from '../../components/ui/Button'
 import { Icon } from '../../components/ui/Icon'
 import { Empty, ErrorText, Loading } from '../../components/ui/Feedback'
@@ -47,6 +49,7 @@ import {
   parseMoney,
 } from '../../lib/format'
 import { buildAmountMaps, chartWithAmounts, groupAccountsByParent, idsWithAmount, sumBranch } from '../../lib/raioX'
+import { MoneyDisplay } from '../raioX/raioXShared'
 import pageStyles from '../pageStyles'
 import budgetStyles from './budget.module.css'
 
@@ -64,6 +67,7 @@ export type BudgetTreeEditorProps = {
   yearData: BudgetYear | null | undefined
   focusCategoryId: string | null
   onSaved: () => void
+  onReturnToRaioX?: () => void
 }
 
 export function BudgetTreeEditor({
@@ -78,6 +82,7 @@ export function BudgetTreeEditor({
   yearData,
   focusCategoryId,
   onSaved,
+  onReturnToRaioX,
 }: BudgetTreeEditorProps) {
   const { plan } = usePlanAccess()
   const fullAccess = hasFullAccess(plan)
@@ -297,6 +302,7 @@ export function BudgetTreeEditor({
   const sheetIndex = sheetAccount
     ? editableAnalyticals.findIndex((account) => account.id === sheetAccount.id)
     : -1
+  const sheetHasPrev = sheetIndex > 0
   const sheetHasNext = sheetIndex >= 0 && sheetIndex < editableAnalyticals.length - 1
 
   function toggle(id: string) {
@@ -347,22 +353,22 @@ export function BudgetTreeEditor({
     setSheetCategoryId(categoryId)
   }
 
-  function advanceValueSheet(amount: string, day: string | null) {
+  function moveValueSheet(amount: string, day: string | null, direction: 1 | -1) {
     if (!sheetCategoryId) {
       return
     }
     applySheetDraft(sheetCategoryId, amount, day)
     const index = editableAnalyticals.findIndex((account) => account.id === sheetCategoryId)
-    const next = index >= 0 ? editableAnalyticals[index + 1] : undefined
-    if (!next) {
+    const target = index >= 0 ? editableAnalyticals[index + direction] : undefined
+    if (!target) {
       setSheetCategoryId(null)
       return
     }
-    expandAncestors(next.id)
-    setFocusedId(next.id)
-    setSheetCategoryId(next.id)
+    expandAncestors(target.id)
+    setFocusedId(target.id)
+    setSheetCategoryId(target.id)
     window.setTimeout(() => {
-      document.getElementById(`budget-account-${next.id}`)?.scrollIntoView({
+      document.getElementById(`budget-account-${target.id}`)?.scrollIntoView({
         block: 'center',
         behavior: 'smooth',
       })
@@ -422,6 +428,13 @@ export function BudgetTreeEditor({
 
   return (
     <section className={styles.section}>
+      {onReturnToRaioX ? (
+        <div className={styles.budgetReturnBar}>
+          <Button type="button" variant="secondary" onClick={onReturnToRaioX}>
+            Voltar pro Raio-X
+          </Button>
+        </div>
+      ) : null}
       <div className={styles.budgetSaveBar}>
         <p className={styles.muted}>
           {canEdit ? 'Edite o previsto e salve.' : 'Orçamento familiar em modo leitura.'}
@@ -462,7 +475,17 @@ export function BudgetTreeEditor({
         </Empty>
       ) : null}
       {roots.length > 0 ? (
-        <div className={styles.raioxList}>
+        <div className={`${styles.raioxList} ${styles.budgetTreeList}`}>
+          <div className={styles.budgetTreeHead}>
+            <strong>Categorias</strong>
+            <div className={styles.budgetTreeHeadHints}>
+              <MoneyAbbrevLegend />
+              <InfoHint label="Informação sobre projetos de vida no orçamento" title="Informação">
+                Projetos de vida: a parcela mensal entra sozinha no previsto. Copiar o mês anterior não altera
+                essas linhas.
+              </InfoHint>
+            </div>
+          </div>
           <div className={`${styles.raioxRow} ${styles.budgetRow} ${styles.raioxHead}`}>
             <span />
             <span>Categoria</span>
@@ -525,12 +548,17 @@ export function BudgetTreeEditor({
               }
               day={
                 EXPENSE_SECTIONS.includes(sheetAccount.section)
-                  ? (dayDrafts[sheetAccount.id] ?? '')
+                  ? (dayDrafts[sheetAccount.id] ??
+                    (expenseDays.has(sheetAccount.id)
+                      ? String(expenseDays.get(sheetAccount.id))
+                      : ''))
                   : null
               }
+              hasPrev={sheetHasPrev}
               hasNext={sheetHasNext}
               onCancel={() => setSheetCategoryId(null)}
-              onNext={sheetHasNext ? advanceValueSheet : undefined}
+              onPrev={sheetHasPrev ? (amount, day) => moveValueSheet(amount, day, -1) : undefined}
+              onNext={sheetHasNext ? (amount, day) => moveValueSheet(amount, day, 1) : undefined}
               onConfirm={(nextAmount, nextDay) => {
                 applySheetDraft(sheetAccount.id, nextAmount, nextDay)
                 setSheetCategoryId(null)
@@ -545,6 +573,7 @@ export function BudgetTreeEditor({
           year={year}
           account={yearAccount}
           line={yearLine}
+          projects={projects}
           readOnly={lockedCategoryIds.has(yearAccount.id)}
           plannedAmount={(() => {
             const draft = drafts[yearAccount.id]
@@ -697,7 +726,18 @@ function BudgetAccountBlock({
       >
         <span />
         <span className={styles.budgetAccountCell}>
-          <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
+          {projectLocked ? (
+            <button
+              type="button"
+              className={styles.budgetAccountName}
+              onClick={() => onOpenYear(account.id)}
+              aria-label={`Ver detalhes de ${categoryLabel(account)}`}
+            >
+              <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
+            </button>
+          ) : (
+            <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
+          )}
           {needsProject && canEdit ? (
             <button
               type="button"
@@ -708,23 +748,29 @@ function BudgetAccountBlock({
             </button>
           ) : null}
           {linkedProjects.length > 0 ? (
-            <span className={styles.muted}>
+            <button
+              type="button"
+              className={styles.budgetProjectMeta}
+              onClick={() => onOpenYear(account.id)}
+              aria-label="Ver rateio do projeto de vida"
+            >
               {linkedProjects.map((project) => {
-                const months = monthsInclusive(project.contributionStartYm, project.dueDate.slice(0, 7))
-                const parcel = months.length > 0 ? project.goalAmount / months.length : 0
-                const inWindow = ym >= project.contributionStartYm && ym <= project.dueDate.slice(0, 7)
+                const inWindow =
+                  ym >= project.contributionStartYm && ym <= project.dueDate.slice(0, 7)
                 return (
-                  <span key={project.id} style={{ display: 'block' }}>
-                    {project.name}: {formatMoney(parcel)}/mês
-                    {inWindow
-                      ? plannedAmount > 0.001
-                        ? ` · neste mês ${formatMoney(plannedAmount)}`
-                        : ' · neste mês (rateio pendente)'
-                      : ` · a partir de ${formatCompetence(project.contributionStartYm)}`}
+                  <span key={project.id} className={styles.budgetProjectLine}>
+                    <span className={styles.budgetProjectName}>{project.name}</span>
+                    <span className={styles.muted}>
+                      {inWindow
+                        ? plannedAmount > 0.001
+                          ? 'Toque para ver o rateio'
+                          : 'Rateio pendente neste mês'
+                        : `Início ${formatCompetence(project.contributionStartYm)}`}
+                    </span>
                   </span>
                 )
               })}
-            </span>
+            </button>
           ) : null}
           {lockHint ? <span className={styles.muted}>{lockHint}</span> : null}
         </span>
@@ -740,7 +786,10 @@ function BudgetAccountBlock({
                     aria-label={`Editar orçamento ${categoryLabel(account)}`}
                     onClick={() => onOpenValueSheet(account.id)}
                   >
-                    {displayAmount || '0,00'}
+                    <MoneyDisplay
+                      value={Number.isFinite(parseMoney(displayAmount)) ? parseMoney(displayAmount) : 0}
+                      className={styles.moneyValue}
+                    />
                   </button>
                 ) : (
                   <MoneyField
@@ -756,16 +805,16 @@ function BudgetAccountBlock({
               <button
                 type="button"
                 className={styles.budgetSpreadIcon}
-                disabled={busy || !canEdit || needsProject}
+                disabled={busy || needsProject || (!projectLocked && !canEdit)}
                 aria-label={
                   projectLocked
-                    ? `Ver parcelas de ${categoryLabel(account)}`
-                    : `Repetir ou parcelar ${categoryLabel(account)}`
+                    ? `Ver detalhes de ${categoryLabel(account)}`
+                    : `Repetir previsto de ${categoryLabel(account)}`
                 }
-                title={projectLocked ? 'Ver rateio do projeto' : 'Repetir ou parcelar'}
+                title={projectLocked ? 'Ver detalhes do projeto' : 'Repetir previsto'}
                 onClick={() => onOpenYear(account.id)}
               >
-                <Icon name="repeat" size={20} />
+                <Icon name={projectLocked ? 'info' : 'repeat'} size={20} />
               </button>
             </span>
           }
@@ -820,9 +869,10 @@ function BudgetAccountBlock({
         <BudgetTotalsCell
           edit={
             <span className={styles.budgetPlannedCell}>
-              <strong className={styles.moneyValue}>
-                {formatMoney(sumBranch(account.id, byParent, shownPlanned, noActual).planned)}
-              </strong>
+              <MoneyDisplay
+                value={sumBranch(account.id, byParent, shownPlanned, noActual).planned}
+                className={styles.moneyValue}
+              />
             </span>
           }
         />
@@ -957,10 +1007,6 @@ function isBudgetSheetEditable(
 
 type AppliedMonth = { ym: string; amount: number }
 
-function roundMoney(value: number): number {
-  return Math.round(value * 100) / 100
-}
-
 function plannedOn(line: BudgetYear['lines'][number] | null | undefined, monthYm: string): number {
   return Math.abs(line?.months.find((month) => month.competenceYm === monthYm)?.plannedAmount ?? 0)
 }
@@ -1004,6 +1050,7 @@ function BudgetYearSheet({
   year,
   account,
   line,
+  projects = [],
   plannedAmount,
   readOnly = false,
   onClose,
@@ -1013,6 +1060,7 @@ function BudgetYearSheet({
   year: number
   account: Category
   line: BudgetYear['lines'][number] | null | undefined
+  projects?: LifeProject[]
   plannedAmount: number
   /** Life-project rateio: show months, no mutate. */
   readOnly?: boolean
@@ -1022,18 +1070,11 @@ function BudgetYearSheet({
   const titleId = useId()
   const action = useAction()
   const [repeatMonths, setRepeatMonths] = useState('3')
-  const [installmentCount, setInstallmentCount] = useState('3')
-  const [installmentTotal, setInstallmentTotal] = useState(() => formatMoneyInput(plannedAmount))
   const [applied, setApplied] = useState<AppliedMonth[] | null>(null)
-  const [appliedKind, setAppliedKind] = useState<'repeat' | 'installment' | null>(null)
-
-  useEffect(() => {
-    setInstallmentTotal(formatMoneyInput(plannedAmount))
-  }, [plannedAmount, account.id])
+  const linkedProjects = projects.filter((project) => project.categoryId === account.id)
 
   useEffect(() => {
     setApplied(null)
-    setAppliedKind(null)
   }, [account.id])
 
   useEffect(() => {
@@ -1089,44 +1130,15 @@ function BudgetYearSheet({
     if (
       await action.run(() => budgetsApi.repeat(ym, account.id, count, overwrite, plannedAmount))
     ) {
-      setAppliedKind('repeat')
       setApplied(monthsAfterAction(ym, count, Array(count).fill(plannedAmount), line, overwrite, true))
       showSaveToast('Previsto repetido nos meses seguintes.')
       onChanged()
     }
   }
 
-  async function runInstallments() {
-    const count = Number(installmentCount)
-    const total = parseMoney(installmentTotal)
-    if (!Number.isFinite(count) || count < 2) {
-      action.setError('Informe a quantidade de parcelas (mínimo 2).')
-      return
-    }
-    if (!Number.isFinite(total) || total <= 0) {
-      action.setError('Informe o valor total a parcelar.')
-      return
-    }
-    const overwrite = await resolveOverwrite(hasConflict(ym, count, false))
-    const each = roundMoney(total / count)
-    const shares: number[] = []
-    let allocated = 0
-    for (let i = 0; i < count; i++) {
-      const value = i === count - 1 ? roundMoney(total - allocated) : each
-      shares.push(value)
-      allocated = roundMoney(allocated + value)
-    }
-    if (await action.run(() => budgetsApi.installments(ym, account.id, total, count, overwrite))) {
-      setAppliedKind('installment')
-      setApplied(monthsAfterAction(ym, count, shares, line, overwrite, false))
-      showSaveToast('Parcelas gravadas no orçamento.')
-      onChanged()
-    }
-  }
-
   return (
     <div
-      className={styles.sheetOverlay}
+      className={`${styles.sheetOverlay} ${styles.budgetSheetOverlay}`}
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
@@ -1147,21 +1159,36 @@ function BudgetYearSheet({
           <div className={styles.budgetSpread}>
             <div className={styles.budgetSpreadBlock}>
               <div>
-                <h3 className={styles.budgetSpreadTitle}>Rateio do projeto de vida</h3>
+                <h3 className={styles.budgetSpreadTitle}>Projeto de vida · consulta</h3>
                 <p className={styles.muted}>
-                  Parcelas geradas automaticamente. Para mudar, edite o projeto — não o orçamento.
+                  Valor bloqueado no orçamento. Para mudar meta ou prazo, edite o projeto.
                 </p>
               </div>
-              <AppliedMonths
-                months={
-                  line?.months
-                    .filter((month) => Math.abs(month.plannedAmount) > 0.001)
-                    .map((month) => ({
-                      ym: month.competenceYm,
-                      amount: Math.abs(month.plannedAmount),
-                    })) ?? (plannedAmount > 0.001 ? [{ ym, amount: plannedAmount }] : [])
-                }
-              />
+              {linkedProjects.length > 0 ? (
+                <ul className={styles.budgetProjectDetails} aria-label="Detalhes do projeto">
+                  {linkedProjects.map((project) => (
+                    <li key={project.id}>
+                      <strong>{project.name}</strong>
+                      {project.detailedDescription ? (
+                        <p className={styles.muted}>{project.detailedDescription}</p>
+                      ) : null}
+                      <p className={styles.muted}>
+                        Meta {formatMoney(project.goalAmount)} · início{' '}
+                        {formatCompetence(project.contributionStartYm)} · até{' '}
+                        {formatCompetence(project.dueDate.slice(0, 7))}
+                      </p>
+                      <p className={styles.muted}>
+                        Orçamento em {formatCompetence(ym)}: {formatMoney(plannedAmount)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className={styles.muted}>
+                  Nenhum projeto vinculado. Orçamento em {formatCompetence(ym)}:{' '}
+                  {formatMoney(plannedAmount)}
+                </p>
+              )}
             </div>
           </div>
         ) : (
@@ -1171,40 +1198,23 @@ function BudgetYearSheet({
                 <h3 className={styles.budgetSpreadTitle}>Repetir o previsto</h3>
                 <p className={styles.muted}>Copia o valor deste mês para os meses seguintes.</p>
               </div>
-              <IntegerField
-                label="Quantos meses?"
-                name="budgetRepeat"
-                maxLength={3}
-                value={repeatMonths}
-                onChange={setRepeatMonths}
-              />
+              <div className={styles.budgetRepeatRow}>
+                <span className={styles.budgetRepeatRowLabel} aria-hidden="true">
+                  Quantos meses?
+                </span>
+                <IntegerField
+                  compact
+                  label="Quantos meses?"
+                  name="budgetRepeat"
+                  maxLength={4}
+                  value={repeatMonths}
+                  onChange={setRepeatMonths}
+                />
+              </div>
               <Button type="button" variant="secondary" disabled={action.busy} onClick={() => void runRepeat()}>
                 Repetir
               </Button>
-              {appliedKind === 'repeat' ? <AppliedMonths months={applied} /> : null}
-            </div>
-            <div className={styles.budgetSpreadBlock}>
-              <div>
-                <h3 className={styles.budgetSpreadTitle}>Parcelar um total</h3>
-                <p className={styles.muted}>Divide o valor a partir deste mês.</p>
-              </div>
-              <MoneyField
-                label="Valor total"
-                name="budgetInstallmentTotal"
-                value={installmentTotal}
-                onChange={setInstallmentTotal}
-              />
-              <IntegerField
-                label="Quantidade de parcelas"
-                name="budgetInstallments"
-                maxLength={3}
-                value={installmentCount}
-                onChange={setInstallmentCount}
-              />
-              <Button type="button" variant="secondary" disabled={action.busy} onClick={() => void runInstallments()}>
-                Parcelar
-              </Button>
-              {appliedKind === 'installment' ? <AppliedMonths months={applied} /> : null}
+              <AppliedMonths months={applied} />
             </div>
           </div>
         )}
@@ -1280,7 +1290,7 @@ function LifeProjectCreateSheet({
 
   return (
     <div
-      className={styles.sheetOverlay}
+      className={`${styles.sheetOverlay} ${styles.budgetSheetOverlay}`}
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {

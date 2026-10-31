@@ -1,4 +1,4 @@
-import type { IanAge } from './speakPt'
+import type { IanAge, IanVoiceId } from './speakPt'
 
 export type JourneyStepKind = 'start' | 'cadastro' | 'marco' | 'apex'
 
@@ -15,7 +15,7 @@ export type JourneyTimelineStep = {
   achievementKeys?: readonly string[]
 }
 
-/** Same timeline as /jornada — single source for home and the jornada page. */
+/** Raio-X journey timeline — single source for home and related UI. */
 export const JORNADA_TIMELINE: JourneyTimelineStep[] = [
   {
     id: 'start',
@@ -140,6 +140,7 @@ export function journeyKindLabel(kind: JourneyStepKind): string {
   return 'Ápice'
 }
 
-export function journeyPortraitUrl(age: IanAge): string {
-  return `${import.meta.env.BASE_URL}assets/ian-garoto-${String(age).padStart(2, '0')}.png`
+export function journeyPortraitUrl(age: IanAge, voiceId: IanVoiceId = 'ian'): string {
+  const base = voiceId === 'clara' ? 'ian-menina' : 'ian-garoto'
+  return `${import.meta.env.BASE_URL}assets/${base}-${String(age).padStart(2, '0')}.png`
 }
