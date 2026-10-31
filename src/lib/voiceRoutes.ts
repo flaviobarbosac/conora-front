@@ -4,6 +4,8 @@ const ROUTES = new Set([
   '/orcamento',
   '/raio-x',
   '/lancamentos',
+  '/lancamentos/novo',
+  '/lancamentos/busca',
   '/categorias',
   '/contas',
   '/cartoes',

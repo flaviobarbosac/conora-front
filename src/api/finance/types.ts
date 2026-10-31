@@ -517,6 +517,7 @@ export type FamilyProfile = {
   hasAppleLogin?: boolean
   budgetAlertPercent?: number
   photoEvolutionEnabled?: boolean
+  homeJourneyTimelineEnabled?: boolean
   phone?: string | null
   cep?: string | null
   contractAcknowledgedAt?: string | null
@@ -548,6 +549,7 @@ export type UserPreferencesInput = {
   voiceEntryConfirm?: boolean
   budgetAlertPercent?: number
   photoEvolutionEnabled?: boolean
+  homeJourneyTimelineEnabled?: boolean
 }
 
 export type FamilyMemberUser = {

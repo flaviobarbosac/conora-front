@@ -7,6 +7,86 @@ export type RaioXTotals = { planned: number; actual: number }
 export type ProgressTone = 'ok' | 'over' | 'muted' | 'unbudgeted'
 
 /**
+ * Level-3 cash-flow groups shown on Raio-X Previsto × realizado.
+ * Codes match SystemCategories; names are resolved from the live chart.
+ */
+export const RAIOX_PREVISTO_CATEGORY_CODES = [
+  'DISC',
+  'ESS_DEBT',
+  'ESS',
+  'LIFE',
+  'SOC',
+  'INC_BENEFIT',
+  'INC_OTHER',
+  'INC_WORK',
+] as const
+
+const RAIOX_PREVISTO_NAME_FALLBACKS: Record<(typeof RAIOX_PREVISTO_CATEGORY_CODES)[number], string[]> = {
+  DISC: ['descontos sobre renda'],
+  ESS_DEBT: ['dívidas e despesas financeiras'],
+  ESS: ['essencial'],
+  LIFE: ['projetos de vida', 'projeto de vida'],
+  SOC: ['social'],
+  INC_BENEFIT: ['benefícios recebidos'],
+  INC_OTHER: ['outras receitas'],
+  INC_WORK: ['renda do trabalho', 'renda e trabalho'],
+}
+
+export type RaioXPrevistoBar = {
+  categoryId: string
+  code: string
+  name: string
+  section: CategorySection
+  planned: number
+  actual: number
+  progressPct: number
+}
+
+/** Bars for Previsto × realizado: the 8 level-3 groups only (no children). */
+export function buildRaioXPrevistoBars(
+  accounts: Category[],
+  byParent: Map<string | null, Category[]>,
+  planned: Map<string, number>,
+  actual: Map<string, number>,
+): RaioXPrevistoBar[] {
+  const byCode = new Map<string, Category>()
+  const byName = new Map<string, Category>()
+  for (const account of accounts) {
+    if (account.code) {
+      byCode.set(account.code, account)
+    }
+    byName.set(account.name.trim().toLowerCase(), account)
+  }
+
+  const bars: RaioXPrevistoBar[] = []
+  for (const code of RAIOX_PREVISTO_CATEGORY_CODES) {
+    let account = byCode.get(code)
+    if (!account) {
+      for (const name of RAIOX_PREVISTO_NAME_FALLBACKS[code]) {
+        account = byName.get(name)
+        if (account) break
+      }
+    }
+    if (!account) continue
+
+    const totals = sumBranch(account.id, byParent, planned, actual)
+    const plannedAbs = Math.abs(totals.planned)
+    const actualAbs = Math.abs(totals.actual)
+    const percent = progressPercent({ planned: plannedAbs, actual: actualAbs })
+    bars.push({
+      categoryId: account.id,
+      code,
+      name: account.name,
+      section: account.section,
+      planned: plannedAbs,
+      actual: actualAbs,
+      progressPct: percent === null ? 0 : Math.min(100, percent),
+    })
+  }
+  return bars
+}
+
+/**
  * Rolls up planned/actual from analytical leaves through the category tree.
  * Parents are synthetic: any amount stored on the parent itself is ignored when
  * children exist; only leaf values (and their rollups) count.

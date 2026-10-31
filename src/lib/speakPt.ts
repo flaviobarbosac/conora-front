@@ -151,6 +151,8 @@ export function maturityAgeFromAchievements(
 const FEMALE_HINT =/maria|francisca|luciana|heloisa|leticia|female|feminina|vitoria|vitória/
 const MALE_HINT = /daniel|antonio|antônio|male|masculin|david|mark|guy|james/
 
+export const IAN_VOICE_CHANGED = 'conora.ianVoiceChanged'
+
 export function getIanVoice(): IanVoice {
   const stored = localStorage.getItem(STORAGE_KEY)
   return IAN_VOICES.find((voice) => voice.id === stored) ?? IAN_VOICES[0]
@@ -158,6 +160,7 @@ export function getIanVoice(): IanVoice {
 
 export function setIanVoice(id: IanVoiceId): void {
   localStorage.setItem(STORAGE_KEY, id)
+  window.dispatchEvent(new CustomEvent(IAN_VOICE_CHANGED, { detail: { id } }))
 }
 
 function voiceScore(voice: SpeechSynthesisVoice, id: IanVoiceId): number {

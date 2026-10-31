@@ -20,8 +20,16 @@ body,
 html {
   color-scheme: light;
   overflow-x: clip;
+  overflow-y: auto;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Prefer visual viewport on mobile so 100dvh matches what the user sees. */
+  height: 100%;
+}
+
+#root {
+  min-height: 100%;
+  min-height: 100dvh;
 }
 
 html[data-theme='dark'] {

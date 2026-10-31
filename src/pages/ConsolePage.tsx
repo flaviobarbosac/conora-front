@@ -17,7 +17,7 @@ import styles from './ConsolePage.module.css'
 const MONTHS_MIN = 1
 const MONTHS_MAX = 24
 
-type MetricsSection = Exclude<ConsoleSectionId, 'feedback' | 'abandonamento'>
+type MetricsSection = Exclude<ConsoleSectionId, 'feedback' | 'abandonamento' | 'jornada-tipos'>
 type Cell = string | { text: string; hint?: string }
 
 const SECTION_INTRO: Record<MetricsSection, { title: string; text: string }> = {

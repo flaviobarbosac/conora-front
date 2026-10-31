@@ -1,4 +1,11 @@
-export type ConsoleSectionId = 'metodo' | 'engajamento' | 'tendencias' | 'saude' | 'feedback' | 'abandonamento'
+export type ConsoleSectionId =
+  | 'metodo'
+  | 'engajamento'
+  | 'tendencias'
+  | 'saude'
+  | 'feedback'
+  | 'abandonamento'
+  | 'jornada-tipos'
 
 export type ConsoleNavItem = {
   id: ConsoleSectionId
@@ -44,5 +51,11 @@ export const CONSOLE_NAV: ReadonlyArray<ConsoleNavItem> = [
     to: '/console/abandonamento',
     label: 'Abandono',
     purpose: 'Quem entra no grátis, onde para e se registra.',
+  },
+  {
+    id: 'jornada-tipos',
+    to: '/console/jornada-tipos',
+    label: 'Tipos de jornada',
+    purpose: 'Seis jornadas pré-definidas (J0–J5) lado a lado.',
   },
 ]

@@ -26,7 +26,6 @@ const EXTRA_PATHS = [
   { path: '/relatorios', label: 'Relatórios' },
   { path: '/onboarding', label: 'Onboarding' },
   { path: '/lancamentos', label: 'Lançamentos' },
-  { path: '/jornada', label: 'Jornada' },
   { path: '/retrospectiva', label: 'Retrospectiva' },
   { path: '/diagnostico', label: 'Diagnóstico' },
   { path: '/whatsapp', label: 'WhatsApp' },
@@ -38,6 +37,7 @@ const EXTRA_PATHS = [
   { path: '/console/tendencias', label: 'Console · Tendências' },
   { path: '/console/saude', label: 'Console · Saúde' },
   { path: '/console/feedback', label: 'Console · Feedback' },
+  { path: '/console/jornada-tipos', label: 'Console · Tipos de jornada' },
   { path: '/operacao', label: 'Operação' },
 ]
 

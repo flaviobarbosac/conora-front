@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { CONSOLE_NAV } from './consoleNav'
 
 describe('CONSOLE_NAV', () => {
-  it('lists six console areas with unique ids and routes', () => {
-    expect(CONSOLE_NAV).toHaveLength(6)
+  it('lists console areas with unique ids and routes', () => {
+    expect(CONSOLE_NAV).toHaveLength(7)
     const ids = CONSOLE_NAV.map((item) => item.id)
-    expect(new Set(ids).size).toBe(6)
+    expect(new Set(ids).size).toBe(7)
+    expect(ids).toContain('jornada-tipos')
     for (const item of CONSOLE_NAV) {
       expect(item.to.startsWith('/console/')).toBe(true)
       expect(item.label.length).toBeGreaterThan(0)

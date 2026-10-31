@@ -19,5 +19,6 @@ describe('jornadaTimeline', () => {
     expect(journeyKindLabel('apex')).toBe('Ápice')
     expect(journeyPortraitUrl(0)).toContain('ian-garoto-00.png')
     expect(journeyPortraitUrl(30)).toContain('ian-garoto-30.png')
+    expect(journeyPortraitUrl(5, 'clara')).toContain('ian-menina-05.png')
   })
 })

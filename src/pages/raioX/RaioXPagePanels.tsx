@@ -1,4 +1,6 @@
 import type { Category, CategorySection, Entry } from '../../api/finance'
+import { MoneyAbbrevLegend } from '../../components/MoneyAbbrevLegend'
+import { ProgressToneLegend } from '../../components/ProgressToneLegend'
 import { categoryLabel } from '../../lib/categoryLabel'
 import { compareCategorySiblings } from '../../lib/categoryOrder'
 import pageStyles from '../pageStyles'
@@ -228,13 +230,20 @@ export function RaioXTreeList({
 }) {
   return (
     <div id="raiox-arvore" className={styles.raioxList}>
-      <div className={`${styles.raioxRow} ${styles.raioxHead}`}>
+      <div className={styles.raioxTreeHead}>
+        <strong>Categorias</strong>
+        <div className={styles.raioxTreeHeadHints}>
+          <ProgressToneLegend />
+          <MoneyAbbrevLegend />
+        </div>
+      </div>
+      <div className={`${styles.raioxRow} ${styles.raioxHead}`} aria-hidden={false}>
         <span />
         <span>Categoria</span>
         <span className={styles.raioxTotals}>
-          <span>Previsto</span>
-          <span>Realizado</span>
-          <span>%</span>
+          <span title="Previsto">Previsto</span>
+          <span title="Realizado">Realizado</span>
+          <span title="Percentual">%</span>
         </span>
       </div>
       {rootRows.map((account) => (

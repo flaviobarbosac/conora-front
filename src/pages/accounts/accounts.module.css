@@ -1,3 +1,11 @@
+.bankDetailsRow {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(4.5rem, 5.5rem);
+  gap: var(--space-3);
+  align-items: end;
+}
+
 .accountList {
   display: flex;
   flex-direction: column;

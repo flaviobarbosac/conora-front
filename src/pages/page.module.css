@@ -1200,20 +1200,23 @@ button.compact {
 }
 
 .budgetRow {
-  grid-template-columns:
-    2rem
-    minmax(8rem, 1fr)
-    calc(var(--money-field-w) + 2.5rem + var(--space-2) + 4.5rem + var(--space-4));
-  min-width: calc(
-    2rem + 8rem + var(--money-field-w) + 2.5rem + var(--space-2) + 4.5rem + 2 * var(--space-4) + var(--space-3)
-  );
+  grid-template-columns: 2rem minmax(0, 1fr) minmax(0, 1.25fr);
+  min-width: 0;
 }
 
 .budgetRow .budgetTotals {
-  grid-template-columns: calc(var(--money-field-w) + 2.5rem + var(--space-2)) 4.5rem;
-  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr) 2ch;
+  gap: var(--space-2);
   align-items: center;
-  justify-items: end;
+  justify-items: stretch;
+  width: 100%;
+  min-width: 0;
+}
+
+.budgetRow .budgetTotalsHead > span:last-child {
+  text-align: right;
+  justify-self: end;
+  width: 2ch;
 }
 
 .budgetPlannedCell {
@@ -1222,6 +1225,7 @@ button.compact {
   justify-content: flex-end;
   gap: var(--space-2);
   width: 100%;
+  min-width: 0;
 }
 
 .budgetSpreadIcon {
@@ -1244,18 +1248,21 @@ button.compact {
 }
 
 .budgetDayField {
-  width: 4.5rem;
-  min-width: 4.5rem;
-  max-width: 4.5rem;
-  flex: 0 0 4.5rem;
+  width: 2ch;
+  min-width: 2ch;
+  max-width: 2ch;
+  flex: 0 0 2ch;
+  justify-self: end;
+  box-sizing: content-box;
 }
 
 .budgetDayField :global(input[inputmode='numeric']) {
-  width: 4.5rem;
-  min-width: 4.5rem;
-  max-width: 4.5rem;
-  padding-inline: var(--space-2);
-  text-align: center;
+  width: 2ch;
+  min-width: 2ch;
+  max-width: 2ch;
+  padding-inline: 0;
+  text-align: right;
+  box-sizing: content-box;
 }
 
 .budgetValueTrigger,
@@ -1279,7 +1286,8 @@ button.compact {
 
 .budgetDayTrigger {
   padding-inline: 0;
-  text-align: center;
+  text-align: right;
+  overflow: hidden;
 }
 
 .budgetValueTrigger:disabled,
@@ -1288,16 +1296,18 @@ button.compact {
 }
 
 .raioxBudgetField {
-  width: var(--money-field-w);
-  min-width: var(--money-field-w);
-  max-width: var(--money-field-w);
-  justify-self: end;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  justify-self: stretch;
 }
 
-.raioxBudgetField :global(input[inputmode='numeric']) {
-  width: var(--money-field-w);
-  min-width: var(--money-field-w);
-  max-width: var(--money-field-w);
+.raioxBudgetField :global(input[inputmode='numeric']),
+.raioxBudgetField :global(input[inputmode='decimal']) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   text-align: right;
 }
 
@@ -1306,22 +1316,36 @@ button.compact {
   display: grid;
   gap: var(--space-3);
   grid-template-columns: 1fr;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .macroSplit {
   display: grid;
   gap: var(--space-3);
   grid-template-columns: 1fr;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .macroCard {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: var(--space-4);
   border-radius: var(--radius-lg);
   background: var(--surface-muted, var(--surface));
   border: 1px solid var(--border-subtle);
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .macroHead {
@@ -1345,6 +1369,10 @@ button.compact {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .macroBarLink {
@@ -1353,6 +1381,8 @@ button.compact {
   justify-content: center;
   gap: 6px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 44px;
   margin: 0;
   padding: var(--space-2) 0;
@@ -1375,15 +1405,32 @@ button.compact {
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   font-size: var(--text-sm);
+  box-sizing: border-box;
 }
 
 .macroBarLabel strong {
   font-size: var(--text-sm);
+  flex: 1 1 auto;
   min-width: 0;
+  /* Full class name (ex.: Descontos sobre renda) — wrap up to 2 lines, like Orçamento. */
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.progress {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .macroBarTracks {
@@ -1766,7 +1813,8 @@ button.compact {
   }
 
   .heroCardsRaioX .heroCardStatic:first-child,
-  .heroCardsRaioX .heroCardStatic:last-child {
+  .heroCardsRaioX .heroCardStatic:last-child,
+  .heroCardsRaioX .heroCardGastavel {
     grid-column: 1 / -1;
   }
 
@@ -1794,60 +1842,88 @@ button.compact {
     overflow-x: hidden;
   }
 
-  /* Portrait: name + Previsto/Realizado/% on ONE row (not stacked). */
+  /*
+   * Portrait: same 5-column track for head + rows so Previsto / Realizado / %
+   * values sit under their titles. Order stays toggle · Categoria · Previsto · Realizado · %.
+   * display:contents on .raioxTotals lifts money cells into this parent grid.
+   */
   .raioxRow:not(.categoriesRow):not(.budgetRow) {
-    grid-template-columns: 1.5rem minmax(0, 1fr) max-content;
+    --raiox-col-toggle: 1.5rem;
+    --raiox-col-previsto: 4.6rem;
+    --raiox-col-realizado: 4.6rem;
+    --raiox-col-percent: 2.4rem;
+    grid-template-columns:
+      var(--raiox-col-toggle)
+      minmax(0, 1fr)
+      var(--raiox-col-previsto)
+      var(--raiox-col-realizado)
+      var(--raiox-col-percent);
+    width: 100%;
     min-width: 0;
+    max-width: 100%;
     align-items: center;
-    gap: 6px;
+    column-gap: 4px;
+    row-gap: 0;
     padding: var(--space-2) var(--space-3);
   }
 
-  .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxAccountName {
+  .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxAccountName,
+  .raioxRow:not(.categoriesRow):not(.budgetRow) .rowMain {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
     font-size: var(--text-sm);
+    min-width: 0;
+    line-height: 1.25;
   }
 
   .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxTotals {
-    grid-column: auto;
-    width: max-content;
-    min-width: 0;
-    padding-left: 0;
-    /* Compact fixed cols so the category name keeps readable width. */
-    grid-template-columns: 4.55rem 4.55rem 2.1rem;
-    gap: 2px;
-    font-size: 0.625rem;
-    letter-spacing: -0.04em;
+    display: contents;
   }
 
-  .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxHead .raioxTotals,
-  .raioxHead:not(.budgetRow) .raioxTotals {
-    font-size: 0.5625rem;
-    letter-spacing: 0;
-    grid-template-columns: 4.55rem 4.55rem 2.1rem;
-  }
-
+  .raioxHead:not(.budgetRow) .raioxTotals > span,
   .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxAmount,
   .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxPercent,
   .raioxRow:not(.categoriesRow):not(.budgetRow) .raioxPercentLink {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-size: 0.625rem;
+    letter-spacing: -0.03em;
+    text-align: right;
+    justify-self: stretch;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    min-height: 0;
+  }
+
+  .raioxHead:not(.budgetRow) .raioxTotals > span {
+    font-size: 0.5625rem;
+    letter-spacing: 0;
+    font-weight: var(--weight-semibold);
+    color: var(--text-muted);
+    white-space: normal;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .raioxRow:not(.categoriesRow):not(.budgetRow) .moneyValue,
+  .raioxRow:not(.categoriesRow):not(.budgetRow) .moneyDisplay {
     font-size: inherit;
     letter-spacing: inherit;
     max-width: 100%;
-    overflow: hidden;
-    text-overflow: clip;
-    min-height: 0;
-    padding: 0;
   }
 
-  .raioxRow:not(.categoriesRow):not(.budgetRow) .moneyValue {
-    font-size: inherit;
-  }
-
-  /* Orçamento: uma linha, como antes. O dia ocupa a coluna estreita do percentual. */
+  /* Orçamento: valor ocupa o restante; dia fixo em 2 caracteres. */
   .budgetRow {
-    grid-template-columns: 1.5rem minmax(0, 1fr) max-content;
+    grid-template-columns: 1.5rem minmax(0, 1fr) minmax(0, 1.35fr);
     min-width: 0;
     align-items: center;
     gap: 6px;
@@ -1868,20 +1944,21 @@ button.compact {
 
   .budgetRow .budgetTotals {
     grid-column: auto;
-    width: max-content;
+    width: 100%;
     min-width: 0;
     padding-left: 0;
-    grid-template-columns: 4.55rem 2.1rem;
-    gap: 2px;
+    grid-template-columns: minmax(0, 1fr) 2ch;
+    gap: 4px;
     font-size: 0.625rem;
     letter-spacing: -0.04em;
     align-items: center;
   }
 
   .budgetRow .budgetTotalsHead {
-    font-size: 0.5625rem;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
     letter-spacing: 0;
-    grid-template-columns: 4.55rem 2.1rem;
+    grid-template-columns: minmax(0, 1fr) 2ch;
   }
 
   .budgetTotals .raioxAmount,
@@ -1934,10 +2011,10 @@ button.compact {
 
   .budgetRow .budgetDayField,
   .budgetRow .budgetDayField :global(input[inputmode='numeric']) {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    flex: none;
+    width: 2ch;
+    min-width: 2ch;
+    max-width: 2ch;
+    flex: 0 0 2ch;
   }
 
   .budgetRow .budgetDayField :global(input[inputmode='numeric']) {
@@ -1945,7 +2022,7 @@ button.compact {
     min-height: 1.5rem;
     padding-inline: 0;
     font-size: 0.625rem;
-    text-align: center;
+    text-align: right;
   }
 
   .macroBarLabel {
@@ -1960,6 +2037,17 @@ button.compact {
     overflow: hidden;
     text-overflow: clip;
   }
+
+  .macroAmounts,
+  .macroAmountsHead {
+    grid-template-columns: minmax(3rem, 4rem) minmax(3rem, 4rem) 2.5rem;
+    gap: 2px;
+    font-size: var(--text-xs);
+  }
+
+  .macroAmountsHead {
+    grid-template-columns: minmax(0, 1fr) minmax(3rem, 4rem) minmax(3rem, 4rem) 2.5rem;
+  }
 }
 
 /* Very narrow phones: squeeze money cols a bit more, still one row. */
@@ -1972,15 +2060,19 @@ button.compact {
   }
 
   .budgetRow {
-    grid-template-columns: 1.35rem minmax(0, 1fr) max-content;
+    grid-template-columns: 1.35rem minmax(0, 1fr) minmax(0, 1.4fr);
     gap: 4px;
   }
 
   .budgetRow .budgetTotals,
   .budgetRow .budgetTotalsHead {
-    grid-template-columns: 4.15rem 1.9rem;
-    font-size: 0.5625rem;
-    gap: 1px;
+    grid-template-columns: minmax(0, 1fr) 2ch;
+    gap: 2px;
+  }
+
+  .budgetRow .budgetTotalsHead {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
   }
 }
 

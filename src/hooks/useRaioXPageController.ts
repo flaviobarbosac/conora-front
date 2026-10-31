@@ -218,19 +218,34 @@ export function useRaioXPageController() {
     setYm(saved.competenceYm)
     setMonths(safeMonths)
     setLeakageOnly(saved.leakageOnly)
-    setOpen(new Set(saved.openIds))
+    const openIds = new Set(saved.openIds)
+    if (saved.categoryId) {
+      openIds.add(saved.categoryId)
+      for (const id of ancestorIds(saved.categoryId, list)) {
+        openIds.add(id)
+      }
+    }
+    setOpen(openIds)
     const nextParams = new URLSearchParams()
     nextParams.set('competenceYm', saved.competenceYm)
     if (safeMonths > MONTHS_MIN) {
       nextParams.set('months', String(safeMonths))
     }
     setSearchParams(nextParams, { replace: true })
+    const focusCategoryId = saved.categoryId
     const timer = window.setTimeout(() => {
-      window.scrollTo(0, saved.scrollY)
+      const el = focusCategoryId
+        ? document.getElementById(`raiox-account-${focusCategoryId}`)
+        : null
+      if (el) {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      } else {
+        window.scrollTo(0, saved.scrollY)
+      }
       clearRaioXReturn()
     }, 200)
     return () => window.clearTimeout(timer)
-  }, [list.length, budget.loading, budget.data, setSearchParams])
+  }, [list.length, budget.loading, budget.data, setSearchParams, list])
 
   useEffect(() => {
     const focusId = searchParams.get('categoryId')

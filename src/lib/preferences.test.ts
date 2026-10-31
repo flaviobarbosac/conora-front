@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   PREFERENCES_CHANGED,
-  readHomeJourneyTimeline,
   readSidebarCollapsed,
-  writeHomeJourneyTimeline,
   writeSidebarCollapsed,
 } from './preferences'
 
@@ -46,13 +44,5 @@ describe('preferences', () => {
     writeSidebarCollapsed(true)
     expect(readSidebarCollapsed()).toBe(true)
     expect(spy).toHaveBeenCalled()
-  })
-
-  it('home journey timeline defaults true when absent', () => {
-    expect(readHomeJourneyTimeline()).toBe(true)
-    writeHomeJourneyTimeline(false)
-    expect(readHomeJourneyTimeline()).toBe(false)
-    writeHomeJourneyTimeline(true)
-    expect(readHomeJourneyTimeline()).toBe(true)
   })
 })

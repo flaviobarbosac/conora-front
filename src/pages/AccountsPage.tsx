@@ -117,7 +117,7 @@ export function AccountsPage() {
             {accounts.data && accounts.data.length > 0 ? (
               <>
                 <p className={styles.muted} role="note">
-                  O saldo abaixo é o acumulado dos lançamentos no Conora — não é o saldo do app do banco.
+                  A conta no app organiza lançamentos por competência — não é o saldo do aplicativo do banco.
                 </p>
                 <ul className={styles.accountList}>
                   {accountsPage.pageItems.map((account) => {
@@ -154,12 +154,6 @@ export function AccountsPage() {
                         </button>
                         <span className={styles.accountMeta}>
                           {account.isArchived ? <Badge tone="warning">Arquivada</Badge> : null}
-                          <span className={styles.accountBalance} aria-label="Saldo no Conora">
-                            <span className={styles.rowSub} style={{ display: 'block' }}>
-                              Saldo no Conora
-                            </span>
-                            {formatMoney(account.balance)}
-                          </span>
                         </span>
                         <span className={styles.accountActions}>
                           <Button

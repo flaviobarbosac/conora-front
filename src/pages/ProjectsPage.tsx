@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { familyApi, projectsApi, type LifeProjectScope } from '../api/finance'
 import { PaidModuleBadge } from '../components/PaidModuleBadge'
 import { PageHeader } from '../components/PageHeader'
@@ -47,7 +47,6 @@ function isHorizon(value: string | null): value is HorizonKey {
 }
 
 export function ProjectsPage() {
-  const navigate = useNavigate()
   const { plan } = usePlanAccess()
   const canWrite = hasFullAccess(plan)
   const { confirmLeave } = useUnsavedChanges()
@@ -76,14 +75,39 @@ export function ProjectsPage() {
     }
   }, [searchParams, setSearchParams])
 
+  useEffect(() => {
+    if (!showForm) {
+      return
+    }
+    let focusTimer = 0
+    const frame = window.requestAnimationFrame(() => {
+      const section = document.getElementById('projeto-novo')
+      if (!section) {
+        return
+      }
+      section.scrollIntoView({ block: 'start', behavior: 'smooth' })
+      focusTimer = window.setTimeout(() => {
+        document
+          .querySelector<HTMLInputElement>('#projeto-novo input[name="projectName"]')
+          ?.focus({ preventScroll: true })
+      }, 450)
+    })
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(focusTimer)
+    }
+  }, [showForm])
+
   async function toggleForm() {
     if (showForm && formDirty && !(await confirmLeave())) {
       return
     }
-    setShowForm((value) => !value)
     if (showForm) {
+      setShowForm(false)
       setFormDirty(false)
+      return
     }
+    setShowForm(true)
   }
 
   const list = useMemo(() => {
@@ -260,13 +284,16 @@ export function ProjectsPage() {
       {showForm && canWrite ? (
         <ProjectForm
           onDirtyChange={setFormDirty}
-          onSaved={(id) => {
+          onSaved={() => {
             setFormDirty(false)
-            projects.reload()
             setShowForm(false)
-            window.scrollTo(0, 0)
-            document.getElementById('conteudo-principal')?.scrollTo(0, 0)
-            navigate(`/projetos/${id}`, { replace: true })
+            projects.reload()
+            window.requestAnimationFrame(() => {
+              document
+                .getElementById('conteudo-principal')
+                ?.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+              window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+            })
           }}
         />
       ) : null}
@@ -355,7 +382,7 @@ function ProjectForm({
   }
 
   return (
-    <section className={`${styles.section} ${styles.projectFormPortrait}`}>
+    <section id="projeto-novo" className={`${styles.section} ${styles.projectFormPortrait}`}>
       <h2 className={styles.sectionTitle}>Novo projeto</h2>
       <form className={`${styles.form} ${styles.projectFormStack}`} onSubmit={(event) => void submit(event)}>
         <div className={styles.formWide}>

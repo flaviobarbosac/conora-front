@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   entryDisplayDescription,
@@ -11,23 +10,21 @@ import {
 } from '../../api/finance'
 import { LIFE_HORIZONS } from '../../lib/lifeHorizon'
 import { Loading } from '../../components/ui/Feedback'
-import { ProgressToneLegend } from '../../components/ProgressToneLegend'
 import {
   categoryLabel,
 } from '../../lib/categoryLabel'
-import {
-  isCashFlowSection,
-} from '../../lib/categoryOrder'
-import {
-  buildBudgetMacroBars,
-} from '../../lib/homeInsights'
+import { isCashFlowSection } from '../../lib/categoryOrder'
 import {
   formatCompetence,
   formatDate,
   formatMoney,
+  formatMoneyCompact,
   formatPercent,
+  formatPercentValue,
+  isMoneyCompact,
 } from '../../lib/format'
 import {
+  buildRaioXPrevistoBars,
   progressPercent,
   progressTone,
   sectionHead,
@@ -94,6 +91,34 @@ export function signedMoneyClass(value: number): string {
   return value < 0 ? styles.negative : styles.positive
 }
 
+/** Compact money cell: short label when large; full amount in title / aria. */
+export function MoneyDisplay({
+  value,
+  className,
+}: {
+  value: number
+  className?: string
+}) {
+  const full = formatMoney(value)
+  const shown = formatMoneyCompact(value)
+  const compact = isMoneyCompact(value)
+  return (
+    <span
+      className={[
+        styles.moneyDisplay,
+        className,
+        compact ? styles.moneyConvertedHighlight : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      title={compact ? full : undefined}
+      aria-label={full}
+    >
+      {shown}
+    </span>
+  )
+}
+
 export function TotalsCell({
   totals,
   stock = false,
@@ -110,9 +135,11 @@ export function TotalsCell({
     return (
       <span className={styles.raioxTotals}>
         <span className={styles.raioxAmount}>—</span>
-        <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>
-          {has ? formatMoney(totals.actual) : '—'}
-        </span>
+        {has ? (
+          <MoneyDisplay value={totals.actual} className={`${styles.raioxAmount} ${styles.moneyValue}`} />
+        ) : (
+          <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>—</span>
+        )}
         <span className={styles.raioxPercent}>—</span>
       </span>
     )
@@ -126,34 +153,38 @@ export function TotalsCell({
   const actualClass = `${styles.raioxAmount} ${styles.moneyValue}${tone === 'over' ? ` ${styles.negative}` : ''}`
   return (
     <span className={styles.raioxTotals}>
-      <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>{formatMoney(totals.planned)}</span>
+      <MoneyDisplay value={totals.planned} className={`${styles.raioxAmount} ${styles.moneyValue}`} />
       {onActualClick && Math.abs(totals.actual) > 0.001 ? (
         <span
           className={`${actualClass} ${styles.raioxPercentLink}`}
-          title="Abrir lançamentos"
+          title={`${formatMoney(totals.actual)} — abrir lançamentos`}
+          aria-label={`${formatMoney(totals.actual)}. Abrir lançamentos`}
           onClick={(event) => {
             event.stopPropagation()
             onActualClick()
           }}
         >
-          {formatMoney(totals.actual)}
+          {formatMoneyCompact(totals.actual)}
         </span>
       ) : (
-        <span className={actualClass}>{formatMoney(totals.actual)}</span>
+        <MoneyDisplay value={totals.actual} className={actualClass} />
       )}
       {tone === 'unbudgeted' && onUnbudgetedClick ? (
         <span
           className={`${percentClass} ${styles.raioxPercentLink}`}
           title="Definir orçamento desta conta"
+          aria-label={`${formatPercent(shown)}. Definir orçamento desta conta`}
           onClick={(event) => {
             event.stopPropagation()
             onUnbudgetedClick()
           }}
         >
-          {formatPercent(shown)}
+          {formatPercentValue(shown)}
         </span>
       ) : (
-        <span className={percentClass}>{formatPercent(shown)}</span>
+        <span className={percentClass} aria-label={formatPercent(shown)}>
+          {formatPercentValue(shown)}
+        </span>
       )}
     </span>
   )
@@ -257,9 +288,10 @@ export function EntrySubRow({
       </span>
       <span className={styles.raioxTotals}>
         <span className={styles.raioxAmount} />
-        <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>
-          {formatMoney(Math.abs(entry.amount))}
-        </span>
+        <MoneyDisplay
+          value={Math.abs(entry.amount)}
+          className={`${styles.raioxAmount} ${styles.moneyValue}`}
+        />
         <span className={styles.raioxPercent} />
       </span>
     </button>
@@ -366,8 +398,11 @@ export function RaioXAccountBlock({
         }}
         onClick={(event) => {
           event.stopPropagation()
-          onSelect(account.id)
-          if (expandable) {
+          if (lockedLeaf) {
+            return
+          }
+          const target = event.target as HTMLElement | null
+          if (expandable && (account.level !== 'Analytical' || target?.closest(`.${styles.raioxToggle}`))) {
             onToggle(account.id)
           }
         }}
@@ -375,7 +410,11 @@ export function RaioXAccountBlock({
         aria-disabled={lockedLeaf || undefined}
         title={lockedLeaf ? 'Liberado nos planos pagos' : undefined}
       >
-        <span className={styles.raioxToggle} aria-hidden>
+        <span
+          className={styles.raioxToggle}
+          aria-hidden={!expandable}
+          role={expandable ? 'presentation' : undefined}
+        >
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
         <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
@@ -480,7 +519,7 @@ export function RaioXHero({
         <div className={`${styles.heroCard} ${styles.heroCardStatic}`}>
           <span>Saldo anterior</span>
           <strong className={`${styles.moneyValue} ${signedMoneyClass(previousMonthBalance)}`}>
-            {formatMoney(previousMonthBalance)}
+            <MoneyDisplay value={previousMonthBalance} />
           </strong>
         </div>
         <button
@@ -490,7 +529,9 @@ export function RaioXHero({
           onClick={() => onFocus('income')}
         >
           <span>Renda</span>
-          <strong className={`${styles.moneyValue} ${styles.positive}`}>{formatMoney(incomeActual)}</strong>
+          <strong className={`${styles.moneyValue} ${styles.positive}`}>
+            <MoneyDisplay value={incomeActual} />
+          </strong>
         </button>
         <button
           type="button"
@@ -498,26 +539,28 @@ export function RaioXHero({
           aria-pressed={focus === 'discount'}
           onClick={() => onFocus('discount')}
         >
-          <span>{discountIsPlannedOnly ? 'Descontos (previsto)' : 'Descontos'}</span>
+          <span>
+            {discountIsPlannedOnly ? 'Descontos sobre renda (previsto)' : 'Descontos sobre renda'}
+          </span>
           <strong className={`${styles.moneyValue} ${discountActual > 0 ? styles.negative : ''}`}>
-            {formatMoney(discountActual)}
+            <MoneyDisplay value={discountActual} />
           </strong>
         </button>
         <button
           type="button"
-          className={`${styles.heroCard} ${focus === 'spendable' ? styles.heroCardSpendableActive : ''}`}
+          className={`${styles.heroCard} ${styles.heroCardGastavel}${focus === 'spendable' ? ` ${styles.heroCardSpendableActive}` : ''}`}
           aria-pressed={focus === 'spendable'}
           onClick={() => onFocus('spendable')}
         >
           <span>Gastável</span>
           <strong className={`${styles.moneyValue} ${signedMoneyClass(gastavel)}`}>
-            {formatMoney(gastavel)}
+            <MoneyDisplay value={gastavel} />
           </strong>
         </button>
         <div className={`${styles.heroCard} ${styles.heroCardStatic}`}>
           <span>Saldo do mês</span>
           <strong className={`${styles.moneyValue} ${signedMoneyClass(monthBalance)}`}>
-            {formatMoney(monthBalance)}
+            <MoneyDisplay value={monthBalance} />
           </strong>
         </div>
       </div>
@@ -566,9 +609,13 @@ function PairCard({
       onClick={onClick}
     >
       <span>{label}</span>
-      <strong className={`${styles.moneyValue} ${amountClass}`}>{formatMoney(totals.actual)}</strong>
+      <strong className={`${styles.moneyValue} ${amountClass}`}>
+        <MoneyDisplay value={totals.actual} />
+      </strong>
       <span className={`${styles.muted} ${styles.pairCardMeta}`}>
-        {formatMoney(totals.planned)} prev · {formatMoney(totals.actual)} real
+        <span title={formatMoney(totals.planned)}>{formatMoneyCompact(totals.planned)} prev</span>
+        {' · '}
+        <span title={formatMoney(totals.actual)}>{formatMoneyCompact(totals.actual)} real</span>
       </span>
       {note ? <span className={styles.muted}>{note}</span> : null}
     </button>
@@ -576,7 +623,6 @@ function PairCard({
 }
 
 export function RaioXSideCards({
-  budget,
   accounts,
   byParent,
   planned,
@@ -600,8 +646,7 @@ export function RaioXSideCards({
   onFocus: (next: RaioXFocus) => void
   onExpandSection: (section: CategorySection, options?: { accountId?: string }) => void
 }) {
-  const [macroOpen, setMacroOpen] = useState<Set<CategorySection>>(() => new Set())
-  const bars = buildBudgetMacroBars(budget).filter((bar) => isRaioXMacroSection(bar.section))
+  const bars = buildRaioXPrevistoBars(accounts, byParent, planned, actual)
 
   const assets = sectionTotals(accounts, byParent, planned, actual, 'Asset')
   const liabilities = sectionTotals(accounts, byParent, planned, actual, 'Liability')
@@ -615,18 +660,6 @@ export function RaioXSideCards({
     scope === 'Family' ? true : project.scope === 'Personal',
   )
 
-  function toggleMacroBar(section: CategorySection) {
-    setMacroOpen((current) => {
-      const next = new Set(current)
-      if (next.has(section)) {
-        next.delete(section)
-      } else {
-        next.add(section)
-      }
-      return next
-    })
-  }
-
   return (
     <div className={styles.macroGrid}>
       <section
@@ -635,10 +668,13 @@ export function RaioXSideCards({
         aria-label="Previsto versus realizado"
       >
         <div className={styles.macroHeadRow}>
-          <div className={styles.macroHead}>
-            <strong>Previsto × realizado</strong>
-          </div>
-          <ProgressToneLegend />
+          <strong>Previsto × realizado</strong>
+        </div>
+        <div className={styles.macroAmountsHead} aria-hidden>
+          <span />
+          <span>Previsto</span>
+          <span>Realizado</span>
+          <span>%</span>
         </div>
         {bars.length === 0 ? (
           <p id="raiox-graficos" className={styles.muted}>
@@ -646,79 +682,21 @@ export function RaioXSideCards({
           </p>
         ) : (
           <ul id="raiox-graficos" className={styles.macroBars}>
-            {bars.map((bar) => {
-              const head = sectionHead(accounts, bar.section)
-              const childAccounts = head
-                ? (byParent.get(head.id) ?? []).filter((child) => isRaioXVisibleAccount(child))
-                : []
-              const expandable = childAccounts.length > 0
-              const expanded = expandable && macroOpen.has(bar.section)
-              return (
-                <li key={bar.section} className={styles.macroBarItem}>
-                  <button
-                    type="button"
-                    className={styles.macroBarLink}
-                    aria-expanded={expandable ? expanded : undefined}
-                    onClick={() => {
-                      if (expandable) {
-                        const willOpen = !macroOpen.has(bar.section)
-                        toggleMacroBar(bar.section)
-                        if (willOpen) {
-                          onExpandSection(bar.section)
-                        }
-                        return
-                      }
-                      onExpandSection(bar.section)
-                    }}
-                  >
-                    <span className={styles.macroBarLabel}>
-                      <strong>
-                        {expandable ? (
-                          <span className={styles.macroBarToggle} aria-hidden>
-                            {expanded ? '−' : '+'}
-                          </span>
-                        ) : null}
-                        {bar.name}
-                      </strong>
-                      <span className={styles.moneyValue}>
-                        {consumptionLabel(bar.planned, bar.actual)}
-                      </span>
-                    </span>
-                    <ConsumptionBar percent={bar.progressPct} color={accountBarColor(bar.section)} />
-                  </button>
-                  {expanded ? (
-                    <ul className={styles.macroBarChildren}>
-                      {childAccounts.map((child) => {
-                        const totals = sumBranch(child.id, byParent, planned, actual)
-                        const percent = progressPercent(totals)
-                        return (
-                          <li key={child.id}>
-                            <button
-                              type="button"
-                              className={styles.macroBarChildLink}
-                              onClick={() =>
-                                onExpandSection(bar.section, { accountId: child.id })
-                              }
-                            >
-                              <span className={styles.macroBarLabel}>
-                                <strong>{categoryLabel(child)}</strong>
-                                <span className={styles.moneyValue}>
-                                  {consumptionLabel(totals.planned, totals.actual)}
-                                </span>
-                              </span>
-                              <ConsumptionBar
-                                percent={percent === null ? 0 : Math.min(100, percent)}
-                                color={accountBarColor(bar.section)}
-                              />
-                            </button>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  ) : null}
-                </li>
-              )
-            })}
+            {bars.map((bar) => (
+              <li key={bar.categoryId} className={styles.macroBarItem}>
+                <button
+                  type="button"
+                  className={styles.macroBarLink}
+                  onClick={() => onExpandSection(bar.section, { accountId: bar.categoryId })}
+                >
+                  <span className={styles.macroBarLabel}>
+                    <strong>{bar.name}</strong>
+                    <MacroAmounts planned={bar.planned} actual={bar.actual} />
+                  </span>
+                  <ConsumptionBar percent={bar.progressPct} color={accountBarColor(bar.section)} />
+                </button>
+              </li>
+            ))}
           </ul>
         )}
       </section>
@@ -770,7 +748,7 @@ export function RaioXSideCards({
               <Link key={horizon.key} className={styles.horizonRow} to={`/projetos?horizonte=${horizon.key}`}>
                 <span className={styles.horizonMeta}>
                   <strong>{horizon.label}</strong>
-                  <span>{consumptionLabel(goal, accumulated)}</span>
+                  <MacroAmounts planned={goal} actual={accumulated} />
                 </span>
                 <ConsumptionBar percent={percent} color={HORIZON_BAR_COLOR[horizon.key] ?? '#5B7194'} />
               </Link>
@@ -812,10 +790,30 @@ export function ConsumptionBar({ percent, color }: { percent: number; color: str
   )
 }
 
+export function MacroAmounts({ planned, actual }: { planned: number; actual: number }) {
+  const safePlanned = Number.isFinite(planned) ? planned : 0
+  const safeActual = Number.isFinite(actual) ? actual : 0
+  const percent = safePlanned <= 0 ? 0 : (safeActual / safePlanned) * 100
+  const safePercent = Number.isFinite(percent) ? percent : 0
+  return (
+    <span
+      className={styles.macroAmounts}
+      aria-label={`${formatMoney(safeActual)} de ${formatMoney(safePlanned)}, ${formatPercent(safePercent)}`}
+    >
+      <MoneyDisplay value={safePlanned} className={styles.macroAmountCell} />
+      <MoneyDisplay value={safeActual} className={styles.macroAmountCell} />
+      <span className={styles.macroAmountPct} aria-label={formatPercent(safePercent)}>
+        {formatPercentValue(safePercent)}
+      </span>
+    </span>
+  )
+}
+
+/** @deprecated Prefer MacroAmounts for layout; kept for tests that assert the string. */
 export function consumptionLabel(total: number, fulfilled: number): string {
   const safeTotal = Number.isFinite(total) ? total : 0
   const safeFulfilled = Number.isFinite(fulfilled) ? fulfilled : 0
   const percent = safeTotal <= 0 ? 0 : (safeFulfilled / safeTotal) * 100
-  return `${formatMoney(safeFulfilled)} de ${formatMoney(safeTotal)} · ${formatPercent(Number.isFinite(percent) ? percent : 0)}`
+  return `${formatMoneyCompact(safeFulfilled)} de ${formatMoneyCompact(safeTotal)} · ${formatPercent(Number.isFinite(percent) ? percent : 0)}`
 }
 

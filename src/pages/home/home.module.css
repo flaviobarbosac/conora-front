@@ -320,7 +320,7 @@
 
 .homeLaunchOSvg:has(path[aria-label='Escanear recibo']:hover) ~ .homeLaunchOIconScan,
 .homeLaunchOSvg:has(path[aria-label='Lançar por voz']:hover) ~ .homeLaunchOIconVoice,
-.homeLaunchOSvg:has(path[aria-label='Lançar manualmente']:hover) ~ .homeLaunchOIconManual {
+.homeLaunchOSvg:has(path[aria-label='Editar lançamentos']:hover) ~ .homeLaunchOIconManual {
   transform: translate(-50%, -50%) translateY(-2px) scale(1.06);
   box-shadow:
     0 10px 22px color-mix(in srgb, var(--text) 28%, transparent),
@@ -330,7 +330,7 @@
 
 .homeLaunchOSvg:has(path[aria-label='Escanear recibo']:active) ~ .homeLaunchOIconScan,
 .homeLaunchOSvg:has(path[aria-label='Lançar por voz']:active) ~ .homeLaunchOIconVoice,
-.homeLaunchOSvg:has(path[aria-label='Lançar manualmente']:active) ~ .homeLaunchOIconManual {
+.homeLaunchOSvg:has(path[aria-label='Editar lançamentos']:active) ~ .homeLaunchOIconManual {
   transform: translate(-50%, -50%) translateY(1px) scale(0.97);
   box-shadow:
     0 3px 8px color-mix(in srgb, var(--text) 22%, transparent),

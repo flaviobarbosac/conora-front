@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { type Category, type Entry } from '../api/finance'
+import { entryDisplayDescription, type Category, type Entry } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { SharingViewToggle } from '../components/SharingViewToggle'
@@ -11,11 +11,11 @@ import {
   focusSections,
   sectionHead,
   sectionPlannedActual,
+  sumBranch,
   type RaioXFocus,
 } from '../lib/raioX'
 import { saveRaioXReturn } from '../lib/raioXReturn'
 import pageStyles from './pageStyles'
-import { RaioXCrumb } from './raioX/RaioXCrumb.tsx'
 import {
   RaioXAnchorsNav,
   RaioXNoLeakageCelebrate,
@@ -71,7 +71,6 @@ export function RaioXPage() {
     entriesByAccount,
     projects,
   } = useRaioXPageController()
-  const [crumbId, setCrumbId] = useState<string | null>(null)
 
   function toggle(id: string) {
     setFocus(null)
@@ -123,14 +122,25 @@ export function RaioXPage() {
   }
 
   function openBudgetForAccount(accountId: string) {
-    const returnParams = new URLSearchParams({ competenceYm: ym, categoryId: accountId })
-    if (months > MONTHS_MIN) {
-      returnParams.set('months', String(months))
+    const returnPath = raioXReturnPath()
+    const openWithAncestors = new Set(open)
+    openWithAncestors.add(accountId)
+    for (const id of ancestorIds(accountId, list)) {
+      openWithAncestors.add(id)
     }
+    saveRaioXReturn({
+      path: returnPath,
+      scrollY: window.scrollY,
+      openIds: [...openWithAncestors],
+      competenceYm: ym,
+      months,
+      leakageOnly,
+      categoryId: accountId,
+    })
     const params = new URLSearchParams({
       competenceYm: ym,
       categoryId: accountId,
-      returnTo: `/raio-x?${returnParams.toString()}`,
+      returnTo: returnPath,
     })
     navigate(`/orcamento?${params.toString()}`)
   }
@@ -143,35 +153,77 @@ export function RaioXPage() {
     return isFreeCategoryCode(account.code)
   }
 
-  function openEntry(entry: Entry) {
-    if (entry.type === 'ProjectContribution' || entry.type === 'Contribution') {
-      return
-    }
+  function raioXReturnPath() {
     const returnParams = new URLSearchParams({ competenceYm: ym })
     if (months > MONTHS_MIN) {
       returnParams.set('months', String(months))
     }
-    const returnPath = `/raio-x?${returnParams.toString()}`
+    return `/raio-x?${returnParams.toString()}`
+  }
+
+  function openBusca(filters: {
+    competenceYm?: string
+    search?: string
+    categoryId?: string
+    type?: string
+  }) {
+    const returnPath = raioXReturnPath()
+    const openWithAncestors = new Set(open)
+    if (filters.categoryId) {
+      openWithAncestors.add(filters.categoryId)
+      for (const id of ancestorIds(filters.categoryId, list)) {
+        openWithAncestors.add(id)
+      }
+    }
     saveRaioXReturn({
       path: returnPath,
       scrollY: window.scrollY,
-      openIds: [...open],
+      openIds: [...openWithAncestors],
       competenceYm: ym,
       months,
       leakageOnly,
+      categoryId: filters.categoryId,
     })
     const params = new URLSearchParams({
-      entry: entry.id,
-      competenceYm: entry.competenceYm || ym,
+      competenceYm: filters.competenceYm || ym,
       returnTo: returnPath,
     })
-    navigate(`/lancamentos?${params.toString()}`)
+    if (filters.search?.trim()) {
+      params.set('search', filters.search.trim())
+    }
+    if (filters.categoryId) {
+      params.set('categoryId', filters.categoryId)
+    }
+    if (filters.type) {
+      params.set('type', filters.type)
+    }
+    navigate(`/lancamentos/busca?${params.toString()}`)
+  }
+
+  function openEntry(entry: Entry) {
+    // From Raio-X: always open busca filtered by the clicked launch — never the edit form.
+    // Includes ProjectContribution (projeto de vida).
+    const search = entryDisplayDescription(entry).trim()
+    openBusca({
+      competenceYm: entry.competenceYm || ym,
+      search: search || undefined,
+      categoryId: entry.categoryId ?? undefined,
+      type: entry.type === 'Expense' || entry.type === 'Income' ? entry.type : undefined,
+    })
   }
 
   function openActualForAccount(account: Category, launchEntries: Entry[]) {
     if (!categoryUnlocked(account)) return
     if (launchEntries.length === 1) {
       openEntry(launchEntries[0])
+      return
+    }
+    if (launchEntries.length > 1) {
+      openBusca({ categoryId: account.id })
+      return
+    }
+    if (account.section === 'LifeProject' && account.level === 'Analytical') {
+      openBusca({ categoryId: account.id, search: account.name })
       return
     }
     setOpen((prev) => new Set(prev).add(account.id))
@@ -219,9 +271,6 @@ export function RaioXPage() {
           </>
         }
       />
-      <p className={styles.raioxIntro} role="note">
-        Resumo no topo · árvore abaixo. Toque em Renda ou Descontos para destacar a seção.
-      </p>
       <RaioXPeriodLeakageControls
         months={months}
         leakageOnly={leakageOnly}
@@ -290,12 +339,19 @@ export function RaioXPage() {
               }
               return next
             })
-            window.setTimeout(() => {
-              document.getElementById(`raiox-account-${focusId}`)?.scrollIntoView({
-                block: 'center',
-                behavior: 'smooth',
-              })
-            }, 80)
+            // Barras do Previsto×realizado (ex.: Essencial) são sintéticas: com valor → Busca
+            // (API inclui descendentes). Zerada analítica → Orçamento; sintética zerada só expande.
+            const totals = sumBranch(focusId, byParent, planned, actual)
+            const zerada =
+              Math.abs(totals.planned) <= 0.001 && Math.abs(totals.actual) <= 0.001
+            if (!zerada) {
+              openBusca({ categoryId: focusId })
+              return
+            }
+            const target = list.find((item) => item.id === focusId)
+            if (target?.level === 'Analytical') {
+              openBudgetForAccount(focusId)
+            }
           }}
         />
       ) : null}
@@ -303,8 +359,6 @@ export function RaioXPage() {
       {freeLimited && !fullAccess ? <p className={styles.muted}>{FREE_TIER_CATEGORY_LABEL}</p> : null}
       {rootRows.length > 0 && leakageOnly && !hasLeakage ? <RaioXNoLeakageCelebrate /> : null}
       {rootRows.length > 0 && !(leakageOnly && !hasLeakage) ? (
-        <>
-        <RaioXCrumb accounts={list} selectedId={crumbId} />
         <RaioXTreeList
           rootRows={rootRows}
           byParent={byParent}
@@ -319,12 +373,11 @@ export function RaioXPage() {
           freeLimited={freeLimited}
           categoryUnlocked={categoryUnlocked}
           onToggle={toggle}
-          onSelect={setCrumbId}
+          onSelect={() => {}}
           onOpenEntry={openEntry}
           onOpenActual={openActualForAccount}
           onUnbudgetedClick={openBudgetForAccount}
         />
-        </>
       ) : null}
     </div>
   )

@@ -5,6 +5,10 @@
   gap: var(--space-5);
 }
 
+.shellWide {
+  max-width: none;
+}
+
 :global(#conteudo-principal):has(.shell) {
   background: #e6f3ec;
 }

@@ -3,13 +3,15 @@ import { accountsApi, type Account, type AccountKind } from '../../api/finance'
 import { Button } from '../ui/Button'
 import { ErrorText } from '../ui/Feedback'
 import { Field } from '../ui/Field'
-import { IntegerField } from '../ui/IntegerField'
 import { Select } from '../ui/Select'
 import { useAction } from '../../hooks/useAction'
 import { useLoad } from '../../hooks/useLoad'
 import { useRegisterDirty } from '../../hooks/useUnsavedChanges'
 import { showSaveToast } from '../../lib/saveToast'
-import styles from '../../pages/pageStyles'
+import pageStyles from '../../pages/pageStyles'
+import accountStyles from '../../pages/accounts/accounts.module.css'
+
+const styles = { ...pageStyles, ...accountStyles }
 
 const KIND_LABEL: Record<AccountKind, string> = {
   Checking: 'Conta corrente',
@@ -73,13 +75,18 @@ export function AccountForm({
       action.setError('Selecione o banco.')
       return
     }
+    const digit = checkDigit.trim().toUpperCase()
+    if (needsBank && digit && !/^[0-9A-Z]{1,3}$/.test(digit)) {
+      action.setError('Dígito verificador deve ter até 3 caracteres (números ou letras).')
+      return
+    }
     const payload = {
       name: name.trim(),
       kind,
       bankCode: needsBank ? bankCode || undefined : undefined,
       agency: needsBank ? agency.trim() || undefined : undefined,
       accountNumber: needsBank ? accountNumber.trim() || undefined : undefined,
-      checkDigit: needsBank ? checkDigit.trim() || undefined : undefined,
+      checkDigit: needsBank ? digit || undefined : undefined,
     }
     const ok = await action.run(() =>
       initial ? accountsApi.update(initial.id, payload) : accountsApi.create(payload),
@@ -101,6 +108,9 @@ export function AccountForm({
   return (
     <section className={styles.section}>
       <h2 className={styles.sectionTitle}>{title}</h2>
+      <p className={styles.muted} role="note">
+        Use a conta para vincular lançamentos por competência. O Conora não sincroniza o saldo real do banco.
+      </p>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
         <div className={styles.formWide}>
           <Field
@@ -135,32 +145,35 @@ export function AccountForm({
                 </option>
               ))}
             </Select>
-            <Field
-              label="Agência"
-              name="agency"
-              required
-              inputMode="numeric"
-              autoComplete="off"
-              value={agency}
-              onChange={(event) => setAgency(event.target.value.replace(/[^\d-]/g, ''))}
-            />
-            <Field
-              label="Número da conta"
-              name="accountNumber"
-              required
-              inputMode="numeric"
-              autoComplete="off"
-              value={accountNumber}
-              onChange={(event) => setAccountNumber(event.target.value.replace(/[^\d]/g, ''))}
-            />
-            <IntegerField
-              label="Dígito verificador"
-              name="checkDigit"
-              required
-              maxLength={2}
-              value={checkDigit}
-              onChange={setCheckDigit}
-            />
+            <div className={styles.bankDetailsRow}>
+              <Field
+                label="Agência"
+                name="agency"
+                required
+                inputMode="numeric"
+                autoComplete="off"
+                value={agency}
+                onChange={(event) => setAgency(event.target.value.replace(/[^\d-]/g, ''))}
+              />
+              <Field
+                label="Número da conta"
+                name="accountNumber"
+                required
+                inputMode="numeric"
+                autoComplete="off"
+                value={accountNumber}
+                onChange={(event) => setAccountNumber(event.target.value.replace(/[^\d]/g, ''))}
+              />
+              <Field
+                label="Dígito"
+                name="checkDigit"
+                inputMode="text"
+                autoComplete="off"
+                maxLength={3}
+                value={checkDigit}
+                onChange={(event) => setCheckDigit(event.target.value.replace(/[^0-9a-zA-Z]/g, '').toUpperCase())}
+              />
+            </div>
           </>
         ) : null}
         <div className={styles.formWide}>

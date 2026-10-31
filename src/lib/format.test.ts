@@ -8,8 +8,11 @@ import {
   formatDate,
   formatDateTime,
   formatMoney,
+  formatMoneyCompact,
   formatMoneyInput,
   formatPercent,
+  formatPercentValue,
+  isMoneyCompact,
   monthsInclusive,
   parseMoney,
   sanitizeMoneyTyping,
@@ -66,6 +69,38 @@ describe('formatPercent', () => {
     expect(formatPercent(-100)).toBe('-100,0%')
     expect(formatPercent(12.5)).toBe('12,5%')
     expect(formatPercent(null)).toBe('0,0%')
+  })
+
+  it('exposes the figure without the percent sign for labeled columns', () => {
+    expect(formatPercentValue(12.5)).toBe('12,5')
+    expect(formatPercentValue(null)).toBe('0,0')
+  })
+})
+
+describe('formatMoneyCompact', () => {
+  it('keeps full currency below 10 mil', () => {
+    expect(formatMoneyCompact(9_999.99)).toBe(formatMoney(9_999.99))
+    expect(isMoneyCompact(9_999.99)).toBe(false)
+  })
+
+  it('abbreviates from 10 mil reais', () => {
+    expect(formatMoneyCompact(10_000)).toBe('10 mil')
+    expect(formatMoneyCompact(15_400)).toBe('15 mil')
+    expect(formatMoneyCompact(100_000)).toBe('100 mil')
+    expect(formatMoneyCompact(250_500)).toBe('251 mil')
+    expect(isMoneyCompact(10_000)).toBe(true)
+  })
+
+  it('abbreviates millions', () => {
+    expect(formatMoneyCompact(1_000_000)).toBe('1 mi')
+    expect(formatMoneyCompact(1_250_000)).toBe('1,3 mi')
+    expect(formatMoneyCompact(12_000_000)).toBe('12 mi')
+  })
+
+  it('keeps the minus sign', () => {
+    expect(formatMoneyCompact(-15_000)).toBe('-15 mil')
+    expect(formatMoneyCompact(-150_000)).toBe('-150 mil')
+    expect(formatMoneyCompact(-2_500_000)).toBe('-2,5 mi')
   })
 })
 

@@ -8,8 +8,12 @@ type Props = {
   categoryName: string
   amount: string
   day: string | null
+  /** Consultation only (life-project rateio): no edit, no confirm. */
+  readOnly?: boolean
+  hasPrev?: boolean
   hasNext?: boolean
   onConfirm: (amount: string, day: string | null) => void
+  onPrev?: (amount: string, day: string | null) => void
   onNext?: (amount: string, day: string | null) => void
   onCancel: () => void
 }
@@ -19,8 +23,11 @@ export function BudgetValueSheet({
   categoryName,
   amount,
   day,
+  readOnly = false,
+  hasPrev = false,
   hasNext = false,
   onConfirm,
+  onPrev,
   onNext,
   onCancel,
 }: Props) {
@@ -29,6 +36,13 @@ export function BudgetValueSheet({
   const [draftDay, setDraftDay] = useState(day ?? '')
   const amountRef = useRef<HTMLInputElement>(null)
   const showDay = day !== null
+  const showNav = (hasPrev && onPrev) || (hasNext && onNext)
+
+  // Keep local drafts in sync when navigating categories or when server day arrives late.
+  useEffect(() => {
+    setDraftAmount(amount)
+    setDraftDay(day ?? '')
+  }, [amount, day])
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
@@ -73,7 +87,9 @@ export function BudgetValueSheet({
           name="budget-sheet-amount"
           value={draftAmount}
           onChange={setDraftAmount}
-          inputRef={amountRef}
+          inputRef={readOnly ? undefined : amountRef}
+          disabled={readOnly}
+          readOnly={readOnly}
         />
         {showDay ? (
           <IntegerField
@@ -83,24 +99,50 @@ export function BudgetValueSheet({
             maxLength={2}
             value={draftDay}
             onChange={setDraftDay}
+            disabled={readOnly}
+            readOnly={readOnly}
           />
         ) : null}
-        <div className={styles.actions}>
-          <Button variant="secondary" type="button" onClick={onCancel}>
-            Cancelar
-          </Button>
-          {hasNext && onNext ? (
+        {readOnly ? (
+          <p className={styles.readOnlyHint}>
+            Valor do rateio do projeto de vida. Para alterar, edite o projeto — não o orçamento.
+          </p>
+        ) : null}
+        {!readOnly && showNav ? (
+          <div className={styles.nav} role="group" aria-label="Navegar categorias">
             <Button
-              variant="secondary"
+              variant="ghost"
               type="button"
-              onClick={() => onNext(draftAmount, resolvedDay())}
+              disabled={!hasPrev || !onPrev}
+              onClick={() => onPrev?.(draftAmount, resolvedDay())}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="ghost"
+              type="button"
+              disabled={!hasNext || !onNext}
+              onClick={() => onNext?.(draftAmount, resolvedDay())}
             >
               Próxima
             </Button>
-          ) : null}
-          <Button type="button" onClick={() => onConfirm(draftAmount, resolvedDay())}>
-            Ok
-          </Button>
+          </div>
+        ) : null}
+        <div className={styles.actions}>
+          {readOnly ? (
+            <Button type="button" onClick={onCancel}>
+              Fechar
+            </Button>
+          ) : (
+            <>
+              <Button variant="secondary" type="button" onClick={onCancel}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={() => onConfirm(draftAmount, resolvedDay())}>
+                Ok
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
