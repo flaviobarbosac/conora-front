@@ -68,7 +68,7 @@ const FAQ: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: 'Como cancelo?',
-    a: 'Nas assinaturas da sua conta da loja (App Store ou Google Play), até 24 horas antes da renovação. O acesso segue até o fim do período já pago. Não há multa de cancelamento.',
+    a: 'Nas assinaturas da sua conta da loja (App Store ou Google Play). Quando a renovação é cancelada, o plano deixa de ficar ativo no Conora. Não há multa de cancelamento.',
   },
   {
     q: 'Troquei de celular. Como recupero a assinatura?',
@@ -183,8 +183,13 @@ export function PlanPage() {
       restored = await restoreStorePurchases()
     })
     if (!ok) return
-    if (restored) planChanged('Assinatura restaurada.')
-    else restorer.setError(`Nenhuma assinatura ativa deste login foi encontrada na ${storeName()}.`)
+    if (restored?.phase === 'Subscribed') planChanged('Assinatura restaurada.')
+    else {
+      plan.reload()
+      access.reload()
+      window.dispatchEvent(new Event(PLAN_CHANGED))
+      restorer.setError(`Nenhuma assinatura ativa deste login foi encontrada na ${storeName()}.`)
+    }
   }
 
   async function exportData() {

@@ -13,4 +13,6 @@ export const planApi = {
     apiFetch<Plan>('/plan/subscribe', json('POST', { plan, storePurchaseToken })),
   /** Validates an App Store / Google Play purchase with the store and returns the updated plan. */
   confirmStore: (purchase: StorePurchase) => apiFetch<Plan>('/plan/store/confirm', json('POST', purchase)),
+  /** Re-reads the App Store subscription linked to this login (cancel, expiry, product). */
+  refreshStore: () => apiFetch<Plan>('/plan/store/refresh', json('POST')),
 }

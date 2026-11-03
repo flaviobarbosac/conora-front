@@ -100,7 +100,6 @@ export async function restoreStorePurchases(): Promise<Plan | null> {
   }
   const { purchases } = await NativePurchases.getPurchases({
     productType: PURCHASE_TYPE.SUBS,
-    appAccountToken: accountToken(),
     onlyCurrentEntitlements: true,
   })
   const ours = new Set(Object.values(STORE_PRODUCT_IDS))
@@ -114,7 +113,8 @@ export async function restoreStorePurchases(): Promise<Plan | null> {
       purchaseToken: purchase.purchaseToken,
     })
   }
-  return plan
+  // The device list can miss a cancelled subscription. The API re-reads Apple by the stored id.
+  return (await planApi.refreshStore()) ?? plan
 }
 
 export async function openStoreSubscriptions(): Promise<void> {
