@@ -19,7 +19,10 @@ export async function purchasePlan(
   if (storeCheckoutAvailable()) {
     const productId = STORE_PRODUCT_IDS[offer.kind]
     try {
-      await buyInStore(offer.kind, productId ? products[productId] : undefined)
+      const confirmed = await buyInStore(offer.kind, productId ? products[productId] : undefined)
+      if (confirmed.phase !== 'Subscribed') {
+        throw new Error('A loja não confirmou este plano como ativo.')
+      }
     } catch (error) {
       if (isStoreCancel(error)) return null
       throw error
