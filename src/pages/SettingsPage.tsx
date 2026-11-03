@@ -253,7 +253,7 @@ export function SettingsPage() {
               name="homeJourneyTimelineEnabled"
               checked={draft.homeJourneyTimelineEnabled !== false}
               onChange={(event) => patch({ homeJourneyTimelineEnabled: event.target.checked })}
-              description="Ligado: a linha do tempo do Ian ou da Clara aparece abaixo do lançamento na inicial. Desligado: a jornada some da inicial; você escolhe Ian ou Clara ali do mesmo jeito."
+              description="Desligado fecha a jornada de vez, neste aparelho e nos outros. Para só esconder, com um botão para abrir de novo, use Esconder na tela inicial."
             />
           </section>
 

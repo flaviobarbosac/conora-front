@@ -84,6 +84,26 @@
   white-space: nowrap;
 }
 
+:global(#raiox-previsto) .macroAmountsHead > span:nth-child(2),
+:global(#raiox-previsto) .macroAmounts > .macroAmountCell:first-child {
+  transform: translateX(25px);
+}
+
+:global(#raiox-graficos) strong {
+  display: block;
+  flex: 1 1 auto;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
 .macroHeadRow {
   display: flex;
   align-items: center;
@@ -165,13 +185,18 @@
 
 .raioxAnchorsScroll {
   display: flex;
-  flex: 1 1 auto;
+  flex: 1 1 0;
+  width: 50%;
   flex-wrap: nowrap;
   gap: 6px;
   min-width: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+}
+
+.raioxAnchorsScroll .raioxAnchor {
+  width: 100%;
 }
 
 .raioxAnchorsScroll::-webkit-scrollbar {
@@ -206,8 +231,9 @@
 
 .raioxAnchorMenu {
   position: relative;
-  flex: 0 0 auto;
-  min-width: 4.5rem;
+  flex: 1 1 0;
+  width: 50%;
+  min-width: 0;
   z-index: 21;
 }
 
@@ -429,10 +455,10 @@
 .raioxTreeHead {
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
   width: 100%;
   min-width: 100%;
   box-sizing: border-box;
@@ -448,11 +474,12 @@
 .raioxTreeHeadHints {
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-2);
-  flex: 0 0 auto;
+  flex: 1 1 12rem;
+  min-width: 0;
 }
 
 .raioxHead {
@@ -506,6 +533,12 @@
 
 .raioxEntry {
   background: color-mix(in srgb, var(--primary) 6%, var(--bg-app));
+  font-size: var(--text-xs);
+}
+
+.raioxEntry strong,
+.raioxEntry span {
+  font-size: var(--text-xs);
 }
 
 .raioxToggle {
@@ -578,6 +611,13 @@
   font-size: var(--text-sm);
 }
 
+.raioxHead > span,
+.raioxHead .raioxTotals > span {
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
 .raioxHead .raioxTotals > span {
   width: 100%;
   overflow: hidden;
@@ -585,8 +625,6 @@
   line-height: 1.15;
   overflow-wrap: anywhere;
   text-align: right;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
   color: var(--text-muted);
 }
 
@@ -611,9 +649,22 @@
 }
 
 .pairCardMeta {
-  white-space: nowrap;
-  font-size: var(--text-xs);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  white-space: normal;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+
+.pairCardMeta.pairCardMeta strong {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: normal;
+  white-space: normal;
+  min-width: 0;
 }
 
 .periodSlider {
@@ -920,5 +971,137 @@
 @media (min-width: 720px) {
   .heroCardsRaioX {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .macroAmounts,
+  .macroAmountsHead {
+    --raiox-col-previsto: 9.5rem;
+    --raiox-col-realizado: 9.5rem;
+  }
+
+  .macroAmounts {
+    flex-shrink: 0;
+    min-width: calc(9.5rem + 9.5rem + var(--raiox-col-percent) + 8px);
+  }
+
+  .macroAmountCell {
+    overflow: visible;
+    text-overflow: clip;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .macroAmountCell,
+  .macroAmountsHead > span:nth-child(2),
+  .macroAmountsHead > span:nth-child(3),
+  .raioxAmount,
+  .raioxHead .raioxTotals > span:nth-child(-n + 2) {
+    transform: translateX(-5px);
+  }
+
+  :global(#raiox-previsto) .macroAmounts,
+  :global(#raiox-previsto) .macroAmountsHead {
+    --raiox-col-previsto: 7.75rem;
+    --raiox-col-realizado: 7.75rem;
+  }
+
+  :global(#raiox-previsto) .macroAmounts {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+  }
+}
+
+/* Phone landscape only: previsto column in the category list, not the chart. */
+@media (orientation: landscape) and (max-height: 500px) {
+  :global(#raiox-previsto) .macroAmountsHead > span:nth-child(2),
+  :global(#raiox-previsto) .macroAmounts > .macroAmountCell:first-child {
+    position: relative;
+    left: -50px;
+  }
+
+  :global(#raiox-arvore) .raioxTotals > .raioxAmount:first-child,
+  :global(#raiox-arvore) .raioxHead .raioxTotals > span:first-child {
+    margin-left: -55px;
+  }
+
+  :global(#raiox-arvore) .raioxRow {
+    --raiox-col-previsto: 8.5rem;
+    --raiox-col-realizado: 8.5rem;
+  }
+
+  :global(#raiox-arvore) .raioxAmount {
+    width: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-sm);
+  }
+}
+
+/* Phone portrait: category name and percent on the right. Hide Previsto and Realizado. */
+@media (max-width: 500px), (max-width: 719px) and (orientation: portrait) {
+  :global(#raiox-arvore) .raioxRow:not(.raioxEntry) {
+    grid-template-columns: var(--raiox-col-toggle) minmax(0, 1fr) var(--raiox-col-percent);
+  }
+
+  :global(#raiox-arvore) .raioxRow:not(.raioxEntry) .raioxAmount,
+  :global(#raiox-arvore) .raioxHead .raioxTotals > span:nth-child(-n + 2) {
+    display: none;
+  }
+
+  :global(#raiox-arvore) .raioxPercent,
+  :global(#raiox-arvore) .raioxPercentLink,
+  :global(#raiox-arvore) .raioxHead .raioxTotals > span:nth-child(3) {
+    justify-self: end;
+    text-align: right;
+  }
+
+  :global(#raiox-arvore) .raioxAccountName {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-regular);
+    line-height: 1.5;
+  }
+
+  :global(#raiox-arvore) .raioxHead > span,
+  :global(#raiox-arvore) .raioxHead .raioxTotals > span {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-regular);
+  }
+
+  :global(#raiox-previsto) .macroAmountsHead > span:nth-child(2),
+  :global(#raiox-previsto) .macroAmountsHead > span:nth-child(3),
+  :global(#raiox-previsto) .macroAmounts > .macroAmountCell {
+    display: none;
+  }
+
+  :global(#raiox-previsto) .macroAmounts,
+  :global(#raiox-previsto) .macroAmountsHead {
+    grid-template-columns: minmax(0, 1fr) var(--raiox-col-percent);
+  }
+
+  :global(#raiox-previsto) .macroAmountPct {
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  :global(section[aria-label="Patrimônio"]) .macroAmountsHead > span:nth-child(2),
+  :global(section[aria-label="Patrimônio"]) .macroAmountsHead > span:nth-child(3),
+  :global(section[aria-label="Patrimônio"]) .macroAmounts > .macroAmountCell,
+  :global(section[aria-label="Projetos de vida"]) .macroAmounts > .macroAmountCell {
+    display: none;
+  }
+
+  :global(section[aria-label="Patrimônio"]) .macroAmounts,
+  :global(section[aria-label="Patrimônio"]) .macroAmountsHead,
+  :global(section[aria-label="Projetos de vida"]) .macroAmounts {
+    grid-template-columns: minmax(0, 1fr) var(--raiox-col-percent);
+  }
+
+  :global(section[aria-label="Patrimônio"]) .macroAmountPct,
+  :global(section[aria-label="Projetos de vida"]) .macroAmountPct {
+    grid-column: 2;
+    justify-self: end;
   }
 }

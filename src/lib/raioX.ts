@@ -1,5 +1,5 @@
 import type { Budget, BudgetLine, BudgetYear, Category, CategorySection, PatrimonySummary } from '../api/finance'
-import { CASH_FLOW_SECTIONS, isCashFlowSection } from './categoryOrder'
+import { CASH_FLOW_SECTIONS, PATRIMONY_SECTIONS, isCashFlowSection } from './categoryOrder'
 import { monthsInclusive, shiftCompetence } from './format'
 
 export type RaioXTotals = { planned: number; actual: number }
@@ -83,7 +83,29 @@ export function buildRaioXPrevistoBars(
       progressPct: percent === null ? 0 : Math.min(100, percent),
     })
   }
-  return bars
+  return mergeIncomeBars(bars)
+}
+
+const MERGED_INCOME_NAME = 'Renda do trabalho e outras receitas'
+
+function mergeIncomeBars(bars: RaioXPrevistoBar[]): RaioXPrevistoBar[] {
+  const other = bars.find((bar) => bar.code === 'INC_OTHER')
+  const work = bars.find((bar) => bar.code === 'INC_WORK')
+  if (!other || !work) return bars
+
+  const planned = other.planned + work.planned
+  const actual = other.actual + work.actual
+  const percent = progressPercent({ planned, actual })
+  const merged: RaioXPrevistoBar = {
+    categoryId: work.categoryId,
+    code: work.code,
+    name: MERGED_INCOME_NAME,
+    section: work.section,
+    planned,
+    actual,
+    progressPct: percent === null ? 0 : Math.min(100, percent),
+  }
+  return bars.filter((bar) => bar.code !== 'INC_OTHER' && bar.code !== 'INC_WORK').concat(merged)
 }
 
 /**
@@ -218,6 +240,43 @@ export function chartWithAmounts(
     }
   }
   return accounts.filter((account) => keep.has(account.id))
+}
+
+const BUDGET_PAGE_SECTIONS: CategorySection[] = [
+  ...CASH_FLOW_SECTIONS,
+  'Patrimony',
+  ...PATRIMONY_SECTIONS,
+]
+
+/**
+ * Cash-flow accounts stay on the budget tree.
+ * A patrimony account appears only when the month has previsto or realizado,
+ * together with its parents, so the launch is visible without listing every asset.
+ */
+export function budgetTreeAccounts(
+  categories: Category[],
+  planned: Map<string, number>,
+  actual: Map<string, number>,
+): Category[] {
+  const eligible = categories.filter((account) => BUDGET_PAGE_SECTIONS.includes(account.section))
+  const cash = chartWithAmounts(
+    eligible.filter((account) => isCashFlowSection(account.section)),
+    idsWithAmount([planned, actual]),
+  )
+  const amountIds = new Set(idsWithAmount([planned, actual]))
+  const byId = new Map(eligible.map((account) => [account.id, account]))
+  const keep = new Set<string>()
+  for (const account of eligible) {
+    if (isCashFlowSection(account.section) || account.level !== 'Analytical' || !amountIds.has(account.id)) {
+      continue
+    }
+    let current: Category | undefined = account
+    while (current && !isCashFlowSection(current.section)) {
+      keep.add(current.id)
+      current = current.parentId ? byId.get(current.parentId) : undefined
+    }
+  }
+  return [...cash, ...eligible.filter((account) => keep.has(account.id))]
 }
 
 export function idsWithAmount(maps: Map<string, number>[]): string[] {
@@ -389,6 +448,49 @@ export function sectionRealized(
     (account) => account.level === 'Root' && account.section === section,
   )
   return roots.reduce((sum, root) => sum + sumBranch(root.id, byParent, planned, actual).actual, 0)
+}
+
+/**
+ * Viewer's own analytical category keeps its id.
+ * A peer line folds onto the local leaf only when code, level and section all match.
+ * Display name is never a key.
+ */
+export function resolvePatrimonyLeafId(
+  item: { categoryId: string; categoryCode?: string | null; section: CategorySection },
+  accounts: Category[],
+): string | null {
+  const direct = accounts.find((account) => account.id === item.categoryId)
+  if (direct?.level === 'Analytical') {
+    return direct.id
+  }
+
+  const code = item.categoryCode ?? direct?.code ?? null
+  const section = direct?.section ?? item.section
+  if (!code) {
+    return null
+  }
+
+  const local = accounts.find(
+    (account) =>
+      account.level === 'Analytical' && account.code === code && account.section === section,
+  )
+  return local?.id ?? null
+}
+
+/** Stock on the analytical leaf only. Synthetic parents pick it up through sumBranch. */
+export function patrimonyLeafAmounts(
+  items: { categoryId: string; categoryCode?: string | null; section: CategorySection; amount: number }[],
+  accounts: Category[],
+): Map<string, number> {
+  const actual = new Map<string, number>()
+  for (const item of items) {
+    const id = resolvePatrimonyLeafId(item, accounts)
+    if (!id) {
+      continue
+    }
+    actual.set(id, (actual.get(id) ?? 0) + Math.abs(item.amount))
+  }
+  return actual
 }
 
 /** Item amounts keyed by category. Groups roll up with sumBranch. */

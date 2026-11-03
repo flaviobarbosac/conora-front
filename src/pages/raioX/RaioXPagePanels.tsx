@@ -1,7 +1,5 @@
 import type { Category, CategorySection, Entry } from '../../api/finance'
-import { MoneyAbbrevLegend } from '../../components/MoneyAbbrevLegend'
 import { ProgressToneLegend } from '../../components/ProgressToneLegend'
-import { categoryLabel } from '../../lib/categoryLabel'
 import { compareCategorySiblings } from '../../lib/categoryOrder'
 import pageStyles from '../pageStyles'
 import raioStyles from './raioX.module.css'
@@ -28,17 +26,33 @@ export function buildTreeMenuItems(
   return items.sort(compareCategorySiblings)
 }
 
+const CATEGORY_MENU = [
+  { code: 'DISC', label: 'Desconto sobre renda' },
+  { code: 'ESS_DEBT', label: 'Dívidas e despesas financeiras' },
+  { code: 'ESS', label: 'Essencial' },
+  { code: 'LIFE', label: 'Projeto de vida' },
+  { code: 'SOC', label: 'Social' },
+  { code: 'INC_BENEFIT', label: 'Benefícios recebidos' },
+  { code: 'INC_OTHER', label: 'Outras receitas' },
+  { code: 'INC_WORK', label: 'Receitas de trabalho' },
+  { code: 'ASSET', label: 'Ativo' },
+  { code: 'PATRIMONY', label: 'Ativo e passivo' },
+] as const
+
 export function RaioXAnchorsNav({
   treeMenuOpen,
-  treeMenuItems,
+  accounts,
   setTreeMenuOpen,
   onJump,
 }: {
   treeMenuOpen: boolean
-  treeMenuItems: Category[]
+  accounts: Category[]
   setTreeMenuOpen: (value: boolean | ((open: boolean) => boolean)) => void
   onJump: (accountId: string) => void
 }) {
+  const byCode = new Map(
+    accounts.flatMap((account) => (account.code ? [[account.code, account] as const] : [])),
+  )
   return (
     <nav
       className={styles.raioxAnchors}
@@ -73,21 +87,23 @@ export function RaioXAnchorsNav({
         </button>
         {treeMenuOpen ? (
           <div id="raiox-tree-menu" className={styles.raioxAnchorDropdown} role="menu">
-            {treeMenuItems.length === 0 ? (
-              <p className={styles.raioxAnchorEmpty}>Nenhuma seção na árvore.</p>
-            ) : (
-              treeMenuItems.map((account) => (
+            {CATEGORY_MENU.map((item) => {
+              const account = byCode.get(item.code)
+              return (
                 <button
-                  key={account.id}
+                  key={item.code}
                   type="button"
                   role="menuitem"
                   className={styles.raioxAnchorOption}
-                  onClick={() => onJump(account.id)}
+                  disabled={!account}
+                  onClick={() => {
+                    if (account) onJump(account.id)
+                  }}
                 >
-                  {categoryLabel(account)}
+                  {item.label}
                 </button>
-              ))
-            )}
+              )
+            })}
           </div>
         ) : null}
       </div>
@@ -231,10 +247,8 @@ export function RaioXTreeList({
   return (
     <div id="raiox-arvore" className={styles.raioxList}>
       <div className={styles.raioxTreeHead}>
-        <strong>Categorias</strong>
         <div className={styles.raioxTreeHeadHints}>
           <ProgressToneLegend />
-          <MoneyAbbrevLegend />
         </div>
       </div>
       <div className={`${styles.raioxRow} ${styles.raioxHead}`} aria-hidden={false}>

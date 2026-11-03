@@ -18,10 +18,8 @@ import {
   formatCompetence,
   formatDate,
   formatMoney,
-  formatMoneyCompact,
   formatPercent,
   formatPercentValue,
-  isMoneyCompact,
 } from '../../lib/format'
 import {
   buildRaioXPrevistoBars,
@@ -44,7 +42,7 @@ export const MONTHS_MAX = 24
 export const MONTH_MARKS = [1, 3, 6, 12, 24] as const
 
 export const RAIOX_ANCHORS = [
-  { id: 'raiox-previsto', label: 'Previsto' },
+  { id: 'raiox-previsto', label: 'Orçamento' },
 ] as const
 
 export function scrollToRaioXAnchor(id: string) {
@@ -91,7 +89,7 @@ export function signedMoneyClass(value: number): string {
   return value < 0 ? styles.negative : styles.positive
 }
 
-/** Compact money cell: short label when large; full amount in title / aria. */
+/** Full currency cell: R$ with two decimals, no mil/mi abbreviation. */
 export function MoneyDisplay({
   value,
   className,
@@ -100,21 +98,9 @@ export function MoneyDisplay({
   className?: string
 }) {
   const full = formatMoney(value)
-  const shown = formatMoneyCompact(value)
-  const compact = isMoneyCompact(value)
   return (
-    <span
-      className={[
-        styles.moneyDisplay,
-        className,
-        compact ? styles.moneyConvertedHighlight : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      title={compact ? full : undefined}
-      aria-label={full}
-    >
-      {shown}
+    <span className={[styles.moneyDisplay, className].filter(Boolean).join(' ')} aria-label={full}>
+      {full}
     </span>
   )
 }
@@ -164,7 +150,7 @@ export function TotalsCell({
             onActualClick()
           }}
         >
-          {formatMoneyCompact(totals.actual)}
+          {formatMoney(totals.actual)}
         </span>
       ) : (
         <MoneyDisplay value={totals.actual} className={actualClass} />
@@ -261,17 +247,12 @@ export function ancestorIds(accountId: string, list: Category[]): string[] {
 export function EntrySubRow({
   entry,
   depth,
-  categoryName,
-  accountName,
   onOpen,
 }: {
   entry: Entry
   depth: number
-  categoryName: string | null
-  accountName: string | null
   onOpen: (entry: Entry) => void
 }) {
-  const headline = [categoryName, accountName, formatDate(entry.occurredAt)].filter(Boolean).join(' · ')
   return (
     <button
       type="button"
@@ -283,15 +264,17 @@ export function EntrySubRow({
     >
       <span />
       <span className={styles.rowMain}>
-        <strong>{headline}</strong>
-        <span className={`${styles.rowSub} ${styles.raioxLaunchNote}`}>{entryDisplayDescription(entry)}</span>
+        <span className={`${styles.rowSub} ${styles.raioxLaunchNote}`}>
+          {entry.occurredAt
+            ? `${entryDisplayDescription(entry)} · ${formatDate(entry.occurredAt)}`
+            : entryDisplayDescription(entry)}
+        </span>
       </span>
       <span className={styles.raioxTotals}>
         <span className={styles.raioxAmount} />
-        <MoneyDisplay
-          value={Math.abs(entry.amount)}
-          className={`${styles.raioxAmount} ${styles.moneyValue}`}
-        />
+        <span className={`${styles.raioxAmount} ${styles.moneyValue}`}>
+          {formatMoney(Math.abs(entry.amount))}
+        </span>
         <span className={styles.raioxPercent} />
       </span>
     </button>
@@ -461,8 +444,6 @@ export function RaioXAccountBlock({
               key={entry.id}
               entry={entry}
               depth={depth}
-              categoryName={entry.categoryId ? (categoryNameById.get(entry.categoryId) ?? null) : null}
-              accountName={entry.accountId ? (bankNameById.get(entry.accountId) ?? null) : null}
               onOpen={onOpenEntry}
             />
           ))
@@ -586,39 +567,32 @@ const HORIZON_BAR_COLOR: Record<string, string> = {
   long: '#A6843A',
 }
 
-function PairCard({
+function barPercent(totals: RaioXTotals): number {
+  const percent = progressPercent(totals)
+  return percent === null ? 0 : Math.min(100, percent)
+}
+
+function PatrimonyBar({
   label,
   totals,
-  active,
-  amountClass,
-  note,
+  color,
   onClick,
 }: {
   label: string
   totals: RaioXTotals
-  active: boolean
-  amountClass: string
-  note?: string
+  color: string
   onClick: () => void
 }) {
   return (
-    <button
-      type="button"
-      className={`${styles.heroCard} ${active ? styles.heroCardPatrimonyActive : ''}`}
-      aria-pressed={active}
-      onClick={onClick}
-    >
-      <span>{label}</span>
-      <strong className={`${styles.moneyValue} ${amountClass}`}>
-        <MoneyDisplay value={totals.actual} />
-      </strong>
-      <span className={`${styles.muted} ${styles.pairCardMeta}`}>
-        <span title={formatMoney(totals.planned)}>{formatMoneyCompact(totals.planned)} prev</span>
-        {' · '}
-        <span title={formatMoney(totals.actual)}>{formatMoneyCompact(totals.actual)} real</span>
-      </span>
-      {note ? <span className={styles.muted}>{note}</span> : null}
-    </button>
+    <li className={styles.macroBarItem}>
+      <button type="button" className={styles.macroBarLink} onClick={onClick}>
+        <span className={styles.macroBarLabel}>
+          <strong>{label}</strong>
+          <MacroAmounts planned={totals.planned} actual={totals.actual} />
+        </span>
+        <ConsumptionBar percent={barPercent(totals)} color={color} />
+      </button>
+    </li>
   )
 }
 
@@ -705,30 +679,38 @@ export function RaioXSideCards({
           <div className={styles.macroHead}>
             <strong>Patrimônio</strong>
           </div>
-          <div className={styles.heroCards}>
-            <PairCard
+          <div className={styles.macroAmountsHead} aria-hidden>
+            <span />
+            <span>Previsto</span>
+            <span>Realizado</span>
+            <span>%</span>
+          </div>
+          <ul className={styles.macroBars}>
+            <PatrimonyBar
               label="Ativo"
               totals={assets}
-              active={patrimonyActive}
-              amountClass={styles.positive}
+              color="var(--primary)"
               onClick={() => onFocus('patrimony')}
             />
-            <PairCard
+            <PatrimonyBar
               label="Passivo"
               totals={liabilities}
-              active={patrimonyActive}
-              amountClass={styles.negative}
+              color="var(--danger)"
               onClick={() => onFocus('patrimony')}
             />
-            <PairCard
-              label="Patrimônio líquido"
-              totals={net}
-              active={patrimonyActive}
-              amountClass={net.actual < 0 ? styles.negative : ''}
-              note="Ativo − passivo"
-              onClick={() => onFocus('patrimony')}
-            />
-          </div>
+          </ul>
+          <button
+            type="button"
+            className={`${styles.heroCard} ${patrimonyActive ? styles.heroCardPatrimonyActive : ''}`}
+            aria-pressed={patrimonyActive}
+            onClick={() => onFocus('patrimony')}
+          >
+            <span>Patrimônio líquido (ativo menos passivo)</span>
+            <strong className={`${styles.moneyValue} ${net.actual < 0 ? styles.negative : styles.raioxToneOk}`}>
+              {formatMoney(net.actual)}
+            </strong>
+            <span className={styles.muted}>Valor acumulado</span>
+          </button>
         </section>
         <section
           className={styles.macroCard}
@@ -814,6 +796,6 @@ export function consumptionLabel(total: number, fulfilled: number): string {
   const safeTotal = Number.isFinite(total) ? total : 0
   const safeFulfilled = Number.isFinite(fulfilled) ? fulfilled : 0
   const percent = safeTotal <= 0 ? 0 : (safeFulfilled / safeTotal) * 100
-  return `${formatMoneyCompact(safeFulfilled)} de ${formatMoneyCompact(safeTotal)} · ${formatPercent(Number.isFinite(percent) ? percent : 0)}`
+  return `${formatMoney(safeFulfilled)} de ${formatMoney(safeTotal)} · ${formatPercent(Number.isFinite(percent) ? percent : 0)}`
 }
 

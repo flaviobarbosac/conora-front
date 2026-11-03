@@ -1,32 +1,26 @@
-import { InfoHint } from './InfoHint'
 import page from '../pages/pageStyles'
 import styles from './ProgressToneLegend.module.css'
 
-/** Color legend for planned×actual tones — InfoHint (circle-i) opens the popover. */
+/** Color legend for planned×actual tones, shown inline next to the category tree. */
 export function ProgressToneLegend() {
   return (
-    <InfoHint
-      label="Legenda de cores do previsto versus realizado"
-      title="Legenda de cores"
-    >
-      <ul className={styles.list}>
-        <li>
-          <span className={`${styles.mark} ${page.raioxToneUnbudgeted}`}>Amarelo</span>
-          {' = sem orçamento'}
-        </li>
-        <li>
-          <span className={`${styles.mark} ${page.raioxToneOk}`}>Azul</span>
-          {' = no previsto'}
-        </li>
-        <li>
-          <span className={`${styles.mark} ${page.raioxToneOver}`}>Vermelho</span>
-          {' = acima'}
-        </li>
-        <li>
-          <span className={`${styles.mark} ${page.raioxToneMuted}`}>Cinza</span>
-          {' = sem movimento'}
-        </li>
-      </ul>
-    </InfoHint>
+    <ul className={styles.list} aria-label="Legenda de cores">
+      <li className={styles.item}>
+        <span className={`${styles.bullet} ${page.raioxToneUnbudgeted}`} aria-hidden />
+        sem orçamento
+      </li>
+      <li className={styles.item}>
+        <span className={`${styles.bullet} ${page.raioxToneOk}`} aria-hidden />
+        no previsto
+      </li>
+      <li className={styles.item}>
+        <span className={`${styles.bullet} ${page.raioxToneOver}`} aria-hidden />
+        acima
+      </li>
+      <li className={styles.item}>
+        <span className={`${styles.bullet} ${page.raioxToneMuted}`} aria-hidden />
+        sem movimento
+      </li>
+    </ul>
   )
 }

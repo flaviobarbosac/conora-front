@@ -105,25 +105,14 @@ export function BudgetPage() {
       }
       return
     }
-    if (intake.needsClassification || intake.status === 'NeedsClassification') {
+    if (
+      intake.needsClassification ||
+      intake.status === 'NeedsClassification' ||
+      intake.status === 'Ready'
+    ) {
       setBoletoRerouteHint(takeReceiptRerouteHint())
       setBoletoIntake(intake)
       setBoletoClassifyOpen(true)
-      return
-    }
-    if (intake.status === 'Ready') {
-      const result = await receiptsApi.confirmBudget(intake.id)
-      takePendingIntakeId()
-      showSaveToast(
-        `Despesa a pagar no orçamento de ${formatCompetence(result.competenceYm)}.` +
-          (result.expenseDay != null ? ` Vencimento dia ${result.expenseDay}.` : ''),
-      )
-      if (result.competenceYm !== ym) {
-        setYm(result.competenceYm)
-      } else {
-        budget.reload()
-        yearData.reload()
-      }
       return
     }
     setBoletoError('Classifique o boleto para gravar no orçamento.')
@@ -353,12 +342,37 @@ export function BudgetPage() {
           setBoletoClassifyOpen(false)
           setBoletoRerouteHint(null)
         }}
-        onClassified={(intake) => {
+        onClassified={(intake, draft) => {
           setBoletoClassifyOpen(false)
           setBoletoRerouteHint(null)
-          void finishBoleto(intake).catch((error: unknown) => {
-            setBoletoError(error instanceof Error ? error.message : 'Falha ao gravar o boleto.')
-          })
+          if (intake.purpose === 'Expense') {
+            setPendingIntakeId(intake.id)
+            setReceiptRerouteHint('to-expense')
+            navigate('/lancamentos?novo=1&recibo=1', { replace: true })
+            return
+          }
+          void receiptsApi
+            .confirmBudget(intake.id, {
+              categoryId: intake.proposedCategoryId ?? undefined,
+              amount: draft.amount,
+              occurredAt: draft.occurredAt ?? undefined,
+            })
+            .then((result) => {
+              takePendingIntakeId()
+              showSaveToast(
+                `Despesa a pagar no orçamento de ${formatCompetence(result.competenceYm)}.` +
+                  (result.expenseDay != null ? ` Vencimento dia ${result.expenseDay}.` : ''),
+              )
+              if (result.competenceYm !== ym) {
+                setYm(result.competenceYm)
+              } else {
+                budget.reload()
+                yearData.reload()
+              }
+            })
+            .catch((error: unknown) => {
+              setBoletoError(error instanceof Error ? error.message : 'Falha ao gravar o boleto.')
+            })
         }}
       />
       {data && !canEdit ? (

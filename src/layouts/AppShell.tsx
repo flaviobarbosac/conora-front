@@ -12,6 +12,13 @@ import { PlanBanner } from '../components/PlanBanner'
 import { Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
+import {
+  hasJornadaAnswer,
+  isJornadaDiagnosticoComplete,
+  readJornadaDiagnostico,
+  writeJornadaDiagnostico,
+  type JornadaDiagnosticoAnswers,
+} from '../lib/jornadaDiagnostico'
 import { trackJourney } from '../lib/journeyTrack'
 import { PREFERENCES_CHANGED, readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
 import { applyIanMaturity, maturityAgeFromAchievements } from '../lib/speakPt'
@@ -71,6 +78,41 @@ export function AppShell() {
       setTheme(profile.data.themeId)
     }
   }, [profile.data?.themeId, setTheme])
+
+  useEffect(() => {
+    const stored = profile.data?.jornadaDiagnostico
+    if (!profile.data || !stored) return
+    const fromAccount: JornadaDiagnosticoAnswers = {
+      ...(typeof stored.rendaFixa === 'boolean' ? { rendaFixa: stored.rendaFixa } : {}),
+      ...(typeof stored.divida === 'boolean' ? { divida: stored.divida } : {}),
+      ...(typeof stored.patrimonio === 'boolean' ? { patrimonio: stored.patrimonio } : {}),
+      ...(typeof stored.projetoVida === 'boolean' ? { projetoVida: stored.projetoVida } : {}),
+    }
+    if (hasJornadaAnswer(fromAccount)) {
+      writeJornadaDiagnostico(fromAccount)
+      return
+    }
+    const local = readJornadaDiagnostico()
+    if (!local || !isJornadaDiagnosticoComplete(local)) return
+    const saved = local
+    let cancelled = false
+    void familyApi
+      .updateJornada({
+        answers: {
+          rendaFixa: saved.rendaFixa ?? null,
+          divida: saved.divida ?? null,
+          patrimonio: saved.patrimonio ?? null,
+          projetoVida: saved.projetoVida ?? null,
+        },
+      })
+      .then(() => {
+        if (!cancelled) profile.reload()
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [profile.data, profile.reload])
 
   useEffect(() => {
     const prefs = profile.data

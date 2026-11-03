@@ -13,11 +13,24 @@ import { useLoad } from '../hooks/useLoad'
 import { usePlanAccess } from '../hooks/usePlanAccess'
 import { currentCompetence } from '../lib/format'
 import { hasFullAccess, isFreeLimited } from '../lib/freeTier'
-import { readJornadaDiagnostico } from '../lib/jornadaDiagnostico'
+import { hasJornadaAnswer, readJornadaDiagnostico, type JornadaDiagnosticoAnswers } from '../lib/jornadaDiagnostico'
 import { isVoiceMicActive } from '../lib/voiceLaunch'
 import pageStyles from './pageStyles'
 import homeStyles from './home/home.module.css'
 const styles = { ...pageStyles, ...homeStyles }
+
+function journeyFromProfile(
+  stored: { rendaFixa: boolean | null; divida: boolean | null; patrimonio: boolean | null; projetoVida: boolean | null } | null | undefined,
+): JornadaDiagnosticoAnswers | null {
+  if (!stored) return readJornadaDiagnostico()
+  const answers: JornadaDiagnosticoAnswers = {
+    ...(typeof stored.rendaFixa === 'boolean' ? { rendaFixa: stored.rendaFixa } : {}),
+    ...(typeof stored.divida === 'boolean' ? { divida: stored.divida } : {}),
+    ...(typeof stored.patrimonio === 'boolean' ? { patrimonio: stored.patrimonio } : {}),
+    ...(typeof stored.projetoVida === 'boolean' ? { projetoVida: stored.projetoVida } : {}),
+  }
+  return hasJornadaAnswer(answers) ? answers : readJornadaDiagnostico()
+}
 
 function firstName(fullName: string | undefined): string {
   const trimmed = fullName?.trim()
@@ -35,7 +48,10 @@ export function HomePage() {
   const [voiceError, setVoiceError] = useState<string | null>(null)
   const [scanSheetOpen, setScanSheetOpen] = useState(false)
   const name = firstName(profile.data?.name)
-  const showJourney = profile.data?.homeJourneyTimelineEnabled !== false
+  const journeyDisplay =
+    profile.data?.homeJourneyDisplay ??
+    (profile.data?.homeJourneyTimelineEnabled === false ? 'closed' : 'shown')
+  const showJourney = journeyDisplay === 'shown'
   const pendingCategories = dashboard.data?.alerts.find((alert) => alert.code === 'CATEGORY_PENDING_REVIEW')
   const showPaidModulesTag = isFreeLimited(plan) && !hasFullAccess(plan)
 
@@ -71,6 +87,18 @@ export function HomePage() {
     void scanReceipt()
       .then(() => navigate('/lancamentos?novo=1&recibo=1'))
       .catch(() => undefined)
+  }
+
+  const journeyAnswers = journeyFromProfile(profile.data?.jornadaDiagnostico)
+
+  async function setJourneyDisplay(display: 'shown' | 'hidden' | 'closed') {
+    setVoiceError(null)
+    try {
+      await familyApi.updateJornada({ display })
+      profile.reload()
+    } catch {
+      setVoiceError('Não foi possível atualizar a jornada.')
+    }
   }
 
   function openVoice() {
@@ -126,9 +154,25 @@ export function HomePage() {
 
       {showJourney ? (
         <section className={styles.homeJourney} aria-label="Jornada Raio X">
-          <p className={styles.homeJourneyKicker}>Jornada Raio X</p>
-          <JornadaTimeline diagnostico={readJornadaDiagnostico()} />
+          <div className={styles.homeJourneyHead}>
+            <p className={styles.homeJourneyKicker}>Jornada Raio X</p>
+            <div className={styles.homeJourneyActions}>
+              <button type="button" className={styles.homeJourneyAction} onClick={() => void setJourneyDisplay('hidden')}>
+                Esconder
+              </button>
+              <button type="button" className={styles.homeJourneyAction} onClick={() => void setJourneyDisplay('closed')}>
+                Fechar
+              </button>
+            </div>
+          </div>
+          <JornadaTimeline diagnostico={journeyAnswers} />
         </section>
+      ) : null}
+      {journeyDisplay === 'hidden' ? (
+        <button type="button" className={styles.homeJourneyReveal} onClick={() => void setJourneyDisplay('shown')}>
+          <Icon name="chevron" size={20} />
+          Mostrar jornada
+        </button>
       ) : null}
     </div>
   )
