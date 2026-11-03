@@ -1,9 +1,31 @@
 .bankDetailsRow {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(4.5rem, 5.5rem);
+  grid-template-columns: minmax(0, 1fr) 5.5rem;
   gap: var(--space-3);
   align-items: end;
+}
+
+.bankAgency {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.bankDetailsRow input {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  text-align: left !important;
+}
+
+@media (min-width: 640px) {
+  .bankDetailsRow {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr) 5.5rem;
+  }
+
+  .bankAgency {
+    grid-column: auto;
+  }
 }
 
 .accountList {
