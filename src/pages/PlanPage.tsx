@@ -178,12 +178,12 @@ export function PlanPage() {
   }
 
   async function restore() {
-    let restored: Plan | null = null
+    const found: { plan: Plan | null } = { plan: null }
     const ok = await restorer.run(async () => {
-      restored = await restoreStorePurchases()
+      found.plan = await restoreStorePurchases()
     })
     if (!ok) return
-    if (restored?.phase === 'Subscribed') planChanged('Assinatura restaurada.')
+    if (found.plan?.phase === 'Subscribed') planChanged('Assinatura restaurada.')
     else {
       plan.reload()
       access.reload()

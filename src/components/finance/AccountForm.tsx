@@ -146,15 +146,17 @@ export function AccountForm({
               ))}
             </Select>
             <div className={styles.bankDetailsRow}>
-              <Field
-                label="Agência"
-                name="agency"
-                required
-                inputMode="numeric"
-                autoComplete="off"
-                value={agency}
-                onChange={(event) => setAgency(event.target.value.replace(/[^\d-]/g, ''))}
-              />
+              <div className={styles.bankAgency}>
+                <Field
+                  label="Agência"
+                  name="agency"
+                  required
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={agency}
+                  onChange={(event) => setAgency(event.target.value.replace(/[^\d-]/g, ''))}
+                />
+              </div>
               <Field
                 label="Número da conta"
                 name="accountNumber"
