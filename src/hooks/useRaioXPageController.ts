@@ -5,6 +5,7 @@ import {
   budgetsApi,
   categoriesApi,
   entriesApi,
+  patrimonyApi,
   projectsApi,
   type BudgetYear,
   type Entry,
@@ -21,6 +22,7 @@ import {
   buildAmountMaps,
   chartWithAmounts,
   mergeEntryActuals,
+  patrimonyLeafAmounts,
   groupAccountsByParent,
   idsWithAmount,
   monthsEndingAt,
@@ -82,6 +84,7 @@ export function useRaioXPageController() {
   )
   const bankAccounts = useLoad(() => accountsApi.list(), [])
   const projects = useLoad(() => projectsApi.list(), [])
+  const patrimony = useLoad(() => patrimonyApi.get(), [])
 
   useEffect(() => {
     function onVoiceSaved() {
@@ -97,14 +100,15 @@ export function useRaioXPageController() {
       months === 1
         ? buildAmountMaps(budget.data?.lines ?? [])
         : aggregateYearMonths(yearsBudget.data ?? [], monthList)
-    if (months !== 1) {
-      return base
+    const flow =
+      months === 1 ? mergeEntryActuals(base.actual, entries.data?.items ?? []) : base.actual
+    const actual = new Map(flow)
+    const stock = patrimonyLeafAmounts(patrimony.data?.items ?? [], accounts.data ?? [])
+    for (const [id, amount] of stock) {
+      actual.set(id, (actual.get(id) ?? 0) + amount)
     }
-    return {
-      planned: base.planned,
-      actual: mergeEntryActuals(base.actual, entries.data?.items ?? []),
-    }
-  }, [months, budget.data, yearsBudget.data, monthList, entries.data])
+    return { planned: base.planned, actual }
+  }, [months, budget.data, yearsBudget.data, monthList, entries.data, patrimony.data, accounts.data])
 
   const list = useMemo(
     () =>

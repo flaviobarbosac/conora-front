@@ -4,6 +4,7 @@ import {
   entriesApi,
   entryDisplayDescription,
   monthsApi,
+  projectsApi,
   receiptsApi,
   type Category,
   type Entry,
@@ -227,25 +228,15 @@ export function EntriesPage() {
         entries.reload()
         return
       }
-      if (intake.needsClassification || intake.status === 'NeedsClassification') {
+      if (
+        intake.needsClassification ||
+        intake.status === 'NeedsClassification' ||
+        (intake.status === 'Ready' && !intake.proposedCategoryId)
+      ) {
         setClassifyRerouteHint(takeReceiptRerouteHint())
         setReceiptIntake(intake)
         setClassifyOpen(true)
         navigate('/lancamentos')
-        return
-      }
-      if (intake.status === 'Ready' && intake.proposedCategoryId) {
-        await receiptsApi.confirm(intake.id, {
-          categoryId: intake.proposedCategoryId,
-          accountId: intake.selectedBankAccountId ?? undefined,
-          amount: intake.extractedAmount ?? undefined,
-          occurredAt: intake.extractedOccurredAt ?? undefined,
-          description: intake.extractedName ?? undefined,
-        })
-        takePendingIntakeId()
-        showSaveToast('Lançamento gravado.')
-        navigate('/lancamentos')
-        entries.reload()
         return
       }
       applyIntakeToForm(intake)
@@ -834,9 +825,15 @@ export function EntriesPage() {
           setClassifyOpen(false)
           setClassifyRerouteHint(null)
         }}
-        onClassified={(intake) => {
+        onClassified={(intake, draft) => {
           setClassifyOpen(false)
           setClassifyRerouteHint(null)
+          if (intake.purpose === 'BudgetBoleto') {
+            setPendingIntakeId(intake.id)
+            setReceiptRerouteHint('to-budget')
+            navigate('/orcamento?recibo=1', { replace: true })
+            return
+          }
           if (intake.status === 'Confirmed') {
             takePendingIntakeId()
             showSaveToast('Lançamento gravado.')
@@ -844,12 +841,11 @@ export function EntriesPage() {
             entries.reload()
             return
           }
-          if (intake.needsClassification || intake.status === 'NeedsClassification') {
-            setReceiptIntake(intake)
-            setClassifyOpen(true)
-            return
-          }
-          applyIntakeToForm(intake)
+          applyIntakeToForm({
+            ...intake,
+            extractedAmount: draft.amount,
+            extractedOccurredAt: draft.occurredAt ?? intake.extractedOccurredAt,
+          })
         }}
       />
 
@@ -913,6 +909,8 @@ function EntryForm({
   const [categoryId, setCategoryId] = useState(
     () => initial?.categoryId ?? receiptPrefill?.categoryId ?? '',
   )
+  const [lifeProjectId, setLifeProjectId] = useState(() => initial?.lifeProjectId ?? '')
+  const projects = useLoad(() => projectsApi.list(), [])
   const amountInputRef = useRef<HTMLInputElement | null>(null)
   const action = useAction()
 
@@ -980,6 +978,27 @@ function EntryForm({
   const kindCategories = categories.filter((category) => matchesEntryType(category.section, type))
   const writableKindCategories = kindCategories.filter((category) => isCategoryWritable(plan, category))
   const noWritableCategories = !editing && kindCategories.length > 0 && writableKindCategories.length === 0
+  const selectedCategory = categories.find((category) => category.id === categoryId)
+  const lifeIncome = type === 'Income' && selectedCategory?.section === 'LifeProject'
+  const lifeProjects = (projects.data ?? []).filter((project) => project.categoryId === categoryId)
+  const lifeProjectKey = lifeProjects.map((project) => project.id).join(',')
+  const resolvedLifeProjectId = !lifeIncome
+    ? ''
+    : lifeProjects.length === 1
+      ? lifeProjects[0].id
+      : lifeProjectId
+
+  useEffect(() => {
+    if (!lifeIncome) {
+      return
+    }
+    const ids = lifeProjectKey ? lifeProjectKey.split(',') : []
+    if (ids.length === 1) {
+      setLifeProjectId(ids[0])
+      return
+    }
+    setLifeProjectId((current) => (ids.includes(current) ? current : ''))
+  }, [lifeIncome, lifeProjectKey])
 
   useEffect(() => {
     if (skipDirtyRef.current) {
@@ -1047,6 +1066,14 @@ function EntryForm({
       action.setError('Selecione a categoria para concluir o lançamento.')
       return
     }
+    if (lifeIncome && lifeProjects.length === 0) {
+      action.setError('Crie um projeto de vida nesta conta antes de lançar a receita.')
+      return
+    }
+    if (lifeIncome && !resolvedLifeProjectId) {
+      action.setError('Escolha o projeto desta receita.')
+      return
+    }
 
     if (editing && initial) {
       const input: EntryUpdateInput = {
@@ -1056,6 +1083,7 @@ function EntryForm({
         accountId: accountId || undefined,
         categoryId: categoryId || undefined,
         incomeSourceId: type === 'Income' ? initial.incomeSourceId ?? undefined : undefined,
+        lifeProjectId: lifeIncome ? resolvedLifeProjectId : undefined,
         memberId: initial.memberId ?? undefined,
         confirmDuplicate,
       }
@@ -1092,6 +1120,7 @@ function EntryForm({
       description: description.trim(),
       accountId: accountId || undefined,
       categoryId: categoryId || undefined,
+      lifeProjectId: lifeIncome ? resolvedLifeProjectId : undefined,
       confirmDuplicate,
     }
 
@@ -1157,6 +1186,30 @@ function EntryForm({
           tree={tree}
           emptyLabel="Selecione a categoria"
         />
+        {lifeIncome && lifeProjects.length === 1 ? (
+          <p className={`${styles.muted} ${styles.formWide}`}>Projeto: {lifeProjects[0].name}</p>
+        ) : null}
+        {lifeIncome && lifeProjects.length > 1 ? (
+          <Select
+            label="Projeto de vida"
+            name="lifeProjectId"
+            value={lifeProjectId}
+            onChange={(event) => setLifeProjectId(event.target.value)}
+            aria-required
+          >
+            <option value="">Escolha o projeto</option>
+            {lifeProjects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </Select>
+        ) : null}
+        {lifeIncome && !projects.loading && lifeProjects.length === 0 ? (
+          <p className={`${styles.muted} ${styles.formWide}`} role="status">
+            Esta conta ainda não tem projeto de vida.
+          </p>
+        ) : null}
         <Select
           label="Conta bancária"
           name="accountId"

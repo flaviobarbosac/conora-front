@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { entryDisplayDescription, type Category, type Entry } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
@@ -21,7 +20,6 @@ import {
   RaioXNoLeakageCelebrate,
   RaioXPeriodLeakageControls,
   RaioXTreeList,
-  buildTreeMenuItems,
 } from './raioX/RaioXPagePanels'
 import raioStyles from './raioX/raioX.module.css'
 import {
@@ -249,16 +247,11 @@ export function RaioXPage() {
     discountMonth != null && discountMonth.actual <= 0.001 && discountMonth.planned > 0.001
   const monthBalance = months === 1 ? (data?.monthResult ?? 0) : rangeBalance
 
-  const treeMenuItems = useMemo(
-    () => buildTreeMenuItems(rootRows, byParent),
-    [rootRows, byParent],
-  )
-
   return (
     <div className={`${styles.page} ${styles.raioxPage}`} onClick={clearFocus}>
       <RaioXAnchorsNav
         treeMenuOpen={treeMenuOpen}
-        treeMenuItems={treeMenuItems}
+        accounts={list}
         setTreeMenuOpen={setTreeMenuOpen}
         onJump={jumpToTreeAccount}
       />

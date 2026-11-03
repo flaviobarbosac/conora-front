@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { familyApi } from '../api/finance'
 import { Button } from './ui/Button'
 import {
   isJornadaDiagnosticoComplete,
@@ -31,16 +32,34 @@ export function JornadaDiagnosticoWizard({
 }: Props) {
   const formId = useId()
   const [answers, setAnswers] = useState<JornadaDiagnosticoAnswers>(() => ({ ...(initial ?? {}) }))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const ready = isJornadaDiagnosticoComplete(answers)
 
   function setAnswer(key: JornadaDiagnosticoKey, value: boolean) {
     setAnswers((current) => ({ ...current, [key]: value }))
   }
 
-  function submit() {
-    if (!isJornadaDiagnosticoComplete(answers)) return
-    writeJornadaDiagnostico(answers)
-    onComplete(answers)
+  async function submit() {
+    if (!isJornadaDiagnosticoComplete(answers) || saving) return
+    setSaving(true)
+    setError(null)
+    try {
+      await familyApi.updateJornada({
+        answers: {
+          rendaFixa: answers.rendaFixa ?? null,
+          divida: answers.divida ?? null,
+          patrimonio: answers.patrimonio ?? null,
+          projetoVida: answers.projetoVida ?? null,
+        },
+      })
+      writeJornadaDiagnostico(answers)
+      onComplete(answers)
+    } catch {
+      setError('Não foi possível gravar a jornada na conta.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -105,17 +124,18 @@ export function JornadaDiagnosticoWizard({
         ) : null}
         <Button
           type="button"
-          disabled={!ready}
-          aria-disabled={!ready}
+          disabled={!ready || saving}
+          aria-disabled={!ready || saving}
           title={ready ? undefined : 'Responda as quatro perguntas para continuar'}
           onClick={() => {
             if (!ready) return
-            submit()
+            void submit()
           }}
         >
-          {submitLabel}
+          {saving ? 'Salvando…' : submitLabel}
         </Button>
       </div>
+      {error ? <p role="alert">{error}</p> : null}
     </section>
   )
 }

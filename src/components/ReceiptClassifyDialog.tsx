@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { categoriesApi, receiptsApi, type Category, type ReceiptIntake } from '../api/finance'
+import { dateToApi, formatMoneyInput, parseMoney } from '../lib/format'
 import type { ReceiptRerouteHint } from '../lib/receiptFlow'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
@@ -7,8 +8,14 @@ import { WordLancamento, WordOrcamento } from './ReceiptReadingOverlay'
 import { Button } from './ui/Button'
 import { ErrorText, Loading } from './ui/Feedback'
 import { Field } from './ui/Field'
+import { MoneyField } from './ui/MoneyField'
 import { Select } from './ui/Select'
 import styles from './IanAnalyzeDialog.module.css'
+
+export type ReceiptDraft = {
+  amount: number
+  occurredAt: string | null
+}
 
 type Props = {
   open: boolean
@@ -16,7 +23,7 @@ type Props = {
   /** Set when the photo arrived from the wrong screen (cupom↔boleto). */
   rerouteHint?: ReceiptRerouteHint | null
   onClose: () => void
-  onClassified: (intake: ReceiptIntake) => void
+  onClassified: (intake: ReceiptIntake, draft: ReceiptDraft) => void
 }
 
 export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClose, onClassified }: Props) {
@@ -29,6 +36,8 @@ export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClos
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
   const [parentId, setParentId] = useState('')
+  const [amountText, setAmountText] = useState('')
+  const [dueDate, setDueDate] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -37,7 +46,9 @@ export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClos
     setShowCreate(false)
     setNewName(intake?.extractedName?.trim() ?? '')
     setParentId('')
-  }, [open, intake?.proposedCategoryCode, intake?.extractedName])
+    setAmountText(intake?.extractedAmount != null && intake.extractedAmount > 0 ? formatMoneyInput(intake.extractedAmount) : '')
+    setDueDate(intake?.extractedOccurredAt ? intake.extractedOccurredAt.slice(0, 10) : '')
+  }, [open, intake?.proposedCategoryCode, intake?.extractedName, intake?.extractedAmount, intake?.extractedOccurredAt])
 
   useEffect(() => {
     if (!open) return
@@ -72,17 +83,38 @@ export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClos
 
   if (!open || !intake) return null
 
+  function currentDraft(boleto: boolean): ReceiptDraft | null {
+    const amount = parseMoney(amountText)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      action.setError('Informe o valor.')
+      return null
+    }
+    if (boleto && !dueDate) {
+      action.setError('Informe o vencimento do boleto.')
+      return null
+    }
+    return {
+      amount,
+      occurredAt: boleto ? dateToApi(dueDate) : intake?.extractedOccurredAt ?? null,
+    }
+  }
+
   async function save() {
     if (!intake || !selectedCode) {
       action.setError('Escolha uma conta do plano.')
       return
     }
-    let updated: ReceiptIntake | null = null
+    const boleto = intake.purpose === 'BudgetBoleto'
+    const draft = currentDraft(boleto)
+    if (!draft) return
+    let updated: ReceiptIntake = intake
     const ok = await action.run(async () => {
-      updated = await receiptsApi.classify(intake.id, selectedCode)
+      if (intake.status !== 'Ready' || intake.proposedCategoryCode !== selectedCode) {
+        updated = await receiptsApi.classify(intake.id, selectedCode)
+      }
     })
-    if (ok && updated) {
-      onClassified(updated)
+    if (ok) {
+      onClassified(updated, draft)
     }
   }
 
@@ -92,7 +124,10 @@ export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClos
       updated = await receiptsApi.linkSupplier(intake!.id, supplierId)
     })
     if (ok && updated) {
-      onClassified(updated)
+      const boleto = intake!.purpose === 'BudgetBoleto'
+      const draft = currentDraft(boleto)
+      if (!draft) return
+      onClassified(updated, draft)
     }
   }
 
@@ -158,6 +193,24 @@ export function ReceiptClassifyDialog({ open, intake, rerouteHint = null, onClos
             ? `Fornecedor: ${intake.extractedName}${intake.extractedCnpj ? ` (CNPJ ${intake.extractedCnpj})` : ''}.`
             : 'Escolha a conta do plano. Com CNPJ ou nome, a classificação vale nos próximos recibos.'}
         </p>
+        <MoneyField
+          label="Valor (R$)"
+          name="receiptAmount"
+          required
+          value={amountText}
+          onChange={setAmountText}
+          hint={isBoleto ? 'Valor lido da linha digitável ou do código de barras.' : 'Valor pago lido do cupom.'}
+        />
+        {isBoleto ? (
+          <Field
+            label="Vencimento"
+            name="receiptDueDate"
+            type="date"
+            required
+            value={dueDate}
+            onChange={(event) => setDueDate(event.target.value)}
+          />
+        ) : null}
         {similar.length > 0 ? (
           <div className={styles.list} aria-label="Fornecedores parecidos">
             <p className={styles.hint}>Encontramos cadastros parecidos. Vincule em vez de duplicar:</p>

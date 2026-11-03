@@ -251,6 +251,20 @@ export async function commitVoiceEntry(
   }
 
   const account = accountHit.match!
+  let lifeProjectId: string | undefined
+  if (type === 'Income' && category!.section === 'LifeProject') {
+    const onAccount = (await projectsApi.list()).filter((project) => project.categoryId === category!.id)
+    const named = entry.projectName ? exactByName(entry.projectName, onAccount) : undefined
+    lifeProjectId = onAccount.length === 1 ? onAccount[0].id : named?.id
+    if (!lifeProjectId) {
+      return {
+        status: 'incomplete',
+        message: onAccount.length > 1
+          ? 'Esta conta tem mais de um projeto. Diga qual.'
+          : 'Crie um projeto de vida nesta conta antes da receita.',
+      }
+    }
+  }
   onSaving?.()
 
   const occurred = resolveDate(entry.date)
@@ -262,6 +276,7 @@ export async function commitVoiceEntry(
     description: entry.description.trim(),
     accountId: account.id,
     categoryId: category!.id,
+    lifeProjectId,
   })
   return { status: 'saved', id: created[0]?.id ?? '' }
 }

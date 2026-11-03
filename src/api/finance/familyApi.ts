@@ -9,6 +9,7 @@ import type {
   FamilyInvitePreview,
   FamilyGroupResponse,
   UpdateProfileInput,
+  UpdateJornadaInput,
 } from './types'
 export const membersApi = {
   list: () => apiFetch<Member[]>('/members'),
@@ -26,6 +27,8 @@ export const familyApi = {
   },
   updatePreferences: (input: UserPreferencesInput) =>
     apiFetch<FamilyProfile>('/family/preferences', json('PUT', input)),
+  updateJornada: (input: UpdateJornadaInput) =>
+    apiFetch<FamilyProfile>('/family/profile/jornada', json('PUT', input)),
   completeOnboarding: () => apiFetch<FamilyProfile>('/family/onboarding/complete', json('POST')),
   acknowledgeContract: () => apiFetch<FamilyProfile>('/family/profile/contract-acknowledgment', json('POST')),
   uploadPhoto: (file: Blob, fileName = 'photo.jpg') => {

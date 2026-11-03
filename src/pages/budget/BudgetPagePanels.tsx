@@ -48,8 +48,7 @@ import {
   monthsInclusive,
   parseMoney,
 } from '../../lib/format'
-import { buildAmountMaps, chartWithAmounts, groupAccountsByParent, idsWithAmount, sumBranch } from '../../lib/raioX'
-import { MoneyDisplay } from '../raioX/raioXShared'
+import { budgetTreeAccounts, buildAmountMaps, groupAccountsByParent, sumBranch } from '../../lib/raioX'
 import pageStyles from '../pageStyles'
 import budgetStyles from './budget.module.css'
 
@@ -162,10 +161,10 @@ export function BudgetTreeEditor({
 
   const { planned, actual } = useMemo(() => buildAmountMaps(budget.lines), [budget.lines])
 
-  const cashAccounts = useMemo(() => {
-    const cash = visibleCategories.filter((account) => CASH_FLOW_SECTIONS.includes(account.section))
-    return chartWithAmounts(cash, idsWithAmount([planned, actual]))
-  }, [visibleCategories, planned, actual])
+  const cashAccounts = useMemo(
+    () => budgetTreeAccounts(visibleCategories, planned, actual),
+    [visibleCategories, planned, actual],
+  )
 
   const byParent = useMemo(() => {
     const map = groupAccountsByParent(cashAccounts)
@@ -188,6 +187,13 @@ export function BudgetTreeEditor({
       ).filter(Boolean) as Category[],
     [cashAccounts, visibleCategories],
   )
+
+  const treeRoots = useMemo(() => {
+    const patrimonyRoot = cashAccounts.find(
+      (account) => account.section === 'Patrimony' && account.level === 'Root',
+    )
+    return patrimonyRoot ? [...roots, patrimonyRoot] : roots
+  }, [cashAccounts, roots])
 
   const expenseDays = useMemo(() => {
     const map = new Map<string, number>()
@@ -290,10 +296,10 @@ export function BudgetTreeEditor({
 
   const editableAnalyticals = useMemo(
     () =>
-      collectAnalyticalAccounts(roots, byParent, matches).filter((account) =>
+      collectAnalyticalAccounts(treeRoots, byParent, matches).filter((account) =>
         isBudgetSheetEditable(account, lockedCategoryIds, canEdit),
       ),
-    [roots, byParent, matches, lockedCategoryIds, canEdit],
+    [treeRoots, byParent, matches, lockedCategoryIds, canEdit],
   )
 
   const sheetAccount = sheetCategoryId
@@ -481,8 +487,9 @@ export function BudgetTreeEditor({
             <div className={styles.budgetTreeHeadHints}>
               <MoneyAbbrevLegend />
               <InfoHint label="Informação sobre projetos de vida no orçamento" title="Informação">
-                Projetos de vida: a parcela mensal entra sozinha no previsto. Copiar o mês anterior não altera
-                essas linhas.
+                Projetos de vida: a parcela mensal entra sozinha no previsto. O lançamento entra no realizado.
+                Copiar o mês anterior não altera essas linhas. Patrimônio: a conta aparece no mês do lançamento.
+                Receita aumenta o bem e despesa diminui. O valor do mês entra no realizado.
               </InfoHint>
             </div>
           </div>
@@ -494,7 +501,7 @@ export function BudgetTreeEditor({
               <span>Dia</span>
             </span>
           </div>
-          {roots.map((root) => (
+          {treeRoots.map((root) => (
             <BudgetAccountBlock
               key={root.id}
               account={root}
@@ -503,6 +510,7 @@ export function BudgetTreeEditor({
               projects={projects}
               byParent={byParent}
               planned={planned}
+              actual={actual}
               shownPlanned={shownPlanned}
               drafts={drafts}
               dayDrafts={dayDrafts}
@@ -632,6 +640,7 @@ function BudgetAccountBlock({
   projects,
   byParent,
   planned,
+  actual,
   shownPlanned,
   drafts,
   dayDrafts,
@@ -655,6 +664,7 @@ function BudgetAccountBlock({
   projects: LifeProject[]
   byParent: Map<string | null, Category[]>
   planned: Map<string, number>
+  actual: Map<string, number>
   shownPlanned: Map<string, number>
   drafts: Record<string, string>
   dayDrafts: Record<string, string>
@@ -708,6 +718,7 @@ function BudgetAccountBlock({
     const fieldDisabled = busy || !canEdit || locked || needsProject
     const showDay = EXPENSE_SECTIONS.includes(account.section)
     const plannedAmount = planned.get(account.id) ?? 0
+    const monthActual = actual.get(account.id) ?? 0
     const displayAmount = locked ? formatMoneyInput(plannedAmount) : draft
     const linkedProjects = projects.filter((project) => project.categoryId === account.id)
     const lockHint = projectLocked
@@ -773,6 +784,9 @@ function BudgetAccountBlock({
             </button>
           ) : null}
           {lockHint ? <span className={styles.muted}>{lockHint}</span> : null}
+          {monthActual > 0.001 ? (
+            <span className={styles.muted}>Realizado {formatMoney(monthActual)}</span>
+          ) : null}
         </span>
         <BudgetTotalsCell
           edit={
@@ -786,10 +800,9 @@ function BudgetAccountBlock({
                     aria-label={`Editar orçamento ${categoryLabel(account)}`}
                     onClick={() => onOpenValueSheet(account.id)}
                   >
-                    <MoneyDisplay
-                      value={Number.isFinite(parseMoney(displayAmount)) ? parseMoney(displayAmount) : 0}
-                      className={styles.moneyValue}
-                    />
+                    <span className={styles.moneyValue}>
+                      {formatMoney(Number.isFinite(parseMoney(displayAmount)) ? parseMoney(displayAmount) : 0)}
+                    </span>
                   </button>
                 ) : (
                   <MoneyField
@@ -869,10 +882,9 @@ function BudgetAccountBlock({
         <BudgetTotalsCell
           edit={
             <span className={styles.budgetPlannedCell}>
-              <MoneyDisplay
-                value={sumBranch(account.id, byParent, shownPlanned, noActual).planned}
-                className={styles.moneyValue}
-              />
+              <span className={styles.moneyValue}>
+                {formatMoney(sumBranch(account.id, byParent, shownPlanned, noActual).planned)}
+              </span>
             </span>
           }
         />
@@ -887,6 +899,7 @@ function BudgetAccountBlock({
               projects={projects}
               byParent={byParent}
               planned={planned}
+              actual={actual}
               shownPlanned={shownPlanned}
               drafts={drafts}
               dayDrafts={dayDrafts}
@@ -916,6 +929,7 @@ function BudgetAccountBlock({
               projects={projects}
               byParent={byParent}
               planned={planned}
+              actual={actual}
               shownPlanned={shownPlanned}
               drafts={drafts}
               dayDrafts={dayDrafts}

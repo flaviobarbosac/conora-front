@@ -52,6 +52,11 @@ export function writeJornadaDiagnostico(answers: JornadaDiagnosticoAnswers): voi
   localStorage.setItem(STORAGE_KEY, JSON.stringify(answers))
 }
 
+export function hasJornadaAnswer(answers: JornadaDiagnosticoAnswers | null): boolean {
+  if (!answers) return false
+  return JORNADA_DIAGNOSTICO_QUESTIONS.some((question) => typeof answers[question.key] === 'boolean')
+}
+
 export function isJornadaDiagnosticoComplete(answers: JornadaDiagnosticoAnswers | null): boolean {
   if (!answers) return false
   return JORNADA_DIAGNOSTICO_QUESTIONS.every((q) => typeof answers[q.key] === 'boolean')

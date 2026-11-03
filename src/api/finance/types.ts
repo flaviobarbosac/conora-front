@@ -156,6 +156,7 @@ export type EntryInput = {
   accountId?: string
   contraAccountId?: string
   categoryId?: string
+  lifeProjectId?: string
   memberId?: string
   installmentCount?: number
   repeatMonths?: number
@@ -171,6 +172,7 @@ export type EntryUpdateInput = {
   contraAccountId?: string
   categoryId?: string
   incomeSourceId?: string
+  lifeProjectId?: string
   memberId?: string
   confirmDuplicate?: boolean
 }
@@ -366,6 +368,8 @@ export type PatrimonyItem = {
   section: CategorySection
   groupName: string
   amount: number
+  /** System code of the item's category. Matching never uses the display name. */
+  categoryCode?: string | null
 }
 
 export type PatrimonyGroupTotal = {
@@ -502,6 +506,18 @@ export type YearRetrospective = {
 
 export type Member = { id: string; name: string; isActive: boolean }
 
+export type JornadaDiagnosticoProfile = {
+  rendaFixa: boolean | null
+  divida: boolean | null
+  patrimonio: boolean | null
+  projetoVida: boolean | null
+}
+
+export type UpdateJornadaInput = {
+  display?: 'shown' | 'hidden' | 'closed'
+  answers?: JornadaDiagnosticoProfile
+}
+
 export type FamilyProfile = {
   usuarioId: string
   name: string
@@ -518,6 +534,8 @@ export type FamilyProfile = {
   budgetAlertPercent?: number
   photoEvolutionEnabled?: boolean
   homeJourneyTimelineEnabled?: boolean
+  homeJourneyDisplay?: 'shown' | 'hidden' | 'closed'
+  jornadaDiagnostico?: JornadaDiagnosticoProfile | null
   phone?: string | null
   cep?: string | null
   contractAcknowledgedAt?: string | null

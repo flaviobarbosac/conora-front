@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest'
 import type { Budget, BudgetLine, Category } from '../api/finance'
 import {
   aggregateYearMonths,
+  budgetTreeAccounts,
   buildAmountMaps,
+  buildRaioXPrevistoBars,
   mergeEntryActuals,
+  patrimonyLeafAmounts,
   patrimonyStockMap,
   sectionHead,
   sectionRealized,
@@ -227,6 +230,57 @@ describe('patrimonyStockMap', () => {
   })
 })
 
+describe('patrimonyLeafAmounts', () => {
+  it('keeps the analytical asset id and rolls the stock up, ignoring a same-name liability', () => {
+    const asset = account({ id: 'asset', parentId: null, name: 'Ativo', level: 'Root', section: 'Asset' })
+    const idle = account({
+      id: 'idle',
+      parentId: 'asset',
+      name: 'Bens de não uso',
+      level: 'Group',
+      section: 'Asset',
+      code: 'ASSET_NONUSE',
+    })
+    const cdb = account({
+      id: 'cdb',
+      parentId: 'idle',
+      name: 'CDB / RDB',
+      level: 'Analytical',
+      section: 'Asset',
+      code: 'ASSET_CDB',
+    })
+    const liability = account({ id: 'liab', parentId: null, name: 'Passivo', level: 'Root', section: 'Liability' })
+    const twin = account({
+      id: 'twin',
+      parentId: 'liab',
+      name: 'CDB / RDB',
+      level: 'Analytical',
+      section: 'Liability',
+      code: 'LIAB_CDB',
+    })
+    const accounts = [asset, idle, cdb, liability, twin]
+    const byParent = groupAccountsByParent(accounts)
+    const stock = patrimonyLeafAmounts(
+      [
+        {
+          categoryId: 'remote-cdb',
+          categoryCode: 'ASSET_CDB',
+          section: 'Asset',
+          amount: 200000,
+        },
+      ],
+      accounts,
+    )
+
+    expect(stock.get('cdb')).toBe(200000)
+    expect(stock.has('twin')).toBe(false)
+    expect(stock.has('idle')).toBe(false)
+    expect(sumBranch('idle', byParent, new Map(), stock)).toEqual({ planned: 0, actual: 200000 })
+    expect(sumBranch('asset', byParent, new Map(), stock)).toEqual({ planned: 0, actual: 200000 })
+    expect(sumBranch('liab', byParent, new Map(), stock)).toEqual({ planned: 0, actual: 0 })
+  })
+})
+
 describe('sectionRealized', () => {
   it('matches the tree root and ignores planned and diagnosis net', () => {
     const salary = account({ id: 'salary', parentId: 'income', name: 'Salário', level: 'Analytical', section: 'Income' })
@@ -322,6 +376,168 @@ describe('monthsEndingAt', () => {
     expect(monthsEndingAt('2026-10', 1)).toEqual(['2026-10'])
     expect(monthsEndingAt('2026-10', 2)).toEqual(['2026-09', '2026-10'])
     expect(monthsEndingAt('2026-02', 3)).toEqual(['2025-12', '2026-01', '2026-02'])
+  })
+})
+
+describe('life project reflections', () => {
+  const life = account({
+    id: 'life',
+    parentId: null,
+    name: 'Projetos de vida',
+    level: 'Root',
+    section: 'LifeProject',
+    code: 'LIFE',
+  })
+  const trip = account({
+    id: 'trip',
+    parentId: 'life',
+    name: 'Viagem',
+    level: 'Analytical',
+    section: 'LifeProject',
+  })
+
+  it('keeps the launch on the budget line and that budget on the Raio-X bar', () => {
+    const maps = buildAmountMaps([line('trip', 130, 70)])
+    expect(maps.planned.get('trip')).toBe(130)
+    expect(maps.actual.get('trip')).toBe(70)
+
+    const bars = buildRaioXPrevistoBars(
+      [life, trip],
+      groupAccountsByParent([life, trip]),
+      maps.planned,
+      maps.actual,
+    )
+    expect(bars.find((bar) => bar.code === 'LIFE')).toMatchObject({ planned: 130, actual: 70 })
+  })
+
+  it('puts life-project income and aporte on the Raio-X actual', () => {
+    const actual = mergeEntryActuals(new Map([['trip', 0]]), [
+      { categoryId: 'trip', type: 'Income', amount: 50 },
+      { categoryId: 'trip', type: 'ProjectContribution', amount: 20 },
+    ])
+    expect(actual.get('trip')).toBe(70)
+  })
+
+  it('sums life-project budget and income across November, December and January', () => {
+    const maps = aggregateYearMonths(
+      [
+        {
+          year: 2026,
+          months: ['2026-11', '2026-12'],
+          lines: [
+            {
+              categoryId: 'trip',
+              categoryName: 'Viagem',
+              groupName: 'Curto prazo',
+              section: 'LifeProject',
+              months: [
+                { competenceYm: '2026-11', plannedAmount: 130, actualAmount: 70 },
+                { competenceYm: '2026-12', plannedAmount: 130, actualAmount: 10 },
+              ],
+            },
+          ],
+          totals: [],
+        },
+        {
+          year: 2027,
+          months: ['2027-01'],
+          lines: [
+            {
+              categoryId: 'trip',
+              categoryName: 'Viagem',
+              groupName: 'Curto prazo',
+              section: 'LifeProject',
+              months: [{ competenceYm: '2027-01', plannedAmount: 130, actualAmount: 15 }],
+            },
+          ],
+          totals: [],
+        },
+      ],
+      ['2026-11', '2026-12', '2027-01'],
+    )
+    expect(maps.planned.get('trip')).toBe(390)
+    expect(maps.actual.get('trip')).toBe(95)
+  })
+})
+
+describe('patrimony reflections', () => {
+  const root = account({ id: 'pat', parentId: null, name: 'Patrimônio', level: 'Root', section: 'Patrimony' })
+  const asset = account({ id: 'asset', parentId: 'pat', name: 'Ativo', level: 'Group', section: 'Asset' })
+  const car = account({ id: 'car', parentId: 'asset', name: 'Automóvel', level: 'Analytical', section: 'Asset' })
+  const idle = account({ id: 'cash', parentId: 'asset', name: 'Dinheiro', level: 'Analytical', section: 'Asset' })
+  const liab = account({ id: 'liab', parentId: 'pat', name: 'Passivo', level: 'Group', section: 'Liability' })
+  const debt = account({ id: 'debt', parentId: 'liab', name: 'Empréstimo', level: 'Analytical', section: 'Liability' })
+  const income = account({ id: 'salary', parentId: null, name: 'Salário', level: 'Analytical', section: 'Income' })
+  const chart = [root, asset, car, idle, liab, debt, income]
+
+  it('shows only the patrimony account that has a launch, and keeps the cash-flow account', () => {
+    const maps = buildAmountMaps([
+      line('car', 0, 80),
+      line('salary', 1000, 0),
+    ])
+    const tree = budgetTreeAccounts(chart, maps.planned, maps.actual)
+    expect(tree.map((account) => account.id).sort()).toEqual(['asset', 'car', 'pat', 'salary'])
+  })
+
+  it('rolls the patrimony budget line to the Raio-X ativo and passivo cards', () => {
+    const maps = buildAmountMaps([
+      line('car', 1000, 80),
+      line('debt', 200, 30),
+    ])
+    const byParent = groupAccountsByParent(chart)
+    const assetHead = sectionHead(chart, 'Asset')
+    const liabilityHead = sectionHead(chart, 'Liability')
+    expect(sumBranch(assetHead!.id, byParent, maps.planned, maps.actual)).toEqual({
+      planned: 1000,
+      actual: 80,
+    })
+    expect(sumBranch(liabilityHead!.id, byParent, maps.planned, maps.actual)).toEqual({
+      planned: 200,
+      actual: 30,
+    })
+    expect(sectionRealized(byParent, maps.actual, 'Asset', chart)).toBe(80)
+  })
+
+  it('adds patrimony income and expense to the month actual and ignores transfers', () => {
+    const actual = mergeEntryActuals(new Map([['car', 0]]), [
+      { categoryId: 'car', type: 'Income', amount: 50 },
+      { categoryId: 'car', type: 'Expense', amount: 20 },
+      { categoryId: 'car', type: 'Transfer', amount: 999 },
+      { categoryId: 'car', type: 'CardPayment', amount: 999 },
+    ])
+    expect(actual.get('car')).toBe(70)
+  })
+
+  it('keeps the life-project total when a patrimony month is aggregated beside it', () => {
+    const maps = aggregateYearMonths(
+      [
+        {
+          year: 2026,
+          months: ['2026-11'],
+          lines: [
+            {
+              categoryId: 'car',
+              categoryName: 'Automóvel',
+              groupName: 'Ativo',
+              section: 'Asset',
+              months: [{ competenceYm: '2026-11', plannedAmount: 0, actualAmount: 50 }],
+            },
+            {
+              categoryId: 'trip',
+              categoryName: 'Viagem',
+              groupName: 'Curto prazo',
+              section: 'LifeProject',
+              months: [{ competenceYm: '2026-11', plannedAmount: 130, actualAmount: 70 }],
+            },
+          ],
+          totals: [],
+        },
+      ],
+      ['2026-11'],
+    )
+    expect(maps.actual.get('car')).toBe(50)
+    expect(maps.planned.get('trip')).toBe(130)
+    expect(maps.actual.get('trip')).toBe(70)
   })
 })
 
