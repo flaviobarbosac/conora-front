@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Button } from './ui/Button'
 import styles from './ConfirmDialog.module.css'
 
-export type ScanPurposeChoice = 'boleto' | 'contracheque' | 'cupom'
+export type ScanPurposeChoice = 'boleto' | 'cupom'
 
 type Props = {
   open: boolean
@@ -14,7 +14,7 @@ type Props = {
   onChoose: (choice: ScanPurposeChoice) => void
 }
 
-/** Before camera: pick boleto, payslip/income, or expense receipt. */
+/** Before camera: pick boleto or expense receipt. */
 export function ScanPurposeSheet({
   open,
   title = 'O que você vai fotografar?',
@@ -57,7 +57,7 @@ export function ScanPurposeSheet({
         <h2 id={titleId} className={styles.title}>
           {title}
         </h2>
-        <p className={styles.message}>Escolha o destino da foto. Contracheque grava renda; boleto entra no orçamento.</p>
+        <p className={styles.message}>Escolha o destino da foto. Boleto entra no orçamento. Cupom vira lançamento.</p>
         <div className={styles.actions} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
           <Button
             ref={firstRef}
@@ -68,15 +68,6 @@ export function ScanPurposeSheet({
             }}
           >
             Boleto (água, luz, etc.)
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              onChoose('contracheque')
-              onClose()
-            }}
-          >
-            Contracheque / renda
           </Button>
           {includeCupom ? (
             <Button
