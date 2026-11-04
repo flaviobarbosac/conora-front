@@ -72,12 +72,6 @@ export function HomePage() {
   }
 
   function onScanPurpose(choice: ScanPurposeChoice) {
-    if (choice === 'contracheque') {
-      void scanReceipt({ header: 'Contracheque / renda' })
-        .then(() => navigate('/diagnostico?foto=1'))
-        .catch(() => undefined)
-      return
-    }
     if (choice === 'boleto') {
       void scanReceipt({ header: 'Boleto' })
         .then(() => navigate('/orcamento?recibo=1'))

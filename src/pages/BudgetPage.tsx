@@ -118,25 +118,6 @@ export function BudgetPage() {
     setBoletoError('Classifique o boleto para gravar no orçamento.')
   }
 
-  async function runContrachequeScan() {
-    if (boletoBusy || !canEdit || monthClosed) return
-    setBoletoError(null)
-    resetMobileViewport()
-    try {
-      await scanReceipt({
-        header: 'Contracheque / renda',
-        photo: 'Galeria',
-        picture: 'Câmera',
-      })
-      resetMobileViewport()
-      navigate('/diagnostico?foto=1')
-    } catch {
-      /* user cancelled camera */
-    } finally {
-      resetMobileViewport()
-    }
-  }
-
   async function runBoletoScan() {
     if (boletoBusy || !canEdit || monthClosed) return
     setBoletoBusy(true)
@@ -170,10 +151,6 @@ export function BudgetPage() {
   }
 
   function onScanPurpose(choice: ScanPurposeChoice) {
-    if (choice === 'contracheque') {
-      void runContrachequeScan()
-      return
-    }
     if (choice === 'cupom') {
       void scanReceipt()
         .then(() => navigate('/lancamentos?novo=1&recibo=1'))
