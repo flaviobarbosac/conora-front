@@ -266,6 +266,7 @@ export function BudgetPage() {
 
   return (
     <div className={styles.page}>
+      <div className={styles.budgetTop}>
       <PageHeader
         kicker="Planejamento"
         title="Orçamento"
@@ -277,29 +278,32 @@ export function BudgetPage() {
               </Button>
             ) : null}
             <SharingViewToggle onChange={setScope} />
-            <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
-            <Button
-              variant="secondary"
-              disabled={boletoBusy || !canEdit || monthClosed}
-              onClick={() => setScanSheetOpen(true)}
-            >
-              {boletoBusy ? 'Lendo foto…' : 'Enviar Foto'}
-            </Button>
-            <span className={styles.budgetHeaderPair}>
-              <Button variant="secondary" disabled={copy.busy || !canEdit} onClick={() => void copyPrevious()}>
-                Copiar mês anterior
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={monthClosed}
-                onClick={() => navigate(`/mes?competenceYm=${encodeURIComponent(ym)}`)}
-              >
-                Fechar mês
-              </Button>
-            </span>
           </>
         }
       />
+      <div className={styles.budgetMonthStack}>
+        <CompetencePicker value={ym} onChange={(next) => void changeYm(next)} />
+        <div className={styles.budgetHeaderActions}>
+          <Button
+            variant="secondary"
+            disabled={boletoBusy || !canEdit || monthClosed}
+            onClick={() => setScanSheetOpen(true)}
+          >
+            {boletoBusy ? 'Lendo foto…' : 'Enviar Foto'}
+          </Button>
+          <Button variant="secondary" disabled={copy.busy || !canEdit} onClick={() => void copyPrevious()}>
+            Copiar mês anterior
+          </Button>
+          <Button
+            variant="danger"
+            disabled={monthClosed}
+            onClick={() => navigate(`/mes?competenceYm=${encodeURIComponent(ym)}`)}
+          >
+            Fechar mês
+          </Button>
+        </div>
+      </div>
+      </div>
       <ReceiptReadingOverlay
         open={boletoBusy}
         purpose={readingPurpose}
@@ -391,7 +395,6 @@ export function BudgetPage() {
           year={year}
           yearData={yearData.data}
           focusCategoryId={focusCategoryId}
-          onReturnToRaioX={canReturnToRaioX ? goBackToRaioX : undefined}
           onSaved={() => {
             void Promise.all([budget.reload(), yearData.reload(), projects.reload()])
           }}

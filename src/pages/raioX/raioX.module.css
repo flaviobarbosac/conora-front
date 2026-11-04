@@ -329,6 +329,16 @@
   gap: var(--space-4);
 }
 
+.raioxMonthWeb {
+  display: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.raioxMonthWeb > * {
+  width: 100%;
+}
+
 .raioxControls {
   display: flex;
   flex-direction: column;
@@ -1012,8 +1022,120 @@
   }
 }
 
+/* Web only (min-width 720). Phone portrait and phone landscape stay on the rules above. */
+@media (min-width: 720px) and (min-height: 501px) {
+  /* Sticky top: 56px shifts the section bar down over the month picker. */
+  .raioxAnchors {
+    top: 0;
+  }
+
+  .raioxMonthMobile {
+    display: none;
+  }
+
+  .raioxMonthWeb {
+    display: block;
+  }
+
+  .periodSlider {
+    flex: 0 0 auto;
+    gap: 4px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .periodSliderControls {
+    grid-template-columns: 2rem minmax(0, 1fr) 2rem;
+  }
+
+  .periodSliderStep {
+    width: 2rem;
+    min-width: 2rem;
+    height: 2rem;
+    min-height: 2rem;
+  }
+
+  .periodSlider input[type='range'] {
+    height: 2rem;
+  }
+
+  .periodSliderTrack {
+    padding-bottom: 1rem;
+  }
+
+  :global(#raiox-arvore) .raioxRow,
+  :global(#raiox-previsto) .macroAmounts,
+  :global(#raiox-previsto) .macroAmountsHead,
+  :global(section[aria-label='Patrimônio']) .macroAmounts,
+  :global(section[aria-label='Patrimônio']) .macroAmountsHead {
+    --raiox-col-previsto: 10.5rem;
+    --raiox-col-realizado: 10.5rem;
+  }
+
+  :global(#raiox-arvore) .raioxHead .raioxTotals > span:nth-child(2),
+  :global(#raiox-previsto) .macroAmountsHead > span:nth-child(3),
+  :global(section[aria-label='Patrimônio']) .macroAmountsHead > span:nth-child(3) {
+    white-space: nowrap;
+    overflow: visible;
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
+
+  :global(#raiox-arvore) .raioxHead .raioxTotals > span:nth-child(1),
+  :global(#raiox-arvore) .raioxTotals > .raioxAmount:nth-child(1),
+  :global(section[aria-label='Patrimônio']) .macroAmountsHead > span:nth-child(2),
+  :global(section[aria-label='Patrimônio']) .macroAmounts > .macroAmountCell:nth-child(1) {
+    transform: translateX(-85px);
+  }
+
+  :global(#raiox-previsto) .macroAmountsHead > span:nth-child(2),
+  :global(#raiox-previsto) .macroAmounts > .macroAmountCell:nth-child(1) {
+    transform: translateX(-55px);
+  }
+
+  :global(#raiox-arvore) .raioxHead .raioxTotals > span:nth-child(2),
+  :global(#raiox-arvore) .raioxTotals > .raioxAmount:nth-child(2),
+  :global(#raiox-previsto) .macroAmountsHead > span:nth-child(3),
+  :global(#raiox-previsto) .macroAmounts > .macroAmountCell:nth-child(2),
+  :global(section[aria-label='Patrimônio']) .macroAmountsHead > span:nth-child(3),
+  :global(section[aria-label='Patrimônio']) .macroAmounts > .macroAmountCell:nth-child(2) {
+    transform: translateX(-15px);
+  }
+
+  :global(#raiox-arvore) .raioxTotals > .raioxAmount,
+  :global(#raiox-previsto) .macroAmountCell,
+  :global(section[aria-label='Patrimônio']) .macroAmountCell {
+    display: flex;
+    width: 100%;
+    justify-content: flex-end;
+    overflow: visible;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+}
+
 /* Phone landscape only: previsto column in the category list, not the chart. */
 @media (orientation: landscape) and (max-height: 500px) {
+  .raioxAnchors {
+    position: static;
+    top: auto;
+  }
+
+  .raioxMonthMobile {
+    flex: 1 0 100%;
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .periodSlider {
+    flex: 0 1 auto;
+  }
+
+  .heroCardsRaioX .heroCardStatic:last-child {
+    grid-column: span 2;
+  }
+
   :global(#raiox-previsto) .macroAmountsHead > span:nth-child(2),
   :global(#raiox-previsto) .macroAmounts > .macroAmountCell:first-child {
     position: relative;

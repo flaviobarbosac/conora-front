@@ -154,3 +154,30 @@
     flex: 1 1 calc(50% - var(--space-1));
   }
 }
+
+.statementCredit {
+  color: var(--primary);
+}
+
+.statementDebit {
+  color: var(--danger);
+}
+
+.statementEntry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.statementEntry:last-child {
+  border-bottom: 0;
+}
+
+.statementLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+}

@@ -7,6 +7,7 @@ import {
   buildRaioXPrevistoBars,
   mergeEntryActuals,
   patrimonyLeafAmounts,
+  patrimonyNetWorth,
   patrimonyStockMap,
   sectionHead,
   sectionRealized,
@@ -496,6 +497,17 @@ describe('patrimony reflections', () => {
       actual: 30,
     })
     expect(sectionRealized(byParent, maps.actual, 'Asset', chart)).toBe(80)
+  })
+
+  it('lowers net worth when a liability is paid and raises it when an asset is received', () => {
+    const maps = buildAmountMaps([
+      line('car', 1000, 250),
+      line('debt', 0, 100),
+    ])
+    const byParent = groupAccountsByParent(chart)
+    const assets = sumBranch(sectionHead(chart, 'Asset')!.id, byParent, maps.planned, maps.actual)
+    const liabilities = sumBranch(sectionHead(chart, 'Liability')!.id, byParent, maps.planned, maps.actual)
+    expect(patrimonyNetWorth(assets, liabilities)).toEqual({ planned: 1000, actual: 150 })
   })
 
   it('adds patrimony income and expense to the month actual and ignores transfers', () => {

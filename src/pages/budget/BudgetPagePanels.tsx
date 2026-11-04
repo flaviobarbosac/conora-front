@@ -12,8 +12,6 @@ import {
   type SharingScope,
 } from '../../api/finance'
 import { BudgetValueSheet } from '../../components/BudgetValueSheet'
-import { InfoHint } from '../../components/InfoHint'
-import { MoneyAbbrevLegend } from '../../components/MoneyAbbrevLegend'
 import { Button } from '../../components/ui/Button'
 import { Icon } from '../../components/ui/Icon'
 import { Empty, ErrorText, Loading } from '../../components/ui/Feedback'
@@ -37,7 +35,7 @@ import {
 import { showSaveToast } from '../../lib/saveToast'
 import { usePlanAccess } from '../../hooks/usePlanAccess'
 import { categoryLabel } from '../../lib/categoryLabel'
-import { CASH_FLOW_SECTIONS, EXPENSE_SECTIONS, compareCategorySiblings } from '../../lib/categoryOrder'
+import { compareCategorySiblings } from '../../lib/categoryOrder'
 import {
   competencesFrom,
   currentCompetence,
@@ -48,7 +46,7 @@ import {
   monthsInclusive,
   parseMoney,
 } from '../../lib/format'
-import { budgetTreeAccounts, buildAmountMaps, groupAccountsByParent, sumBranch } from '../../lib/raioX'
+import { buildAmountMaps, groupAccountsByParent, sumBranch } from '../../lib/raioX'
 import pageStyles from '../pageStyles'
 import budgetStyles from './budget.module.css'
 
@@ -66,7 +64,6 @@ export type BudgetTreeEditorProps = {
   yearData: BudgetYear | null | undefined
   focusCategoryId: string | null
   onSaved: () => void
-  onReturnToRaioX?: () => void
 }
 
 export function BudgetTreeEditor({
@@ -81,7 +78,6 @@ export function BudgetTreeEditor({
   yearData,
   focusCategoryId,
   onSaved,
-  onReturnToRaioX,
 }: BudgetTreeEditorProps) {
   const { plan } = usePlanAccess()
   const fullAccess = hasFullAccess(plan)
@@ -114,14 +110,17 @@ export function BudgetTreeEditor({
   const lockedCategoryIds = projectLockedCategoryIds
 
   useEffect(() => {
-    if (fullAccess || categories.length === 0) {
+    if (categories.length === 0) {
       return
     }
-    const keep = freeTierVisibleIds(categories)
+    const visible = fullAccess ? null : freeTierVisibleIds(categories)
     setOpen(
       new Set(
         categories
-          .filter((account) => keep.has(account.id) && account.level !== 'Analytical')
+          .filter(
+            (account) =>
+              account.level !== 'Analytical' && (visible === null || visible.has(account.id)),
+          )
           .map((account) => account.id),
       ),
     )
@@ -145,7 +144,13 @@ export function BudgetTreeEditor({
     if (target.level !== 'Analytical') {
       ancestors.add(target.id)
     }
-    setOpen(ancestors)
+    setOpen((current) => {
+      const next = new Set(current)
+      for (const id of ancestors) {
+        next.add(id)
+      }
+      return next
+    })
     setFocusedId(focusCategoryId)
     const timer = window.setTimeout(() => {
       document.getElementById(`budget-account-${focusCategoryId}`)?.scrollIntoView({
@@ -161,10 +166,7 @@ export function BudgetTreeEditor({
 
   const { planned, actual } = useMemo(() => buildAmountMaps(budget.lines), [budget.lines])
 
-  const cashAccounts = useMemo(
-    () => budgetTreeAccounts(visibleCategories, planned, actual),
-    [visibleCategories, planned, actual],
-  )
+  const cashAccounts = visibleCategories
 
   const byParent = useMemo(() => {
     const map = groupAccountsByParent(cashAccounts)
@@ -174,26 +176,12 @@ export function BudgetTreeEditor({
     return map
   }, [cashAccounts])
 
-  const roots = useMemo(
-    () =>
-      CASH_FLOW_SECTIONS.map((section) =>
-        cashAccounts.find((account) => {
-          if (account.section !== section || account.level === 'Analytical') {
-            return false
-          }
-          const parent = visibleCategories.find((item) => item.id === account.parentId)
-          return !parent || parent.section !== section
-        }),
-      ).filter(Boolean) as Category[],
-    [cashAccounts, visibleCategories],
-  )
-
   const treeRoots = useMemo(() => {
-    const patrimonyRoot = cashAccounts.find(
-      (account) => account.section === 'Patrimony' && account.level === 'Root',
-    )
-    return patrimonyRoot ? [...roots, patrimonyRoot] : roots
-  }, [cashAccounts, roots])
+    const ids = new Set(cashAccounts.map((account) => account.id))
+    return cashAccounts
+      .filter((account) => !account.parentId || !ids.has(account.parentId))
+      .sort(compareCategorySiblings)
+  }, [cashAccounts])
 
   const expenseDays = useMemo(() => {
     const map = new Map<string, number>()
@@ -434,13 +422,6 @@ export function BudgetTreeEditor({
 
   return (
     <section className={styles.section}>
-      {onReturnToRaioX ? (
-        <div className={styles.budgetReturnBar}>
-          <Button type="button" variant="secondary" onClick={onReturnToRaioX}>
-            Voltar pro Raio-X
-          </Button>
-        </div>
-      ) : null}
       <div className={styles.budgetSaveBar}>
         <p className={styles.muted}>
           {canEdit ? 'Edite o previsto e salve.' : 'Orçamento familiar em modo leitura.'}
@@ -472,26 +453,18 @@ export function BudgetTreeEditor({
       />
       {!fullAccess ? <p className={styles.muted}>{FREE_TIER_CATEGORY_LABEL}</p> : null}
       <ErrorText message={saveAction.error} />
-      {roots.length === 0 && categoriesLoading ? <Loading /> : null}
-      {roots.length === 0 && !categoriesLoading ? (
+      {treeRoots.length === 0 && categoriesLoading ? <Loading /> : null}
+      {treeRoots.length === 0 && !categoriesLoading ? (
         <Empty>
           {scope === 'Personal'
             ? 'Nenhuma categoria nesta visão.'
             : 'Nenhuma categoria para montar o orçamento.'}
         </Empty>
       ) : null}
-      {roots.length > 0 ? (
+      {treeRoots.length > 0 ? (
         <div className={`${styles.raioxList} ${styles.budgetTreeList}`}>
           <div className={styles.budgetTreeHead}>
             <strong>Categorias</strong>
-            <div className={styles.budgetTreeHeadHints}>
-              <MoneyAbbrevLegend />
-              <InfoHint label="Informação sobre projetos de vida no orçamento" title="Informação">
-                Projetos de vida: a parcela mensal entra sozinha no previsto. O lançamento entra no realizado.
-                Copiar o mês anterior não altera essas linhas. Patrimônio: a conta aparece no mês do lançamento.
-                Receita aumenta o bem e despesa diminui. O valor do mês entra no realizado.
-              </InfoHint>
-            </div>
           </div>
           <div className={`${styles.raioxRow} ${styles.budgetRow} ${styles.raioxHead}`}>
             <span />
@@ -555,12 +528,10 @@ export function BudgetTreeEditor({
                     formatMoneyInput(planned.get(sheetAccount.id) ?? 0))
               }
               day={
-                EXPENSE_SECTIONS.includes(sheetAccount.section)
-                  ? (dayDrafts[sheetAccount.id] ??
-                    (expenseDays.has(sheetAccount.id)
-                      ? String(expenseDays.get(sheetAccount.id))
-                      : ''))
-                  : null
+                dayDrafts[sheetAccount.id] ??
+                (expenseDays.has(sheetAccount.id)
+                  ? String(expenseDays.get(sheetAccount.id))
+                  : '')
               }
               hasPrev={sheetHasPrev}
               hasNext={sheetHasNext}
@@ -716,9 +687,8 @@ function BudgetAccountBlock({
     const dayValue = dayDrafts[account.id] ?? ''
     const isFocused = focusedId === account.id
     const fieldDisabled = busy || !canEdit || locked || needsProject
-    const showDay = EXPENSE_SECTIONS.includes(account.section)
+    const showDay = true
     const plannedAmount = planned.get(account.id) ?? 0
-    const monthActual = actual.get(account.id) ?? 0
     const displayAmount = locked ? formatMoneyInput(plannedAmount) : draft
     const linkedProjects = projects.filter((project) => project.categoryId === account.id)
     const lockHint = projectLocked
@@ -784,9 +754,6 @@ function BudgetAccountBlock({
             </button>
           ) : null}
           {lockHint ? <span className={styles.muted}>{lockHint}</span> : null}
-          {monthActual > 0.001 ? (
-            <span className={styles.muted}>Realizado {formatMoney(monthActual)}</span>
-          ) : null}
         </span>
         <BudgetTotalsCell
           edit={

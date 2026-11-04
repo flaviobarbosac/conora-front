@@ -2961,3 +2961,14 @@ button.compact {
   line-height: var(--leading-body);
   color: var(--text-secondary);
 }
+
+/* Phone landscape only. Month selector meets the content edges. Portrait and web keep the page padding. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .picker {
+    box-sizing: border-box;
+    width: calc(100% + 2 * var(--shell-pad-x, var(--space-5)));
+    min-width: calc(100% + 2 * var(--shell-pad-x, var(--space-5)));
+    max-width: none;
+    margin-inline: calc(-1 * var(--shell-pad-x, var(--space-5)));
+  }
+}

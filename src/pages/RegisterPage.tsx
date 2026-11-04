@@ -49,7 +49,10 @@ export function RegisterPage() {
   const [busy, setBusy] = useState(false)
 
   if (session) {
-    return <Navigate to={afterRegister} replace />
+    // A new account always still has to onboard. Going straight there avoids the blank
+    // frame on "/" while the app checks the profile.
+    const next = afterRegister === '/' ? '/onboarding' : afterRegister
+    return <Navigate to={next} replace />
   }
 
   async function goLoginBecauseExists(message: string, usuario?: string) {

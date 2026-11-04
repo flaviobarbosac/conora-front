@@ -36,7 +36,7 @@ const CATEGORY_MENU = [
   { code: 'INC_OTHER', label: 'Outras receitas' },
   { code: 'INC_WORK', label: 'Receitas de trabalho' },
   { code: 'ASSET', label: 'Ativo' },
-  { code: 'PATRIMONY', label: 'Ativo e passivo' },
+  { code: 'PATRIMONY', label: 'Passivo' },
 ] as const
 
 export function RaioXAnchorsNav({

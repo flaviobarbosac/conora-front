@@ -477,6 +477,14 @@ export function resolvePatrimonyLeafId(
   return local?.id ?? null
 }
 
+/** Net worth is assets minus liabilities. Asset entries raise it; liability payments raise the liability side and therefore lower it. */
+export function patrimonyNetWorth(assets: RaioXTotals, liabilities: RaioXTotals): RaioXTotals {
+  return {
+    planned: assets.planned - liabilities.planned,
+    actual: assets.actual - liabilities.actual,
+  }
+}
+
 /** Stock on the analytical leaf only. Synthetic parents pick it up through sumBranch. */
 export function patrimonyLeafAmounts(
   items: { categoryId: string; categoryCode?: string | null; section: CategorySection; amount: number }[],
