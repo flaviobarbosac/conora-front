@@ -6,13 +6,11 @@ import { PaidModuleBadge } from '../components/PaidModuleBadge'
 import { PageHeader } from '../components/PageHeader'
 import { usePlanAccess } from '../hooks/usePlanAccess'
 import { hasFullAccess } from '../lib/freeTier'
-import { Pager } from '../components/Pager'
 import { Button } from '../components/ui/Button'
 import { Badge, Empty, ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
 import { MoneyField } from '../components/ui/MoneyField'
 import { useAction } from '../hooks/useAction'
-import { useClientPagination } from '../hooks/useClientPagination'
 import { useLoad } from '../hooks/useLoad'
 import { useLookups } from '../hooks/useLookups'
 import { useRegisterDirty, useUnsavedChanges } from '../hooks/useUnsavedChanges'
@@ -82,39 +80,6 @@ export function PatrimonyPage() {
     return list
   }, [allItems, sectionFilter, filterAccountId, appliedSearch])
 
-  const pagination = useClientPagination(items, 10)
-
-  const categorySummary = useMemo(() => {
-    const map = new Map<
-      string,
-      { categoryId: string; categoryName: string; section: SectionFilter; amount: number; count: number }
-    >()
-    for (const item of allItems) {
-      if (item.section !== 'Asset' && item.section !== 'Liability') {
-        continue
-      }
-      const current = map.get(item.categoryId)
-      if (current) {
-        current.amount += item.amount
-        current.count += 1
-      } else {
-        map.set(item.categoryId, {
-          categoryId: item.categoryId,
-          categoryName: item.categoryName || item.groupName,
-          section: item.section,
-          amount: item.amount,
-          count: 1,
-        })
-      }
-    }
-    return [...map.values()].sort((a, b) => {
-      if (a.section !== b.section) {
-        return a.section === 'Asset' ? -1 : 1
-      }
-      return b.amount - a.amount
-    })
-  }, [allItems])
-
   function setSectionFilter(next: SectionFilter | null) {
     const params = new URLSearchParams()
     if (next) {
@@ -138,9 +103,6 @@ export function PatrimonyPage() {
       setFormDirty(false)
     }
   }
-
-  const assetCount = allItems.filter((item) => item.section === 'Asset').length
-  const liabilityCount = allItems.filter((item) => item.section === 'Liability').length
 
   return (
     <div className={styles.page}>
@@ -225,7 +187,7 @@ export function PatrimonyPage() {
         </Empty>
       ) : null}
 
-      {pagination.pageItems.map((item) => (
+      {items.map((item) => (
         <Link
           key={item.id}
           className={`${styles.section} ${styles.projectDashCard}`}
@@ -248,14 +210,6 @@ export function PatrimonyPage() {
         </Link>
       ))}
 
-      <Pager
-        page={pagination.page}
-        pageCount={pagination.pageCount}
-        total={pagination.total}
-        pageSize={pagination.pageSize}
-        onPageChange={pagination.setPage}
-      />
-
       {showForm && canWrite ? (
         <PatrimonyCreateForm
           initialCategoryId={filterAccountId}
@@ -271,61 +225,6 @@ export function PatrimonyPage() {
             navigate(`/patrimonio/${id}`)
           }}
         />
-      ) : null}
-
-      {data ? (
-        <section
-          className={`${styles.horizonBlock} ${styles.projectsHorizonSummary}`}
-          aria-label="Resumo por categoria"
-        >
-          <h2 className={styles.sectionTitle}>Resumo</h2>
-          <div className={styles.horizonRow}>
-            <span className={styles.horizonMeta}>
-              <strong>Ativo</strong>
-              <span>
-                {assetCount} {assetCount === 1 ? 'item' : 'itens'} · {formatMoney(data.assetsTotal)}
-              </span>
-            </span>
-          </div>
-          <div className={styles.horizonRow}>
-            <span className={styles.horizonMeta}>
-              <strong>Passivo</strong>
-              <span>
-                {liabilityCount} {liabilityCount === 1 ? 'item' : 'itens'} ·{' '}
-                {formatMoney(data.liabilitiesTotal)}
-              </span>
-            </span>
-          </div>
-          <div className={styles.horizonRow}>
-            <span className={styles.horizonMeta}>
-              <strong>Patrimônio líquido</strong>
-              <span>{formatMoney(data.netWorth)}</span>
-            </span>
-          </div>
-          {categorySummary.length > 0 ? (
-            <>
-              <h3 className={styles.sectionTitle}>Por categoria</h3>
-              {categorySummary.map((row) => (
-                <div key={row.categoryId} className={styles.horizonRow}>
-                  <span className={styles.horizonMeta}>
-                    <strong>
-                      {row.categoryName}
-                      <span className={styles.rowSub}>
-                        {' '}
-                        · {row.section === 'Asset' ? 'Ativo' : 'Passivo'}
-                      </span>
-                    </strong>
-                    <span>
-                      {row.count} {row.count === 1 ? 'item' : 'itens'} · {formatMoney(row.amount)}
-                    </span>
-                  </span>
-                </div>
-              ))}
-            </>
-          ) : (
-            <p className={styles.muted}>Sem categorias com itens ainda.</p>
-          )}
-        </section>
       ) : null}
     </div>
   )

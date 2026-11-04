@@ -10,14 +10,7 @@ import { useLoad } from '../hooks/useLoad'
 import { currentCompetence, downloadBlob, formatMoney } from '../lib/format'
 import styles from './pageStyles'
 
-const TILES: ReadonlyArray<{ to: string; title: string; text: string }> = [
-  { to: '/diagnostico', title: 'Diagnóstico', text: 'Fontes de renda e valor líquido' },
-  { to: '/marcos', title: 'Marcos', text: 'Conquistas do método' },
-  { to: '/retrospectiva', title: 'Retrospectiva', text: 'Resumo do ano' },
-  { to: '/plano', title: 'Plano', text: 'Assinatura e situação' },
-  { to: '/operacao', title: 'Operação', text: 'Auditoria e saúde da API' },
-  { to: '/importar', title: 'Importar extrato', text: 'CSV ou OFX' },
-]
+const TILES: ReadonlyArray<{ to: string; title: string; text: string }> = []
 
 export function MorePage() {
   const [ym, setYm] = useState(currentCompetence)
@@ -84,6 +77,9 @@ export function MorePage() {
           </Button>
           <Button variant="secondary" disabled={files.busy} onClick={() => void download(() => exportApi.summary(ym))}>
             Exportar resumo
+          </Button>
+          <Button variant="secondary" disabled={files.busy} onClick={() => void download(() => exportApi.reportXlsx(ym))}>
+            Exportar relatório (XLSX)
           </Button>
         </div>
       </section>

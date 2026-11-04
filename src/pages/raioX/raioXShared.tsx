@@ -27,6 +27,7 @@ import {
   progressTone,
   sectionHead,
   sumBranch,
+  patrimonyNetWorth,
   type ProgressTone,
   type RaioXFocus,
   type RaioXTotals,
@@ -624,10 +625,7 @@ export function RaioXSideCards({
 
   const assets = sectionTotals(accounts, byParent, planned, actual, 'Asset')
   const liabilities = sectionTotals(accounts, byParent, planned, actual, 'Liability')
-  const net = {
-    planned: assets.planned - liabilities.planned,
-    actual: assets.actual - liabilities.actual,
-  }
+  const net = patrimonyNetWorth(assets, liabilities)
   const patrimonyActive = focus === 'patrimony'
 
   const filteredProjects = projects.filter((project) =>

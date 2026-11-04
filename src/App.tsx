@@ -35,6 +35,7 @@ import { OnboardingPage } from './pages/OnboardingPage'
 import { OwnerTransferPage } from './pages/OwnerTransferPage'
 import { PatrimonyDetailPage } from './pages/PatrimonyDetailPage'
 import { PatrimonyPage } from './pages/PatrimonyPage'
+import { PatrimonyStatementPage } from './pages/PatrimonyStatementPage'
 import { ContractPage } from './pages/ContractPage'
 import { PlanPage } from './pages/PlanPage'
 import { ProfilePage } from './pages/ProfilePage'
@@ -128,7 +129,7 @@ function RequireOnboarding() {
   }, [session, authReady])
 
   if (!authReady || !ready) {
-    return null
+    return <p>Carregando…</p>
   }
   if (needsOnboarding) {
     return <Navigate to="/onboarding" replace />
@@ -181,6 +182,7 @@ export default function App() {
                 <Route path="/categorias" element={<CategoriesPage />} />
                 <Route path="/plano-de-contas" element={<Navigate to="/categorias" replace />} />
                 <Route path="/patrimonio" element={<PatrimonyPage />} />
+                <Route path="/patrimonio/:id/extrato" element={<PatrimonyStatementPage />} />
                 <Route path="/patrimonio/:id" element={<PatrimonyDetailPage />} />
                 <Route path="/membros" element={<MembersPage />} />
                 <Route path="/plano" element={<PlanPage />} />

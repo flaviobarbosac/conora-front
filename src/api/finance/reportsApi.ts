@@ -22,4 +22,5 @@ export const dashboardApi = {
 export const exportApi = {
   entries: (competenceYm?: string) => apiBlob(`/export/entries${query({ competenceYm })}`),
   summary: (ym: string) => apiBlob(`/export/summary/${ym}`),
+  reportXlsx: (ym: string) => apiBlob(`/export/report/${ym}`),
 }

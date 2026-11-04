@@ -536,6 +536,7 @@
 .main {
   display: flex;
   flex-direction: column;
+  --shell-pad-x: var(--space-5);
   padding: var(--space-5);
   min-width: 0;
   min-height: 0;
@@ -589,27 +590,25 @@
   font-weight: var(--weight-semibold);
 }
 
-/* Center tab (Raio-X): larger hit/icon; primary color only when this route is active. */
+/* Center tab (Raio-X): larger icon, always the theme accent so it stands out. */
 .bottomLinkFeature {
   font-size: calc(var(--text-xs) * 1.15);
   gap: 4px;
   transform: translateY(-10px);
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
 }
 
-.bottomLink.bottomLinkFeature {
-  color: var(--text-muted);
-  font-weight: inherit;
+.bottomLink.bottomLinkFeature,
+.bottomLinkActive.bottomLinkFeature,
+.bottomLinkFeatureActive {
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
 }
 
 .bottomLinkFeature :global(svg) {
   width: 30px;
   height: 30px;
-}
-
-.bottomLinkActive.bottomLinkFeature,
-.bottomLinkFeatureActive {
-  color: var(--primary);
-  font-weight: var(--weight-semibold);
 }
 
 @media (min-width: 768px) {
@@ -733,6 +732,7 @@
   }
 
   .main {
+    --shell-pad-x: var(--space-6);
     padding: var(--space-7) var(--space-6);
   }
 }
@@ -910,6 +910,7 @@
   }
 
   .main {
+    --shell-pad-x: var(--space-12);
     padding: var(--space-9) var(--space-12);
   }
 }

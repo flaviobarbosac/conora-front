@@ -95,6 +95,12 @@ export function PatrimonyDetailPage() {
             </section>
           )}
 
+          <div className={styles.formActions}>
+            <Button variant="secondary" onClick={() => navigate(`/patrimonio/${data.id}/extrato`)}>
+              Ver extrato
+            </Button>
+          </div>
+
           <p className={styles.muted}>
             <Link to="/patrimonio" className={styles.cadastroDetailBack}>
               ← Voltar ao patrimônio

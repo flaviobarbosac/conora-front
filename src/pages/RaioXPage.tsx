@@ -260,10 +260,15 @@ export function RaioXPage() {
         actions={
           <>
             <SharingViewToggle onChange={setScope} />
-            <CompetencePicker value={ym} onChange={setYm} />
+            <div className={styles.raioxMonthMobile}>
+              <CompetencePicker value={ym} onChange={setYm} />
+            </div>
           </>
         }
       />
+      <div className={styles.raioxMonthWeb}>
+        <CompetencePicker value={ym} onChange={setYm} />
+      </div>
       <RaioXPeriodLeakageControls
         months={months}
         leakageOnly={leakageOnly}
