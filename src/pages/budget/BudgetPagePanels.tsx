@@ -445,9 +445,6 @@ export function BudgetTreeEditor({
       ) : null}
       {treeRoots.length > 0 ? (
         <div className={`${styles.raioxList} ${styles.budgetTreeList}`}>
-          <div className={styles.budgetTreeHead}>
-            <strong>Categorias</strong>
-          </div>
           <div className={`${styles.raioxRow} ${styles.budgetRow} ${styles.raioxHead}`}>
             <span />
             <span>Categoria</span>

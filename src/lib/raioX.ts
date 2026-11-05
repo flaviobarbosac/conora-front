@@ -11,14 +11,14 @@ export type ProgressTone = 'ok' | 'over' | 'muted' | 'unbudgeted'
  * Codes match SystemCategories; names are resolved from the live chart.
  */
 export const RAIOX_PREVISTO_CATEGORY_CODES = [
+  'INC_WORK',
+  'INC_OTHER',
+  'INC_BENEFIT',
   'DISC',
   'ESS_DEBT',
   'ESS',
-  'LIFE',
   'SOC',
-  'INC_BENEFIT',
-  'INC_OTHER',
-  'INC_WORK',
+  'LIFE',
 ] as const
 
 const RAIOX_PREVISTO_NAME_FALLBACKS: Record<(typeof RAIOX_PREVISTO_CATEGORY_CODES)[number], string[]> = {
@@ -105,7 +105,7 @@ function mergeIncomeBars(bars: RaioXPrevistoBar[]): RaioXPrevistoBar[] {
     actual,
     progressPct: percent === null ? 0 : Math.min(100, percent),
   }
-  return bars.filter((bar) => bar.code !== 'INC_OTHER' && bar.code !== 'INC_WORK').concat(merged)
+  return [merged, ...bars.filter((bar) => bar.code !== 'INC_OTHER' && bar.code !== 'INC_WORK')]
 }
 
 /**
