@@ -17,7 +17,9 @@ import { Field } from '../components/ui/Field'
 import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
+import { usePlanAccess } from '../hooks/usePlanAccess'
 import { confirmDestructive } from '../lib/confirm'
+import { formatDate } from '../lib/format'
 import { planSummary } from '../lib/planAccess'
 import { showSaveToast } from '../lib/saveToast'
 import { VOICE_LAUNCH_ENABLED } from '../lib/voiceLaunch'
@@ -56,15 +58,15 @@ function fromProfile(
 export function SettingsPage() {
   const { theme } = useTheme()
   const { logout } = useAuth()
+  const { plan: accessPlan } = usePlanAccess()
   const profile = useLoad(() => familyApi.profile(), [])
   const plan = useLoad(() => planApi.get(), [])
-  const lgpdStatus = useLoad(() => lgpdApi.status(), [])
+  const exportOnlyUntil = accessPlan?.exportOnlyUntil
+  const exportOnly = Boolean(exportOnlyUntil && new Date(exportOnlyUntil).getTime() > Date.now())
   const savePrefs = useAction()
   const privacy = useAction()
   const [draft, setDraft] = useState<PrefDraft | null>(null)
   const [saved, setSaved] = useState<PrefDraft | null>(null)
-  const canDeleteAccount = Boolean(lgpdStatus.data?.canDeleteAccount)
-
   const dirty = Boolean(draft && saved && JSON.stringify(draft) !== JSON.stringify(saved))
   useRegisterDirty('settings-form', dirty)
 
@@ -126,19 +128,10 @@ export function SettingsPage() {
         'A exportação será agendada e estará disponível pra você daqui a 24 horas.',
         5000,
       )
-      lgpdStatus.reload()
     }
   }
 
   async function deleteAccount() {
-    if (!canDeleteAccount) {
-      showSaveToast(
-        lgpdStatus.data?.message
-          ?? 'Aguarde a exportação dos seus dados ficar disponível antes de excluir a conta.',
-        5000,
-      )
-      return
-    }
     const confirmed = await confirmDestructive(
       'Excluir sua conta remove o acesso ao app. Registros com obrigação fiscal podem ser retidos por até 5 anos. Continuar?',
       { title: 'Excluir conta' },
@@ -306,12 +299,13 @@ export function SettingsPage() {
           </Link>
         </div>
         <p className={styles.muted}>
-          Processos satélites da LGPD: baixe uma cópia dos seus dados ou exclua sua conta definitivamente. O
-          aceite ciente da LGPD é pedido só no pagamento de um plano pago — não no acesso gratuito.
-          Exportar e excluir são ações separadas; a exclusão só libera depois que a exportação estiver pronta.
+          Baixe uma cópia dos seus dados ou exclua sua conta. Exportar e excluir são ações separadas: dá para
+          excluir sem exportar. O aceite ciente da LGPD é pedido só no pagamento de um plano pago.
         </p>
-        {lgpdStatus.data && !lgpdStatus.data.canDeleteAccount ? (
-          <p className={styles.muted}>{lgpdStatus.data.message}</p>
+        {exportOnly ? (
+          <p className={styles.muted} role="status">
+            Sua compra na Hotmart foi cancelada. Até {formatDate(exportOnlyUntil)} você só pode exportar seus dados.
+          </p>
         ) : null}
         <div className={styles.actions}>
           <Button variant="secondary" disabled={privacy.busy} onClick={() => void exportData()}>
@@ -319,7 +313,7 @@ export function SettingsPage() {
           </Button>
           <Button
             variant="danger"
-            disabled={privacy.busy || !canDeleteAccount}
+            disabled={privacy.busy}
             onClick={() => void deleteAccount()}
           >
             Excluir minha conta

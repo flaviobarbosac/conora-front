@@ -83,6 +83,7 @@ describe('planAccess', () => {
   it('summarizes plan phases', () => {
     expect(planSummary(null)).toBe('Carregando…')
     expect(planSummary(plan({ phase: 'Trial', daysLeft: 12 }))).toContain('12 dias')
+    expect(planSummary(plan({ phase: 'Trial', daysLeft: 40, isTrainingStudent: true }))).toBe('Acesso completo')
     expect(planSummary(plan({ phase: 'Grace' }))).toContain('somente leitura')
     expect(planSummary(plan({ phase: 'Blocked' }))).toBe('Conta bloqueada')
     expect(

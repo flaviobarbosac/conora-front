@@ -4,15 +4,13 @@ import { dashboardApi, familyApi } from '../api/finance'
 import { scanReceipt } from '../camera/scanReceipt'
 import { HomeLaunchO } from '../components/HomeLaunchO'
 import { JornadaTimeline } from '../components/JornadaTimeline'
-import { PaidModuleBadge } from '../components/PaidModuleBadge'
 import { PageHeader } from '../components/PageHeader'
 import { ScanPurposeSheet, type ScanPurposeChoice } from '../components/ScanPurposeSheet'
 import { ErrorText } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
 import { usePlanAccess } from '../hooks/usePlanAccess'
-import { currentCompetence } from '../lib/format'
-import { hasFullAccess, isFreeLimited } from '../lib/freeTier'
+import { currentCompetence, formatDate } from '../lib/format'
 import { hasJornadaAnswer, readJornadaDiagnostico, type JornadaDiagnosticoAnswers } from '../lib/jornadaDiagnostico'
 import { isVoiceMicActive } from '../lib/voiceLaunch'
 import pageStyles from './pageStyles'
@@ -53,7 +51,8 @@ export function HomePage() {
     (profile.data?.homeJourneyTimelineEnabled === false ? 'closed' : 'shown')
   const showJourney = journeyDisplay === 'shown'
   const pendingCategories = dashboard.data?.alerts.find((alert) => alert.code === 'CATEGORY_PENDING_REVIEW')
-  const showPaidModulesTag = isFreeLimited(plan) && !hasFullAccess(plan)
+  const studentTrial =
+    plan?.isTrainingStudent === true && plan.phase === 'Trial' && Boolean(plan.trialEndsAt)
 
   useEffect(() => {
     function onProfileChanged() {
@@ -112,15 +111,11 @@ export function HomePage() {
       <PageHeader
         kicker="Início"
         title={name ? `Olá, ${name}` : 'Olá'}
-        actions={showPaidModulesTag ? <PaidModuleBadge /> : undefined}
       />
 
       <ErrorText message={dashboard.error ?? profile.error ?? voiceError} />
-      {showPaidModulesTag ? (
-        <p className={styles.muted}>
-          Patrimônio, membros, projeto de vida e marcos abrem para consulta. Cadastro e edição ficam nos planos
-          pagos.
-        </p>
+      {studentTrial ? (
+        <p className={styles.muted}>Período de teste válido até {formatDate(plan?.trialEndsAt)}.</p>
       ) : null}
 
       {pendingCategories ? (

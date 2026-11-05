@@ -20,6 +20,10 @@ function safeReturnTo(raw: string | null): string {
   return '/'
 }
 
+function isDuplicateCpfMessage(message: string): boolean {
+  return /cpf/i.test(message)
+}
+
 function isAlreadyRegisteredMessage(message: string): boolean {
   return /já existe|já tem uma conta|email duplicado|já cadastrado|conta conora com este|conta existente/i.test(
     message,
@@ -70,6 +74,10 @@ export function RegisterPage() {
   async function handleRegisterError(message: string, usuario?: string) {
     if (isPreRegistrationEmailSent(message)) {
       await confirmInfo(message, { title: 'Verifique seu e-mail' })
+      return
+    }
+    if (isDuplicateCpfMessage(message)) {
+      setError(message)
       return
     }
     if (isAlreadyRegisteredMessage(message)) {
