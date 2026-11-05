@@ -514,7 +514,7 @@ export function MembersPage() {
                       </span>
                       <DeleteIconButton
                         label="Cancelar convite"
-                        disabled={rowAction.busy || !inviteEnabled}
+                        disabled={rowAction.busy}
                         onClick={() => void cancelInvite(invite)}
                       />
                     </li>

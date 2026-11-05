@@ -380,6 +380,50 @@ describe('monthsEndingAt', () => {
   })
 })
 
+describe('previsto bars order', () => {
+  const codes = [
+    'INC_WORK',
+    'INC_OTHER',
+    'INC_BENEFIT',
+    'DISC',
+    'ESS_DEBT',
+    'ESS',
+    'SOC',
+    'LIFE',
+  ] as const
+
+  it('combines work and other income into the first bar', () => {
+    const accounts = codes.map((code) =>
+      account({
+        id: code,
+        parentId: null,
+        name: code,
+        level: 'Group',
+        code,
+        section: 'Income',
+      }),
+    )
+    const planned = new Map(codes.map((code) => [code, code === 'INC_WORK' ? 10 : code === 'INC_OTHER' ? 5 : 1]))
+    const actual = new Map(codes.map((code) => [code, code === 'INC_WORK' ? 4 : code === 'INC_OTHER' ? 3 : 1]))
+    const bars = buildRaioXPrevistoBars(accounts, groupAccountsByParent(accounts), planned, actual)
+
+    expect(bars.map((bar) => bar.code)).toEqual([
+      'INC_WORK',
+      'INC_BENEFIT',
+      'DISC',
+      'ESS_DEBT',
+      'ESS',
+      'SOC',
+      'LIFE',
+    ])
+    expect(bars[0]).toMatchObject({
+      name: 'Renda do trabalho e outras receitas',
+      planned: 15,
+      actual: 7,
+    })
+  })
+})
+
 describe('life project reflections', () => {
   const life = account({
     id: 'life',

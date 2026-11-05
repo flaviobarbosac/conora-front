@@ -654,6 +654,18 @@
   grid-template-columns: 1fr;
 }
 
+.heroTonePrimary,
+.heroTonePrimary:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 14%, var(--bg-app));
+}
+
+.heroToneDanger,
+.heroToneDanger:hover {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, var(--bg-app));
+}
+
 /* Full-width on mobile only — see max-width: 719px below. */
 .heroCardGastavel {
 }

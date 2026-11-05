@@ -25,7 +25,6 @@ import { scanReceipt, fileFromPending } from '../camera/scanReceipt'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { ScanPurposeSheet, type ScanPurposeChoice } from '../components/ScanPurposeSheet'
-import { SharingViewToggle } from '../components/SharingViewToggle'
 import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { useAction } from '../hooks/useAction'
@@ -51,7 +50,6 @@ export function BudgetPage() {
     ym,
     setYm,
     scope,
-    setScope,
     confirmLeave,
     isDirty,
     budget,
@@ -254,7 +252,6 @@ export function BudgetPage() {
                 Voltar pro Raio-X
               </Button>
             ) : null}
-            <SharingViewToggle onChange={setScope} />
           </>
         }
       />

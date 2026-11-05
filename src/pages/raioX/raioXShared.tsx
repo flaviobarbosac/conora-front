@@ -90,6 +90,11 @@ export function signedMoneyClass(value: number): string {
   return value < 0 ? styles.negative : styles.positive
 }
 
+/** Theme primary when value >= 0, danger when negative. */
+function themeSignedCardClass(value: number): string {
+  return value < 0 ? styles.heroToneDanger : styles.heroTonePrimary
+}
+
 /** Full currency cell: R$ with two decimals, no mil/mi abbreviation. */
 export function MoneyDisplay({
   value,
@@ -506,42 +511,42 @@ export function RaioXHero({
         </div>
         <button
           type="button"
-          className={`${styles.heroCard} ${focus === 'income' ? styles.heroCardIncomeActive : ''}`}
+          className={`${styles.heroCard} ${styles.heroTonePrimary} ${focus === 'income' ? styles.heroCardIncomeActive : ''}`}
           aria-pressed={focus === 'income'}
           onClick={() => onFocus('income')}
         >
           <span>Renda</span>
-          <strong className={`${styles.moneyValue} ${styles.positive}`}>
+          <strong className={styles.moneyValue}>
             <MoneyDisplay value={incomeActual} />
           </strong>
         </button>
         <button
           type="button"
-          className={`${styles.heroCard} ${focus === 'discount' ? styles.heroCardDiscountActive : ''}`}
+          className={`${styles.heroCard} ${styles.heroToneDanger} ${focus === 'discount' ? styles.heroCardDiscountActive : ''}`}
           aria-pressed={focus === 'discount'}
           onClick={() => onFocus('discount')}
         >
           <span>
             {discountIsPlannedOnly ? 'Descontos sobre renda (previsto)' : 'Descontos sobre renda'}
           </span>
-          <strong className={`${styles.moneyValue} ${discountActual > 0 ? styles.negative : ''}`}>
+          <strong className={styles.moneyValue}>
             <MoneyDisplay value={discountActual} />
           </strong>
         </button>
         <button
           type="button"
-          className={`${styles.heroCard} ${styles.heroCardGastavel}${focus === 'spendable' ? ` ${styles.heroCardSpendableActive}` : ''}`}
+          className={`${styles.heroCard} ${styles.heroCardGastavel} ${themeSignedCardClass(gastavel)}${focus === 'spendable' ? ` ${styles.heroCardSpendableActive}` : ''}`}
           aria-pressed={focus === 'spendable'}
           onClick={() => onFocus('spendable')}
         >
           <span>Gastável</span>
-          <strong className={`${styles.moneyValue} ${signedMoneyClass(gastavel)}`}>
+          <strong className={styles.moneyValue}>
             <MoneyDisplay value={gastavel} />
           </strong>
         </button>
-        <div className={`${styles.heroCard} ${styles.heroCardStatic}`}>
+        <div className={`${styles.heroCard} ${styles.heroCardStatic} ${themeSignedCardClass(monthBalance)}`}>
           <span>Saldo do mês</span>
-          <strong className={`${styles.moneyValue} ${signedMoneyClass(monthBalance)}`}>
+          <strong className={styles.moneyValue}>
             <MoneyDisplay value={monthBalance} />
           </strong>
         </div>
