@@ -166,7 +166,6 @@ export function LoginPage() {
           type="text"
           inputMode="email"
           autoComplete="username"
-          autoFocus={!fromInvite}
           required
           value={usuario}
           onChange={(event) => setUsuario(formatLoginUsuario(event.target.value))}
