@@ -12,6 +12,7 @@ import { PlanBanner } from '../components/PlanBanner'
 import { Skeleton } from '../components/ui/Feedback'
 import { Icon } from '../components/ui/Icon'
 import { useLoad } from '../hooks/useLoad'
+import { usePlanAccess } from '../hooks/usePlanAccess'
 import {
   hasJornadaAnswer,
   isJornadaDiagnosticoComplete,
@@ -38,6 +39,8 @@ function initialsFrom(name: string, email: string): string {
 
 export function AppShell() {
   const { session, logout } = useAuth()
+  const { plan } = usePlanAccess()
+  const exportOnly = Boolean(plan?.exportOnlyUntil && new Date(plan.exportOnlyUntil).getTime() > Date.now())
   const { theme, setTheme } = useTheme()
   const { pathname } = useLocation()
   const email = session?.email || 'conta'
@@ -394,7 +397,9 @@ export function AppShell() {
             <div id="conora-voice-header" className={styles.appHeaderVoice} />
           ) : null}
           <div className={styles.appHeaderUser} ref={profileMenuRef}>
-            <AlertsBell peerOpen={profileMenuOpen} onOpen={() => setProfileMenuOpen(false)} />
+            {exportOnly ? null : (
+              <AlertsBell peerOpen={profileMenuOpen} onOpen={() => setProfileMenuOpen(false)} />
+            )}
             <button
               type="button"
               className={styles.avatarBtn}
@@ -607,7 +612,7 @@ export function AppShell() {
           <span>Menu</span>
         </button>
       </nav>
-      <IanFloatingChat />
+      {exportOnly ? null : <IanFloatingChat />}
       <FeedbackReplyListener />
       <FeedbackOverlay
         open={feedbackOpen}

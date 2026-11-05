@@ -101,9 +101,8 @@ export function subscribedTier(plan: Plan | null | undefined): PlanTier | null {
 export function planSummary(plan: Plan | null | undefined): string {
   if (!plan) return 'Carregando…'
   if (plan.phase === 'Trial') {
-    return plan.isTrainingStudent
-      ? `Acesso completo gratuito · ${plan.daysLeft} dias restantes`
-      : `Acesso gratuito · ${plan.daysLeft} dias restantes`
+    if (plan.isTrainingStudent) return 'Acesso completo'
+    return `Acesso gratuito · ${plan.daysLeft} dias restantes`
   }
   if (plan.phase === 'Grace') return 'Acesso gratuito encerrado · somente leitura'
   if (plan.phase === 'Blocked') return 'Conta bloqueada'

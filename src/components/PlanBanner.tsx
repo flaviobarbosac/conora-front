@@ -3,9 +3,6 @@ import { usePlanAccess } from '../hooks/usePlanAccess'
 import { hasFullAccess, isFreeLimited } from '../lib/freeTier'
 import styles from './PlanBanner.module.css'
 
-/** Days before the student trial ends when the countdown banner starts showing. */
-const TRIAL_WARNING_DAYS = 15
-
 /** Thin banner above every page that nudges toward the plans screen near/after the trial end. */
 export function PlanBanner() {
   const { plan } = usePlanAccess()
@@ -26,14 +23,7 @@ export function PlanBanner() {
   let lines: string[]
   let cta: string
 
-  if (plan.isTrainingStudent && plan.phase === 'Trial' && plan.daysLeft <= TRIAL_WARNING_DAYS) {
-    lines = [
-      plan.daysLeft <= 1
-        ? 'Seu acesso completo gratuito termina hoje. Assine para continuar com todas as categorias.'
-        : `Seu acesso completo gratuito termina em ${plan.daysLeft} dias. Escolha seu plano e continue sem interrupção.`,
-    ]
-    cta = 'Ver planos'
-  } else if (isFreeLimited(plan) && !hasFullAccess(plan)) {
+  if (isFreeLimited(plan) && !hasFullAccess(plan)) {
     tone = 'warning'
     if (plan.everSubscribed) {
       lines = [

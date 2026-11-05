@@ -662,6 +662,8 @@ export type Plan = {
   hasFullAccess?: boolean
   /** Had a workspace subscription row at least once (drives Renovar vs Assinar). */
   everSubscribed?: boolean
+  /** Hotmart cancel: until this instant the account can only export. */
+  exportOnlyUntil?: string | null
 }
 
 export type StorePurchase = {

@@ -51,10 +51,6 @@ const FAQ: ReadonlyArray<{ q: string; a: string }> = [
     a: 'Sim, como conta financeira: cadastre o cartão em Contas/Cartões para lançar faturas e gastos. Isso é diferente do pagamento da assinatura do app, que continua só pela App Store ou Google Play — não cobramos a assinatura com o cartão cadastrado no Conora.',
   },
   {
-    q: 'Sou aluno do treinamento. Preciso pagar agora?',
-    a: `Não. Alunos do treinamento financeiro do Leomar Campos têm ${TRIAL_DAYS} dias de acesso completo e gratuito ao Conora. A cobrança só entra depois desse período; até lá nenhuma tela existente fica trancada.`,
-  },
-  {
     q: `O que acontece depois dos ${TRIAL_DAYS} dias se eu não assinar?`,
     a: 'Você continua no Conora grátis: lança em aluguel, luz, água e escola, com uma conta. Patrimônio, membros, projeto de vida e marcos ficam só para consulta. Assine para liberar o acesso completo.',
   },
@@ -142,6 +138,55 @@ export function PlanPage() {
     plan.reload()
     access.reload()
     window.dispatchEvent(new Event(PLAN_CHANGED))
+  }
+
+  const phaseRef = useRef(data?.phase)
+  const cancelAnnounced = useRef(false)
+  phaseRef.current = data?.phase
+
+  async function pullStorePlan() {
+    const before = phaseRef.current
+    try {
+      const refreshed = await planApi.refreshStore()
+      phaseRef.current = refreshed.phase
+      if (before === 'Subscribed' && refreshed.phase !== 'Subscribed' && !cancelAnnounced.current) {
+        cancelAnnounced.current = true
+        showSaveToast('Assinatura cancelada com sucesso.')
+      }
+      if (refreshed.phase === 'Subscribed') cancelAnnounced.current = false
+    } catch {
+      // The device may have no receipt. The plan reload below still reads what the API already stored.
+    }
+    plan.reload()
+    window.dispatchEvent(new Event(PLAN_CHANGED))
+  }
+
+  const pullStoreRef = useRef(pullStorePlan)
+  pullStoreRef.current = pullStorePlan
+
+  useEffect(() => {
+    if (!storeCheckout) return
+    let cancelled = false
+    let listener: { remove: () => Promise<void> } | undefined
+    void import('@capacitor/app').then(async ({ App }) => {
+      const handle = await App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) void pullStoreRef.current()
+      })
+      if (cancelled) {
+        await handle.remove()
+        return
+      }
+      listener = handle
+    }).catch(() => undefined)
+    return () => {
+      cancelled = true
+      void listener?.remove()
+    }
+  }, [storeCheckout])
+
+  async function manageSubscription() {
+    await openStoreSubscriptions()
+    await pullStorePlan()
   }
 
   useEffect(() => {
@@ -396,7 +441,7 @@ export function PlanPage() {
                 <Button variant="secondary" disabled={restorer.busy} onClick={() => void restore()}>
                   Restaurar compras
                 </Button>
-                <Button variant="secondary" onClick={() => void openStoreSubscriptions()}>
+                <Button variant="secondary" onClick={() => void manageSubscription()}>
                   Gerenciar assinatura
                 </Button>
               </div>
@@ -451,6 +496,8 @@ function StatusHero({ plan, exporting, onExport }: HeroProps) {
     )
   }
 
+  if (plan.isTrainingStudent && plan.phase === 'Trial') return null
+
   if (!hasFullAccess(plan) && (plan.phase === 'Expired' || plan.phase === 'Grace' || plan.phase === 'Blocked')) {
     const renew = plan.everSubscribed
     return (
@@ -474,14 +521,10 @@ function StatusHero({ plan, exporting, onExport }: HeroProps) {
   return (
     <section className={styles.hero}>
       <strong>
-        {plan.isTrainingStudent
-          ? `Você é aluno: ${plan.daysLeft} ${plan.daysLeft === 1 ? 'dia' : 'dias'} de acesso completo e gratuito`
-          : `${plan.daysLeft} ${plan.daysLeft === 1 ? 'dia' : 'dias'} de acesso gratuito`}
+        {`${plan.daysLeft} ${plan.daysLeft === 1 ? 'dia' : 'dias'} de acesso gratuito`}
       </strong>
       <span>
-        {plan.isTrainingStudent
-          ? `Cortesia do treinamento financeiro do Leomar Campos, até ${formatDate(plan.trialEndsAt)}. Assine antes e continue sem nenhuma interrupção.`
-          : `Até ${formatDate(plan.trialEndsAt)}. Depois você continua no Conora grátis com as quatro categorias liberadas, ou assina para o acesso completo.`}
+        {`Até ${formatDate(plan.trialEndsAt)}. Depois você continua no Conora grátis com as quatro categorias liberadas, ou assina para o acesso completo.`}
       </span>
       <Timeline plan={plan} />
     </section>
@@ -490,7 +533,7 @@ function StatusHero({ plan, exporting, onExport }: HeroProps) {
 
 function Timeline({ plan }: { plan: Plan }) {
   const steps = [
-    { key: 'Trial', day: 'Dia 1', title: 'Acesso completo', text: plan.isTrainingStudent ? 'Grátis para alunos' : 'Período inicial' },
+    { key: 'Trial', day: 'Dia 1', title: 'Acesso completo', text: 'Período inicial' },
     { key: 'Expired', day: `Dia ${TRIAL_DAYS}`, title: 'Conora grátis', text: 'Quatro categorias + consulta' },
   ] as const
   const progress =

@@ -8,6 +8,13 @@ import { PlanAccessContext } from '../hooks/usePlanAccess'
 import { graceScreenShown, PLAN_CHANGED } from '../lib/planAccess'
 
 const PLANS_PATH = '/plano'
+const SETTINGS_PATH = '/configuracoes'
+
+function exportWindowOpen(until: string | null | undefined): boolean {
+  if (!until) return false
+  const end = new Date(until).getTime()
+  return Number.isFinite(end) && end > Date.now()
+}
 
 function isPlansScreen(pathname: string) {
   return pathname === PLANS_PATH || pathname.startsWith(`${PLANS_PATH}/`)
@@ -35,10 +42,14 @@ export function RequirePlanAccess() {
     return null
   }
   const phase = plan.data?.phase
+  const exportOnly = exportWindowOpen(plan.data?.exportOnlyUntil)
   const consoleOpen =
     (pathname === '/console' || pathname.startsWith('/console/')) &&
     isConsoleOperator(session?.email)
-  if (!isPlansScreen(pathname) && !consoleOpen) {
+  if (exportOnly && pathname !== SETTINGS_PATH && !consoleOpen) {
+    return <Navigate to={SETTINGS_PATH} replace />
+  }
+  if (!exportOnly && !isPlansScreen(pathname) && !consoleOpen) {
     if (phase === 'Blocked') {
       return <Navigate to={PLANS_PATH} replace />
     }
