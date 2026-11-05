@@ -28,7 +28,6 @@ import { confirmDestructive } from '../../lib/confirm'
 import {
   FREE_TIER_CATEGORY_LABEL,
   filterCategoriesForPlan,
-  freeTierVisibleIds,
   hasFullAccess,
   PAID_MODULE_HINT_SHORT,
 } from '../../lib/freeTier'
@@ -108,23 +107,6 @@ export function BudgetTreeEditor({
 
   // Project-linked categories stay read-only; paid leaves are hidden on free tier.
   const lockedCategoryIds = projectLockedCategoryIds
-
-  useEffect(() => {
-    if (categories.length === 0) {
-      return
-    }
-    const visible = fullAccess ? null : freeTierVisibleIds(categories)
-    setOpen(
-      new Set(
-        categories
-          .filter(
-            (account) =>
-              account.level !== 'Analytical' && (visible === null || visible.has(account.id)),
-          )
-          .map((account) => account.id),
-      ),
-    )
-  }, [fullAccess, categories])
 
   useEffect(() => {
     if (!focusCategoryId || visibleCategories.length === 0) {
