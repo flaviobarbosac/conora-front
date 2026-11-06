@@ -1,0 +1,226 @@
+[
+  {
+    "name": "Ian · 8 anos",
+    "x": 296,
+    "y": 12,
+    "w": 44,
+    "h": 44
+  },
+  {
+    "name": "Alertas, 71 não lidos",
+    "x": 905,
+    "y": 14,
+    "w": 40,
+    "h": 40
+  },
+  {
+    "name": "Menu do perfil",
+    "x": 989,
+    "y": 16,
+    "w": 36,
+    "h": 36
+  },
+  {
+    "name": "Enviar feedback",
+    "x": 957,
+    "y": 24,
+    "w": 20,
+    "h": 20
+  },
+  {
+    "name": "Recolher menu lateral",
+    "x": 193,
+    "y": 30,
+    "w": 36,
+    "h": 36
+  },
+  {
+    "name": "Início",
+    "x": 18,
+    "y": 108,
+    "w": 211,
+    "h": 46
+  },
+  {
+    "name": "Principal",
+    "x": 18,
+    "y": 108,
+    "w": 211,
+    "h": 250
+  },
+  {
+    "name": "Lançamentos",
+    "x": 296,
+    "y": 132,
+    "w": 213,
+    "h": 37
+  },
+  {
+    "name": "Raio-X",
+    "x": 18,
+    "y": 158,
+    "w": 211,
+    "h": 46
+  },
+  {
+    "name": "Competência",
+    "x": 296,
+    "y": 184,
+    "w": 735,
+    "h": 36
+  },
+  {
+    "name": "Mês anterior",
+    "x": 296,
+    "y": 184,
+    "w": 36,
+    "h": 36
+  },
+  {
+    "name": "Próximo mês",
+    "x": 995,
+    "y": 184,
+    "w": 36,
+    "h": 36
+  },
+  {
+    "name": "Orçamento",
+    "x": 18,
+    "y": 208,
+    "w": 211,
+    "h": 46
+  },
+  {
+    "name": "+ Novo lançamento",
+    "x": 296,
+    "y": 232,
+    "w": 214,
+    "h": 54
+  },
+  {
+    "name": "Buscar",
+    "x": 522,
+    "y": 232,
+    "w": 105,
+    "h": 54
+  },
+  {
+    "name": "Enviar Foto",
+    "x": 639,
+    "y": 232,
+    "w": 140,
+    "h": 54
+  },
+  {
+    "name": "Relatórios",
+    "x": 18,
+    "y": 258,
+    "w": 211,
+    "h": 46
+  },
+  {
+    "name": "Cadastros",
+    "x": 18,
+    "y": 312,
+    "w": 211,
+    "h": 46
+  },
+  {
+    "name": "Oferta religiosa · BB · 28/11/2026 Oferta religiosa",
+    "x": 320,
+    "y": 346,
+    "w": 636,
+    "h": 45
+  },
+  {
+    "name": "Excluir",
+    "x": 1164,
+    "y": 347,
+    "w": 44,
+    "h": 44
+  },
+  {
+    "name": "Pneus · BB · 28/11/2026 Pneus",
+    "x": 320,
+    "y": 416,
+    "w": 638,
+    "h": 45
+  },
+  {
+    "name": "Excluir #2",
+    "x": 1164,
+    "y": 417,
+    "w": 44,
+    "h": 44
+  },
+  {
+    "name": "Outras despesas de habitação · BB · 27/11/2026 Outras despesas de habitação",
+    "x": 320,
+    "y": 486,
+    "w": 636,
+    "h": 45
+  },
+  {
+    "name": "Excluir #3",
+    "x": 1164,
+    "y": 487,
+    "w": 44,
+    "h": 44
+  },
+  {
+    "name": "Cheque especial · BB · 27/11/2026 Cheque especial",
+    "x": 320,
+    "y": 556,
+    "w": 636,
+    "h": 45
+  },
+  {
+    "name": "Excluir #4",
+    "x": 1164,
+    "y": 557,
+    "w": 44,
+    "h": 44
+  },
+  {
+    "name": "Imposto de Renda Retido na Fonte (IRRF) · BB · 26/11/2026 Imposto de Renda Retid",
+    "x": 320,
+    "y": 626,
+    "w": 613,
+    "h": 45
+  },
+  {
+    "name": "Excluir #5",
+    "x": 1164,
+    "y": 627,
+    "w": 44,
+    "h": 44
+  },
+  {
+    "name": "Dízimo · BB · 26/11/2026 Dízimo",
+    "x": 320,
+    "y": 696,
+    "w": 626,
+    "h": 45
+  },
+  {
+    "name": "Excluir #6",
+    "x": 1164,
+    "y": 697,
+    "w": 44,
+    "h": 44
+  },
+  {
+    "name": "Acessórios · BB · 26/11/2026 Acessórios",
+    "x": 320,
+    "y": 766,
+    "w": 630,
+    "h": 45
+  },
+  {
+    "name": "Excluir #7",
+    "x": 1164,
+    "y": 767,
+    "w": 44,
+    "h": 44
+  }
+]

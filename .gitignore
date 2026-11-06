@@ -39,6 +39,12 @@ mobile/ios/App/App/capacitor.config.json
 mobile/android/app/src/main/assets/public
 mobile/ios/App/App/public
 
+# Guard rail output. Baselines under e2e/guard-rail/baselines stay in git.
+test-results/
+playwright-report/
+e2e/guard-rail-playwright.json
+e2e/guard-rail-report.json
+
 # Generated/twin JS beside TypeScript sources
 src/**/*.js
 !src/**/*.config.js
