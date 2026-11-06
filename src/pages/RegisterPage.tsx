@@ -50,6 +50,7 @@ export function RegisterPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [googleMessage, setGoogleMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   if (session) {
@@ -113,10 +114,15 @@ export function RegisterPage() {
   async function onGoogle() {
     setBusy(true)
     setError(null)
+    setGoogleMessage(null)
     try {
       await registerGoogle(await requestGoogleIdToken())
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Não foi possível criar com Google.'
+      if (/escolha outra conta/i.test(message)) {
+        setGoogleMessage(message)
+        return
+      }
       await handleRegisterError(message)
     } finally {
       setBusy(false)
@@ -162,6 +168,11 @@ export function RegisterPage() {
             <GoogleMark />
             Criar com Google
           </Button>
+          {googleMessage ? (
+            <p className={styles.error} role="alert">
+              {googleMessage}
+            </p>
+          ) : null}
           {showApple ? (
             <Button type="button" variant="secondary" className={styles.google} disabled={busy} onClick={() => void onApple()}>
               <AppleMark />
