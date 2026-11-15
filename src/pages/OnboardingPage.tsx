@@ -21,11 +21,14 @@ import {
   resumeOnboardingStep,
   type OnboardingStep,
 } from '../lib/onboardingFlow'
+import { isNativeApp } from '../lib/platform'
 import { showSaveToast } from '../lib/saveToast'
 import pageStyles from './pageStyles'
 import onboardingStyles from './onboarding/onboarding.module.css'
 
 const styles = { ...pageStyles, ...onboardingStyles }
+
+const WELCOME_VIDEO_ID = 'ljs3zGINCAs'
 
 type Step = OnboardingStep
 
@@ -346,13 +349,25 @@ export function OnboardingPage() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>Vídeo rápido</h2>
           <div className={styles.closeRitual}>
-            <iframe
-              className={styles.welcomeVideo}
-              src="https://www.youtube.com/embed/ljs3zGINCAs"
-              title="Vídeo de boas-vindas"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
+            {/* YouTube refuses the embed inside the iOS app (error 153), so native apps open the video outside. */}
+            {isNativeApp() ? (
+              <a
+                className={styles.welcomeVideoLink}
+                href={`https://www.youtube.com/watch?v=${WELCOME_VIDEO_ID}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Assistir ao vídeo no YouTube
+              </a>
+            ) : (
+              <iframe
+                className={styles.welcomeVideo}
+                src={`https://www.youtube.com/embed/${WELCOME_VIDEO_ID}`}
+                title="Vídeo de boas-vindas"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            )}
           </div>
           <ul className={styles.onboardVideoPoints} aria-label="O que você vai ver no app">
             <li>No Início, o círculo tem três jeitos: foto, voz e WhatsApp (e o lápis para lançar na mão).</li>

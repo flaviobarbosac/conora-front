@@ -8,6 +8,7 @@ import { AppleMark } from '../components/AppleMark'
 import { GoogleMark } from '../components/GoogleMark'
 import { Button } from '../components/ui/Button'
 import { Field } from '../components/ui/Field'
+import { PasswordField } from '../components/ui/PasswordField'
 import { AuthLayout } from '../layouts/AuthLayout'
 import styles from './auth.module.css'
 
@@ -127,6 +128,7 @@ export function LoginPage() {
 
   return (
     <AuthLayout
+      logoTo="/"
       title="Entrar"
       subtitle={
         fromInvite
@@ -152,6 +154,11 @@ export function LoginPage() {
             Esta conta já existe. Entre com o mesmo acesso usado no cadastro.
           </p>
         ) : null}
+        {searchParams.get('senha') === 'alterada' ? (
+          <p className={styles.notice} role="status">
+            Senha alterada. Entre com a senha nova.
+          </p>
+        ) : null}
         {fromInvite ? (
           <div className={styles.actions}>
             {socialLogin}
@@ -170,10 +177,9 @@ export function LoginPage() {
           value={usuario}
           onChange={(event) => setUsuario(formatLoginUsuario(event.target.value))}
         />
-        <Field
+        <PasswordField
           label="Senha"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
           value={password}

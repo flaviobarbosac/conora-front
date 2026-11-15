@@ -166,6 +166,15 @@ export function AppShell() {
   }, [])
 
   useEffect(() => {
+    function onOpenFeedback() {
+      setFeedbackPath(pathname)
+      setFeedbackOpen(true)
+    }
+    window.addEventListener('conora:open-feedback', onOpenFeedback)
+    return () => window.removeEventListener('conora:open-feedback', onOpenFeedback)
+  }, [pathname])
+
+  useEffect(() => {
     const media = window.matchMedia('(max-width: 1199px)')
     const apply = () => setRailViewport(media.matches)
     apply()

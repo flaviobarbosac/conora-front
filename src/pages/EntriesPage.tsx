@@ -760,6 +760,13 @@ export function EntriesPage() {
                 >
                   {receiptBusy ? 'Lendo foto…' : 'Enviar Foto'}
                 </Button>
+                <Button
+                  variant="secondary"
+                  disabled={monthClosed}
+                  onClick={() => navigate(`/lancamentos/extrato?mes=${encodeURIComponent(ym)}`)}
+                >
+                  Enviar Extrato Bancário
+                </Button>
               </>
             ) : null}
           </>
@@ -1141,11 +1148,16 @@ function EntryForm({
   return (
     <section className={styles.section}>
       <h2 className={styles.sectionTitle}>{editing ? 'Editar lançamento' : 'Novo lançamento'}</h2>
-      <div className={styles.segmented} role="group" aria-label="Tipo de lançamento">
+      <div
+        className={`${styles.segmented} ${type === 'Expense' ? styles.segmentedTrackExpense : styles.segmentedTrackIncome}`}
+        role="group"
+        aria-label="Tipo de lançamento"
+      >
         {FORM_TYPES.map((option) => (
           <button
             key={option}
             type="button"
+            className={option === 'Expense' ? styles.segmentedExpense : styles.segmentedIncome}
             aria-pressed={type === option}
             disabled={editing}
             onClick={() => {

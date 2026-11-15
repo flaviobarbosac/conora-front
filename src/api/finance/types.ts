@@ -25,9 +25,11 @@ export type EntryType =
   | 'CardPayment'
   | 'ProjectContribution'
 
-export type ImportFormat = 'Csv' | 'Ofx'
+export type ImportFormat = 'Csv' | 'Ofx' | 'Pdf'
 
-export type ImportStatus = 'Preview' | 'Committed'
+export type ImportStatus = 'Preview' | 'Committed' | 'InProgress' | 'Discarded'
+
+export type ImportRowStatus = 'Pending' | 'Deferred' | 'Committed' | 'Ignored'
 
 export type InvoiceStatus = 'Open' | 'Closed' | 'Paid'
 
@@ -814,6 +816,19 @@ export type ImportRow = {
   description: string
   isDuplicate: boolean
   willImport: boolean
+  rowStatus: ImportRowStatus
+  suggestedCategoryId: string | null
+  suggestedCategoryName: string | null
+  entryId: string | null
+  sortIndex: number
+}
+
+export type ImportDetectedAccount = {
+  bankCode: string | null
+  agency: string | null
+  accountNumber: string | null
+  checkDigit: string | null
+  bankName: string | null
 }
 
 export type ImportPreview = {
@@ -821,9 +836,43 @@ export type ImportPreview = {
   fileName: string
   format: ImportFormat
   status: ImportStatus
+  competenceYm: string
   rowCount: number
   duplicateCount: number
+  pendingCount: number
+  deferredCount: number
+  committedCount: number
+  ignoredCount: number
+  accountId: string | null
+  accountMatched: boolean
+  accountNeedsCreate: boolean
+  detectedAccount: ImportDetectedAccount | null
   rows: ImportRow[]
+}
+
+export type ImportCurrentRow = {
+  batchId: string
+  row: ImportRow
+  position: number
+  totalOpen: number
+  deferredCount: number
+  committedCount: number
+  totalRows: number
+  requiresDuplicateConfirm: boolean
+}
+
+export type ImportReport = {
+  batchId: string
+  competenceYm: string
+  fileName: string
+  pendingCount: number
+  deferredCount: number
+  committedCount: number
+  ignoredCount: number
+  pending: ImportRow[]
+  deferred: ImportRow[]
+  committed: ImportRow[]
+  ignored: ImportRow[]
 }
 
 export type MonthStatus = {

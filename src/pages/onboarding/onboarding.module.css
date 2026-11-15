@@ -113,6 +113,20 @@
   cursor: wait;
 }
 
+.welcomeVideoLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--btn-h);
+  padding: 0 var(--space-6);
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--primary-on);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  text-align: center;
+}
+
 .onboardVideoPoints {
   margin: var(--space-4) 0 0;
   padding-left: 1.25rem;

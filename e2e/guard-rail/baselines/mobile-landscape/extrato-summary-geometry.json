@@ -1,0 +1,107 @@
+[
+  {
+    "name": "Ian · 8 anos",
+    "x": 96,
+    "y": 12,
+    "w": 44,
+    "h": 44
+  },
+  {
+    "name": "Alertas, 71 não lidos",
+    "x": 528,
+    "y": 14,
+    "w": 40,
+    "h": 40
+  },
+  {
+    "name": "Menu do perfil",
+    "x": 612,
+    "y": 16,
+    "w": 36,
+    "h": 36
+  },
+  {
+    "name": "Enviar feedback",
+    "x": 580,
+    "y": 24,
+    "w": 20,
+    "h": 20
+  },
+  {
+    "name": "Início",
+    "x": 4,
+    "y": 96,
+    "w": 64,
+    "h": 56
+  },
+  {
+    "name": "Principal",
+    "x": 4,
+    "y": 96,
+    "w": 64,
+    "h": 307
+  },
+  {
+    "name": "← Lançamentos",
+    "x": 96,
+    "y": 97,
+    "w": 267,
+    "h": 23
+  },
+  {
+    "name": "Extrato bancário",
+    "x": 96,
+    "y": 124,
+    "w": 267,
+    "h": 37
+  },
+  {
+    "name": "Raio-X",
+    "x": 4,
+    "y": 156,
+    "w": 64,
+    "h": 56
+  },
+  {
+    "name": "Orçamento",
+    "x": 4,
+    "y": 216,
+    "w": 64,
+    "h": 56
+  },
+  {
+    "name": "Relatórios",
+    "x": 4,
+    "y": 276,
+    "w": 64,
+    "h": 56
+  },
+  {
+    "name": "Cadastros",
+    "x": 4,
+    "y": 340,
+    "w": 64,
+    "h": 63
+  },
+  {
+    "name": "Classificar os 1",
+    "x": 120,
+    "y": 374,
+    "w": 227,
+    "h": 54
+  },
+  {
+    "name": "Agora não",
+    "x": 359,
+    "y": 374,
+    "w": 183,
+    "h": 54
+  },
+  {
+    "name": "Descartar extrato",
+    "x": 554,
+    "y": 374,
+    "w": 242,
+    "h": 54
+  }
+]

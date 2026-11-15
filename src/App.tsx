@@ -25,6 +25,7 @@ import { DiagnosisPage } from './pages/DiagnosisPage'
 import { HelpPage } from './pages/HelpPage'
 import { HomePage } from './pages/HomePage'
 import { ImportPage } from './pages/ImportPage'
+import { StatementImportPage } from './pages/StatementImportPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
@@ -38,6 +39,7 @@ import { PatrimonyPage } from './pages/PatrimonyPage'
 import { PatrimonyStatementPage } from './pages/PatrimonyStatementPage'
 import { ContractPage } from './pages/ContractPage'
 import { PlanPage } from './pages/PlanPage'
+import { ChangePasswordPage } from './pages/ChangePasswordPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { ProjectsPage } from './pages/ProjectsPage'
@@ -168,6 +170,7 @@ export default function App() {
             <Route element={<RequirePlanAccess />}>
               <Route element={<AppShell />}>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/lancamentos/extrato" element={<StatementImportPage />} />
                 <Route path="/lancamentos/*" element={<EntriesPage />} />
                 <Route path="/raio-x" element={<RaioXPage />} />
                 <Route path="/orcamento" element={<BudgetPage />} />
@@ -190,6 +193,7 @@ export default function App() {
                 <Route path="/operacao" element={<AdminPage />} />
                 <Route path="/ajuda" element={<HelpPage />} />
                 <Route path="/perfil" element={<ProfilePage />} />
+                <Route path="/perfil/senha" element={<ChangePasswordPage />} />
                 <Route path="/configuracoes" element={<SettingsPage />} />
                 <Route path="/feedbacks/:id" element={<FeedbackRespostaPage />} />
                 <Route element={<RequireConsole />}>

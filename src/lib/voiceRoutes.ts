@@ -6,6 +6,7 @@ const ROUTES = new Set([
   '/lancamentos',
   '/lancamentos/novo',
   '/lancamentos/busca',
+  '/lancamentos/extrato',
   '/categorias',
   '/contas',
   '/cartoes',
