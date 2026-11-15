@@ -820,6 +820,32 @@ button.compact {
   font-weight: var(--weight-semibold);
 }
 
+.segmentedTrackExpense {
+  background: var(--danger-bg);
+}
+
+.segmentedTrackIncome {
+  background: color-mix(in srgb, var(--primary) 16%, var(--surface));
+}
+
+.segmentedExpense {
+  color: var(--danger);
+}
+
+.segmentedExpense[aria-pressed='true'] {
+  background: var(--danger);
+  color: var(--on-primary);
+}
+
+.segmentedIncome {
+  color: var(--primary);
+}
+
+.segmentedIncome[aria-pressed='true'] {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
 .segmentedWrap {
   display: flex;
   flex-wrap: wrap;

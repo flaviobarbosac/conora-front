@@ -122,9 +122,9 @@ function run(name, command, args, extraEnv = {}) {
   fail(name, tail || `${name} falhou`)
 }
 
-function playwrightFailures() {
+function playwrightFailureLines(reportFile) {
   try {
-    const raw = JSON.parse(readFileSync(path.join(root, 'e2e', 'guard-rail-playwright.json'), 'utf8'))
+    const raw = JSON.parse(readFileSync(reportFile, 'utf8'))
     const lines = []
     const walk = (suite) => {
       for (const spec of suite.specs ?? []) {
@@ -144,6 +144,14 @@ function playwrightFailures() {
   } catch {
     return []
   }
+}
+
+function playwrightFailures() {
+  return playwrightFailureLines(path.join(root, 'e2e', 'guard-rail-playwright.json'))
+}
+
+function playwrightExtratoFailures() {
+  return playwrightFailureLines(path.join(root, 'e2e', 'guard-rail-extrato-playwright.json'))
 }
 
 try {
@@ -175,6 +183,39 @@ try {
   if (suites.at(-1)?.name === 'playwright' && !suites.at(-1).ok) {
     const lines = playwrightFailures()
     if (lines.length > 0) suites.at(-1).detail = lines.join('\n')
+  }
+
+  // Extrato: parser unit (explícito) + smoke UI com geometry.
+  run('extrato', 'dotnet', [
+    'test',
+    path.join(backend, 'tests', 'Conora.UnitTests', 'Conora.UnitTests.csproj'),
+    '--nologo',
+    '--filter',
+    'FullyQualifiedName~ImportParserTests',
+  ])
+  if (suites.at(-1)?.ok) {
+    suites.pop()
+    const extratoBaseline = path.join(baselineDir, 'mobile-portrait', 'extrato-boot-geometry.json')
+    const updateExtrato =
+      process.env.GUARD_RAIL_UPDATE_BASELINES === '1' || !existsSync(extratoBaseline) ? '1' : '0'
+    run(
+      'extrato',
+      process.execPath,
+      [
+        path.join(root, 'node_modules', '@playwright', 'test', 'cli.js'),
+        'test',
+        '-c',
+        'playwright.guard-rail-extrato.config.ts',
+      ],
+      {
+        GUARD_RAIL_ACCESS_TOKEN: accessToken,
+        GUARD_RAIL_UPDATE_BASELINES: updateExtrato,
+      },
+    )
+    if (suites.at(-1)?.name === 'extrato' && !suites.at(-1).ok) {
+      const lines = playwrightExtratoFailures()
+      if (lines.length > 0) suites.at(-1).detail = lines.join('\n')
+    }
   }
 } catch (error) {
   fail('ambiente', error instanceof Error ? error.message : String(error))

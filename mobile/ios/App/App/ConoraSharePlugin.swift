@@ -15,13 +15,17 @@ public class ConoraSharePlugin: CAPPlugin, CAPBridgedPlugin {
             call.resolve(["found": false])
             return
         }
+        let fileName = suite?.string(forKey: "pendingShareFileName") ?? "recibo.jpg"
+        let mimeType = suite?.string(forKey: "pendingShareMimeType") ?? "image/jpeg"
         suite?.removeObject(forKey: "pendingShareImage")
+        suite?.removeObject(forKey: "pendingShareFileName")
+        suite?.removeObject(forKey: "pendingShareMimeType")
         let base64 = data.base64EncodedString()
         call.resolve([
             "found": true,
-            "fileName": "recibo.jpg",
-            "mimeType": "image/jpeg",
-            "dataUrl": "data:image/jpeg;base64,\(base64)"
+            "fileName": fileName,
+            "mimeType": mimeType,
+            "dataUrl": "data:\(mimeType);base64,\(base64)"
         ])
     }
 }

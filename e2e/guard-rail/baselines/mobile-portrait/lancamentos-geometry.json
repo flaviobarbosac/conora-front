@@ -77,37 +77,44 @@
     "h": 54
   },
   {
+    "name": "Enviar Extrato Bancário",
+    "x": 20,
+    "y": 391,
+    "w": 350,
+    "h": 54
+  },
+  {
     "name": "Oferta religiosa · BB · 28/11/2026 Oferta religiosa",
     "x": 36,
-    "y": 427,
+    "y": 489,
     "w": 262,
     "h": 45
   },
   {
     "name": "Excluir",
     "x": 228,
-    "y": 488,
+    "y": 550,
     "w": 44,
     "h": 44
   },
   {
     "name": "Pneus · BB · 28/11/2026 Pneus",
     "x": 36,
-    "y": 557,
+    "y": 619,
     "w": 185,
     "h": 45
   },
   {
     "name": "Excluir #2",
     "x": 226,
-    "y": 618,
+    "y": 680,
     "w": 44,
     "h": 44
   },
   {
     "name": "Outras despesas de habitação · BB · 27/11/2026 Outras despesas de habitação",
     "x": 36,
-    "y": 687,
+    "y": 749,
     "w": 318,
     "h": 69
   },
@@ -124,13 +131,6 @@
     "y": 765,
     "w": 78,
     "h": 55
-  },
-  {
-    "name": "Excluir #3",
-    "x": 228,
-    "y": 772,
-    "w": 44,
-    "h": 44
   },
   {
     "name": "Início",
@@ -161,10 +161,10 @@
     "h": 44
   },
   {
-    "name": "Cheque especial · BB · 27/11/2026 Cheque especial",
-    "x": 36,
-    "y": 841,
-    "w": 268,
-    "h": 45
+    "name": "Excluir #3",
+    "x": 228,
+    "y": 834,
+    "w": 44,
+    "h": 44
   }
 ]

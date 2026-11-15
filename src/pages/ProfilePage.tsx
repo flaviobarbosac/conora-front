@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { familyApi, planApi } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -41,6 +41,7 @@ function formatCep(value: string): string {
 }
 
 export function ProfilePage() {
+  const navigate = useNavigate()
   const profile = useLoad(() => familyApi.profile(), [])
   const plan = useLoad(() => planApi.get(), [])
   const saveProfile = useAction()
@@ -230,6 +231,9 @@ export function ProfilePage() {
               value={cep}
               onChange={(event) => setCep(formatCep(event.target.value))}
             />
+            <Button type="button" variant="secondary" onClick={() => navigate('/perfil/senha')}>
+              Alterar senha
+            </Button>
             <div className={styles.formActions}>
               <Button type="button" variant="secondary" disabled={!dirty || saveProfile.busy} onClick={onCancel}>
                 Cancelar

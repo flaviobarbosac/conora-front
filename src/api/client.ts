@@ -340,6 +340,11 @@ export const authApi = {
       auth: false,
       body: { token, password },
     }),
+  changePassword: (password: string, currentPassword: string) =>
+    apiFetch<void>('/auth/change-password', {
+      method: 'POST',
+      body: { password, currentPassword },
+    }),
   verifyEmail: (token: string) =>
     apiFetch<AuthResponse>('/auth/verify-email', {
       method: 'POST',

@@ -1,0 +1,135 @@
+[
+  {
+    "name": "Ian · 8 anos",
+    "x": 296,
+    "y": 12,
+    "w": 44,
+    "h": 44
+  },
+  {
+    "name": "Alertas, 71 não lidos",
+    "x": 905,
+    "y": 14,
+    "w": 40,
+    "h": 40
+  },
+  {
+    "name": "Menu do perfil",
+    "x": 989,
+    "y": 16,
+    "w": 36,
+    "h": 36
+  },
+  {
+    "name": "Enviar feedback",
+    "x": 957,
+    "y": 24,
+    "w": 20,
+    "h": 20
+  },
+  {
+    "name": "Recolher menu lateral",
+    "x": 193,
+    "y": 30,
+    "w": 36,
+    "h": 36
+  },
+  {
+    "name": "← Lançamentos",
+    "x": 296,
+    "y": 105,
+    "w": 267,
+    "h": 23
+  },
+  {
+    "name": "Início",
+    "x": 18,
+    "y": 108,
+    "w": 211,
+    "h": 46
+  },
+  {
+    "name": "Principal",
+    "x": 18,
+    "y": 108,
+    "w": 211,
+    "h": 250
+  },
+  {
+    "name": "Relatório",
+    "x": 1109,
+    "y": 110,
+    "w": 123,
+    "h": 54
+  },
+  {
+    "name": "Extrato bancário",
+    "x": 296,
+    "y": 132,
+    "w": 267,
+    "h": 37
+  },
+  {
+    "name": "Raio-X",
+    "x": 18,
+    "y": 158,
+    "w": 211,
+    "h": 46
+  },
+  {
+    "name": "Orçamento",
+    "x": 18,
+    "y": 208,
+    "w": 211,
+    "h": 46
+  },
+  {
+    "name": "Relatórios",
+    "x": 18,
+    "y": 258,
+    "w": 211,
+    "h": 46
+  },
+  {
+    "name": "Cadastros",
+    "x": 18,
+    "y": 312,
+    "w": 211,
+    "h": 46
+  },
+  {
+    "name": "Pesquisar categoria ▼",
+    "x": 320,
+    "y": 525,
+    "w": 888,
+    "h": 52
+  },
+  {
+    "name": "Próximo",
+    "x": 320,
+    "y": 605,
+    "w": 888,
+    "h": 54
+  },
+  {
+    "name": "Classificar depois",
+    "x": 320,
+    "y": 667,
+    "w": 888,
+    "h": 54
+  },
+  {
+    "name": "Ignorar",
+    "x": 320,
+    "y": 729,
+    "w": 888,
+    "h": 54
+  },
+  {
+    "name": "Configurações",
+    "x": 18,
+    "y": 734,
+    "w": 211,
+    "h": 40
+  }
+]

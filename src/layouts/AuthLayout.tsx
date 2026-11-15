@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { BrandLockup } from '../components/BrandLockup'
 import { isDarkTheme } from '../theme/themes'
 import { useTheme } from '../theme/ThemeProvider'
@@ -10,9 +11,11 @@ type Props = {
   children: ReactNode
   footer?: ReactNode
   heroHeadline?: string
+  /** When set, the Conora logo navigates here. External URLs leave the app. */
+  logoTo?: string
 }
 
-export function AuthLayout({ title, subtitle, children, footer, heroHeadline }: Props) {
+export function AuthLayout({ title, subtitle, children, footer, heroHeadline, logoTo }: Props) {
   const { theme } = useTheme()
   const illustration = `${import.meta.env.BASE_URL}brand/${isDarkTheme(theme) ? 'ilustracao-escura' : 'ilustracao-login'}.jpg`
 
@@ -28,7 +31,19 @@ export function AuthLayout({ title, subtitle, children, footer, heroHeadline }: 
         </div>
       </div>
       <div className={styles.panel}>
-        <BrandLockup size="auth" />
+        {logoTo ? (
+          logoTo === '/' || logoTo.startsWith('http://') || logoTo.startsWith('https://') ? (
+            <a href={logoTo} className={styles.brandLink} aria-label="Página inicial do Conora">
+              <BrandLockup size="auth" />
+            </a>
+          ) : (
+            <Link to={logoTo} className={styles.brandLink} aria-label="Página inicial do Conora">
+              <BrandLockup size="auth" />
+            </Link>
+          )
+        ) : (
+          <BrandLockup size="auth" />
+        )}
         <div className={styles.intro}>
           <h1>{title}</h1>
           <p>{subtitle}</p>

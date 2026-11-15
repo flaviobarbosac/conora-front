@@ -1,10 +1,10 @@
-import { useId, useState, type InputHTMLAttributes } from 'react'
+import { useId, useState, type InputHTMLAttributes, type ReactNode } from 'react'
 import fieldStyles from './Field.module.css'
 import styles from './PasswordField.module.css'
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
   label: string
-  hint?: string
+  hint?: ReactNode
 }
 
 /** Password input with show/hide toggle for auth screens. */

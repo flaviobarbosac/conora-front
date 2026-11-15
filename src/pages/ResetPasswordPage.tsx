@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { authApi } from '../api/client'
 import { Button } from '../components/ui/Button'
-import { Field } from '../components/ui/Field'
+import { PasswordField } from '../components/ui/PasswordField'
 import { AuthLayout } from '../layouts/AuthLayout'
 import { AppHandoff, useAppHandoff } from '../lib/appLinks'
 import styles from './auth.module.css'
@@ -74,10 +74,9 @@ export function ResetPasswordPage() {
         </p>
       ) : (
         <form className={styles.form} onSubmit={(event) => void onSubmit(event)} noValidate>
-          <Field
+          <PasswordField
             label="Nova senha"
             name="password"
-            type="password"
             autoComplete="new-password"
             autoFocus
             required
@@ -85,10 +84,9 @@ export function ResetPasswordPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          <Field
+          <PasswordField
             label="Confirmar senha"
             name="confirm"
-            type="password"
             autoComplete="new-password"
             required
             minLength={8}
