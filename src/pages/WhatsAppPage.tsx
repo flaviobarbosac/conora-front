@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState } from 'react'
 import {
   whatsappApi,
   type Category,
@@ -8,7 +8,6 @@ import {
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { Empty, ErrorText, Loading } from '../components/ui/Feedback'
-import { Field } from '../components/ui/Field'
 import { CategorySelect } from '../components/CategorySelect'
 import { Select } from '../components/ui/Select'
 import { useAction } from '../hooks/useAction'
@@ -17,6 +16,7 @@ import { useLookups } from '../hooks/useLookups'
 import { confirmDestructive } from '../lib/confirm'
 import { showSaveToast } from '../lib/saveToast'
 import { formatMoney } from '../lib/format'
+import { WhatsAppSection } from './settings/WhatsAppSection'
 import styles from './pageStyles'
 
 function parsePayload(json: string): WhatsAppDraftPayload | null {
@@ -28,35 +28,9 @@ function parsePayload(json: string): WhatsAppDraftPayload | null {
 }
 
 export function WhatsAppPage() {
-  const link = useLoad(() => whatsappApi.link(), [])
   const drafts = useLoad(() => whatsappApi.drafts('Pending'), [])
   const lookups = useLookups()
-  const linkAction = useAction()
   const draftAction = useAction()
-  const [phone, setPhone] = useState('')
-
-  async function saveLink(event: FormEvent) {
-    event.preventDefault()
-    if (await linkAction.run(() => whatsappApi.setLink(phone.trim()))) {
-      showSaveToast('Número vinculado.')
-      setPhone('')
-      link.reload()
-    }
-  }
-
-  async function unlink() {
-    if (
-      !(await confirmDestructive('Desvincular este número do WhatsApp?', {
-        title: 'Desvincular',
-        confirmLabel: 'Desvincular',
-      }))
-    ) {
-      return
-    }
-    if (await linkAction.run(() => whatsappApi.unlink())) {
-      link.reload()
-    }
-  }
 
   async function confirmDraft(draft: WhatsAppDraft, accountId: string, categoryId: string) {
     if (
@@ -87,42 +61,9 @@ export function WhatsAppPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader title="WhatsApp" backTo={{ to: '/', label: '← Início' }} />
-      <ErrorText message={link.error ?? drafts.error ?? linkAction.error ?? draftAction.error} />
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Número vinculado</h2>
-        {link.loading && !link.data ? <Loading /> : null}
-        {link.data ? (
-          <div className={styles.row}>
-            <span className={styles.rowMain}>
-              <strong>{link.data.phoneE164}</strong>
-              <span className={styles.rowSub}>Mensagens viram rascunho até você confirmar.</span>
-            </span>
-            <Button variant="ghost" disabled={linkAction.busy} onClick={() => void unlink()}>
-              Desvincular
-            </Button>
-          </div>
-        ) : (
-          <form className={styles.form} onSubmit={(event) => void saveLink(event)}>
-            <Field
-              label="Telefone (com DDI)"
-              name="whatsappPhone"
-              required
-              inputMode="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              placeholder="5511999999999"
-            />
-            <div className={styles.formActions}>
-              <Button type="submit" disabled={linkAction.busy}>
-                Vincular
-              </Button>
-            </div>
-          </form>
-        )}
-      </section>
+      <PageHeader title="WhatsApp" backTo={{ to: '/configuracoes', label: '← Configurações' }} />
+      <ErrorText message={drafts.error ?? draftAction.error} />
+      <WhatsAppSection showDraftsLink={false} />
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Rascunhos pendentes</h2>
