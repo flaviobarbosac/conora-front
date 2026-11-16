@@ -8,6 +8,7 @@ import {
   readGeometry,
   writeGeometry,
 } from './guard-rail/geometry'
+import { expectGuardScreenshot, settleGuardChrome } from './guard-rail/screenshot'
 
 const API = 'http://127.0.0.1:5080'
 const YM = '2026-09'
@@ -107,9 +108,10 @@ function assertScreenGeometry(
 }
 
 async function capture(page: Page, surface: string, screen: string) {
+  await settleGuardChrome(page)
   const boxes = await page.evaluate(collectGeometry)
   assertScreenGeometry(surface, screen, boxes)
-  await expect(page).toHaveScreenshot(`${screen}.png`, { fullPage: false })
+  await expectGuardScreenshot(page, surface, `${screen}.png`)
 }
 
 test.describe('extrato', () => {
