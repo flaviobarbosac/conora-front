@@ -26,6 +26,7 @@ import { VOICE_LAUNCH_ENABLED } from '../lib/voiceLaunch'
 import { useTheme } from '../theme/ThemeProvider'
 import pageStyles from './pageStyles'
 import settingsStyles from './settings/settings.module.css'
+import { WhatsAppSection } from './settings/WhatsAppSection'
 
 const styles = { ...pageStyles, ...settingsStyles }
 
@@ -284,6 +285,8 @@ export function SettingsPage() {
           </div>
         </form>
       ) : null}
+
+      <WhatsAppSection />
 
       <section className={styles.section} id="conta">
         <h2 className={styles.sectionTitle}>Conta</h2>

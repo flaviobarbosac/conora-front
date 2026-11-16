@@ -394,7 +394,7 @@ export function AppShell() {
               </>
             )}
           </NavLink>
-          <span className={styles.appVersion} title={`Versão ${__APP_VERSION__}`}>
+          <span className={styles.appVersion} data-app-version="" title={`Versão ${__APP_VERSION__}`}>
             v{__APP_VERSION__}
           </span>
         </div>
