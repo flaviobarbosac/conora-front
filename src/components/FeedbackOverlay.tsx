@@ -23,6 +23,7 @@ const EXTRA_PATHS = [
   { path: '/configuracoes', label: 'Configurações' },
   { path: '/plano', label: 'Plano' },
   { path: '/ajuda', label: 'Central de ajuda' },
+  { path: '/novidades', label: 'Novidades' },
   { path: '/relatorios', label: 'Relatórios' },
   { path: '/onboarding', label: 'Onboarding' },
   { path: '/lancamentos', label: 'Lançamentos' },
@@ -38,6 +39,8 @@ const EXTRA_PATHS = [
   { path: '/console/saude', label: 'Console · Saúde' },
   { path: '/console/feedback', label: 'Console · Feedback' },
   { path: '/console/jornada-tipos', label: 'Console · Tipos de jornada' },
+  { path: '/console/acesso', label: 'Console · Acesso' },
+  { path: '/console/clientes', label: 'Console · Clientes' },
   { path: '/operacao', label: 'Operação' },
 ]
 

@@ -4,9 +4,11 @@ import type {
   WhatsAppDraftStatus,
   WhatsAppLink,
   WhatsAppDraft,
+  WhatsAppPairing,
 } from './types'
 export const whatsappApi = {
   link: () => apiFetch<WhatsAppLink | undefined>('/whatsapp/link'),
+  pairingCode: () => apiFetch<WhatsAppPairing>('/whatsapp/pairing-code', json('POST')),
   setLink: (phone: string) => apiFetch<WhatsAppLink>('/whatsapp/link', json('POST', { phone })),
   unlink: () => apiFetch<void>('/whatsapp/link', json('DELETE')),
   drafts: (status?: WhatsAppDraftStatus) => apiFetch<WhatsAppDraft[]>(`/whatsapp/drafts${query({ status })}`),

@@ -162,8 +162,12 @@ export function SettingsPage() {
 
       {draft ? (
         <form className={`${styles.form} ${styles.settingsForm}`} onSubmit={(event) => void onSave(event)}>
-          <section className={styles.section} id="ritmo">
-            <h2 className={styles.sectionTitle}>Ritmo</h2>
+          <details className={`${styles.section} ${settingsStyles.accordion}`} id="ritmo">
+            <summary>
+              <strong>Ritmo</strong>
+              <span>Modo discreto, e-mails, reserva e fechamento.</span>
+            </summary>
+            <div className={settingsStyles.accordionBody}>
             <CheckboxField
               label="Modo discreto"
               name="quietMode"
@@ -249,10 +253,15 @@ export function SettingsPage() {
               onChange={(event) => patch({ homeJourneyTimelineEnabled: event.target.checked })}
               description="Desligado fecha a jornada de vez, neste aparelho e nos outros. Para só esconder, com um botão para abrir de novo, use Esconder na tela inicial."
             />
-          </section>
+            </div>
+          </details>
 
-          <section className={styles.section} id="retrospectiva">
-            <h2 className={styles.sectionTitle}>Retrospectiva</h2>
+          <details className={`${styles.section} ${settingsStyles.accordion}`} id="retrospectiva">
+            <summary>
+              <strong>Retrospectiva</strong>
+              <span>Valores ou só percentuais.</span>
+            </summary>
+            <div className={settingsStyles.accordionBody}>
             <CheckboxField
               label="Incluir valores absolutos"
               name="includeValues"
@@ -260,11 +269,16 @@ export function SettingsPage() {
               onChange={(event) => patch({ includeAbsoluteValuesInRetrospective: event.target.checked })}
               description="Ligado: mostra valores. Desligado: só percentuais e marcos."
             />
-          </section>
+            </div>
+          </details>
 
           {VOICE_LAUNCH_ENABLED ? (
-            <section className={styles.section} id="voz">
-              <h2 className={styles.sectionTitle}>Voz</h2>
+            <details className={`${styles.section} ${settingsStyles.accordion}`} id="voz">
+              <summary>
+                <strong>Voz</strong>
+                <span>Confirmação antes de gravar.</span>
+              </summary>
+              <div className={settingsStyles.accordionBody}>
               <CheckboxField
                 label="Confirmar lançamento por voz"
                 name="voiceEntryConfirm"
@@ -272,7 +286,8 @@ export function SettingsPage() {
                 onChange={(event) => patch({ voiceEntryConfirm: event.target.checked })}
                 description="Ligado: microfone no início e o Ian confirma o lançamento antes de gravar. Desligado: sem microfone no painel."
               />
-            </section>
+              </div>
+            </details>
           ) : null}
 
           <div className={styles.formActions}>
@@ -286,11 +301,27 @@ export function SettingsPage() {
         </form>
       ) : null}
 
-      <WhatsAppSection />
+      <details className={`${styles.section} ${settingsStyles.accordion}`} id="whatsapp">
+        <summary>
+          <strong>WhatsApp</strong>
+          <span>Vínculo do celular e conversa.</span>
+        </summary>
+        <div className={settingsStyles.accordionBody}>
+          <WhatsAppSection framed={false} />
+        </div>
+      </details>
 
-      <section className={styles.section} id="conta">
-        <h2 className={styles.sectionTitle}>Conta</h2>
+      <details className={`${styles.section} ${settingsStyles.accordion}`} id="conta">
+        <summary>
+          <strong>Conta</strong>
+          <span>Plano, perfil, exportar e excluir.</span>
+        </summary>
+        <div className={settingsStyles.accordionBody}>
         <div className={styles.accountLinks}>
+          <Link to="/novidades" className={styles.accountLink}>
+            <strong>Novidades</strong>
+            <span>O que entrou em cada versão.</span>
+          </Link>
           <Link to="/plano" className={styles.accountLink}>
             <strong>Plano</strong>
             <span>{planSummary(plan.data)}</span>
@@ -322,7 +353,8 @@ export function SettingsPage() {
             Excluir minha conta
           </Button>
         </div>
-      </section>
+        </div>
+      </details>
     </div>
   )
 }

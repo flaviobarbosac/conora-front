@@ -1,7 +1,28 @@
 import { fileFromPending } from '../camera/scanReceipt'
 import { receiptsApi, type ReceiptChannel, type ReceiptIntake, type ReceiptPurpose } from '../api/finance'
 import type { PendingShare } from '../share/pendingShare'
+import { confirmDestructive, confirmInfo } from './confirm'
 import { resetMobileViewport } from './resetMobileViewport'
+
+export const PHOTO_MANUAL_QUESTION =
+  'Não consegui ler tudo nesta foto. Quer preencher o que faltou?'
+
+export const PHOTO_CLEARER =
+  'Sem problema. Manda uma foto mais nítida, com o CNPJ, o nome de quem recebeu, a data e o valor bem visíveis. Aí eu lanço pra você.'
+
+/** Asks only when CNPJ, supplier, date or amount is missing. Account and category stay on the form. */
+export async function askIncompletePhoto(intake: ReceiptIntake): Promise<'ok' | 'fill' | 'clearer'> {
+  if ((intake.missingRequired?.length ?? 0) === 0) return 'ok'
+  const fill = await confirmDestructive(PHOTO_MANUAL_QUESTION, {
+    title: 'Foto incompleta',
+    confirmLabel: 'Preencher agora',
+    cancelLabel: 'Enviar outra foto',
+    danger: false,
+  })
+  if (fill) return 'fill'
+  await confirmInfo(PHOTO_CLEARER, { title: 'Foto mais nítida' })
+  return 'clearer'
+}
 
 const PENDING_INTAKE_KEY = 'conora.pendingReceiptIntakeId'
 const REROUTE_HINT_KEY = 'conora.receiptRerouteHint'

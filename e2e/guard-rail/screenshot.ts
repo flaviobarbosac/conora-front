@@ -53,6 +53,9 @@ export async function settleGuardChrome(page: Page) {
   })
 }
 
+// Official exception: the version stamp ([data-app-version]) changes on every
+// release, so a pixel diff that exists only inside that box is not a failure.
+// Geometry drops the same stamp in e2e/guard-rail/geometry.ts.
 export async function expectGuardScreenshot(page: Page, surface: string, name: string) {
   const box = await page.locator('[data-app-version]').boundingBox()
   try {

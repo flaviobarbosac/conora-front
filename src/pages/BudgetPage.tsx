@@ -8,8 +8,10 @@ import {
   WordOrcamento,
 } from '../components/ReceiptReadingOverlay'
 import {
+  askIncompletePhoto,
   pauseForDestinationCue,
   peekPendingIntakeId,
+  PHOTO_CLEARER,
   pickReceiptMedia,
   pollReceipt,
   setPendingIntakeId,
@@ -84,6 +86,12 @@ export function BudgetPage() {
     }
     if (intake.status === 'Failed') {
       setBoletoError(intake.failureReason ?? 'Não foi possível ler o boleto.')
+      takePendingIntakeId()
+      return
+    }
+    const photoChoice = await askIncompletePhoto(intake)
+    if (photoChoice === 'clearer') {
+      setBoletoError(PHOTO_CLEARER)
       takePendingIntakeId()
       return
     }

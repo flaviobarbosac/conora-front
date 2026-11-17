@@ -353,6 +353,7 @@
   border-top: 1px solid var(--border-subtle);
   padding-top: 14px;
   margin-top: var(--space-1);
+  text-decoration: none;
 }
 
 .avatar {

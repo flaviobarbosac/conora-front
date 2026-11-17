@@ -146,7 +146,7 @@ export function LoginPage() {
       <form className={styles.form} onSubmit={(event) => void onSubmit(event)} noValidate>
         {emailSent ? (
           <p className={styles.notice} role="status">
-            E-mail enviado. Abra o link para definir a senha e entre com ela aqui.
+            Se a conta existir, enviamos um link para o e-mail dela. Abra o mais recente.
           </p>
         ) : null}
         {accountExists ? (

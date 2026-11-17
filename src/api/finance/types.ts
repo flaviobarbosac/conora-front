@@ -744,6 +744,11 @@ export type VoiceTurn = {
   text: string
 }
 
+export type WhatsAppPairing = {
+  code: string
+  text: string
+}
+
 export type WhatsAppLink = { phoneE164: string; linkedAt: string }
 
 export type WhatsAppDraft = {
@@ -798,6 +803,7 @@ export type ReceiptIntake = {
   needsClassification: boolean
   similarSuppliers: SimilarSupplier[]
   budgetCompetenceYm: string | null
+  missingRequired?: string[]
 }
 
 export type BudgetBoletoConfirm = {
@@ -881,6 +887,13 @@ export type MonthStatus = {
   closedAt: string | null
   reopenReason: string | null
   closedByUsuarioId: string | null
+}
+
+export type SharedMonthClient = {
+  clientUsuarioId: string
+  name: string
+  email: string
+  months: string[]
 }
 
 export type AuditEvent = {
@@ -971,6 +984,15 @@ export type ConsoleKpis = {
   errorsByArea: ConsoleMetric[]
   errorRows: ConsoleErrorRow[]
   months: ConsoleMonth[]
+}
+
+export type ConsoleUserAccess = {
+  id: string
+  name: string
+  email: string
+  trialEndsAtUtc: string | null
+  complimentaryIndefinite: boolean
+  complimentaryUntilUtc: string | null
 }
 
 export type JourneyAbandonmentRow = {

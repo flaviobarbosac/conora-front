@@ -15,6 +15,8 @@ import { AppShell } from './layouts/AppShell'
 import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { AdminPage } from './pages/AdminPage'
 import { ConsoleAbandonmentPage } from './pages/ConsoleAbandonmentPage'
+import { ConsoleAccessPage } from './pages/ConsoleAccessPage'
+import { ConsoleClientsPage } from './pages/ConsoleClientsPage'
 import { ConsoleFeedbackPage } from './pages/ConsoleFeedbackPage'
 import { ConsoleJornadaTiposPage } from './pages/ConsoleJornadaTiposPage'
 import { ConsolePage } from './pages/ConsolePage'
@@ -23,6 +25,7 @@ import { ApresentacaoPage } from './pages/ApresentacaoPage'
 import { ApresentacaoVariantesPage } from './pages/apresentacao/ApresentacaoVariantesPage'
 import { DiagnosisPage } from './pages/DiagnosisPage'
 import { HelpPage } from './pages/HelpPage'
+import { ReleaseNotesPage } from './pages/ReleaseNotesPage'
 import { HomePage } from './pages/HomePage'
 import { ImportPage } from './pages/ImportPage'
 import { StatementImportPage } from './pages/StatementImportPage'
@@ -192,6 +195,7 @@ export default function App() {
                 <Route path="/plano/contrato" element={<ContractPage />} />
                 <Route path="/operacao" element={<AdminPage />} />
                 <Route path="/ajuda" element={<HelpPage />} />
+                <Route path="/novidades" element={<ReleaseNotesPage />} />
                 <Route path="/perfil" element={<ProfilePage />} />
                 <Route path="/perfil/senha" element={<ChangePasswordPage />} />
                 <Route path="/configuracoes" element={<SettingsPage />} />
@@ -206,6 +210,8 @@ export default function App() {
                     <Route path="feedback" element={<ConsoleFeedbackPage />} />
                     <Route path="abandonamento" element={<ConsoleAbandonmentPage />} />
                     <Route path="jornada-tipos" element={<ConsoleJornadaTiposPage />} />
+                    <Route path="acesso" element={<ConsoleAccessPage />} />
+                    <Route path="clientes" element={<ConsoleClientsPage />} />
                   </Route>
                 </Route>
                 <Route path="/whatsapp" element={<WhatsAppPage />} />

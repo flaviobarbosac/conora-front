@@ -97,6 +97,8 @@ function brazilDateParts(now = new Date()): { year: string; month: string; day: 
 /* ---------- Competence (yyyy-MM) ---------- */
 
 export function currentCompetence(): string {
+  const shared = typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem('conora.sharedMonth')
+  if (shared && /^\d{4}-\d{2}$/.test(shared)) return shared
   const { year, month } = brazilDateParts()
   return `${year}-${month}`
 }

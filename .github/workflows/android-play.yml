@@ -1,6 +1,7 @@
 name: Android Google Play
 
-# Manual only: scripts/publish-android.ps1 or gh workflow run. Always builds main.
+# Manual only: scripts/publish-android.ps1 or gh workflow run.
+# Builds the ref that was dispatched. publish-android.ps1 always passes main.
 # Production = Brasil, full rollout, sent for review; internal is for a quick test build.
 # Does NOT run on develop -> main merge (web deploy stays separate).
 on:
@@ -36,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4

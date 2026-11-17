@@ -55,8 +55,10 @@ import { matchByName, resolveSpokenDate } from '../lib/voiceEntry'
 import { peekPendingShare, setPendingShare, takePendingShare } from '../share/pendingShare'
 import { usePlanAccess } from '../hooks/usePlanAccess'
 import {
+  askIncompletePhoto,
   pauseForDestinationCue,
   peekPendingIntakeId,
+  PHOTO_CLEARER,
   pickReceiptMedia,
   pollReceipt,
   setPendingIntakeId,
@@ -177,9 +179,9 @@ export function EntriesPage() {
     setReceiptIntakeId(intake.id)
     setPendingIntakeId(intake.id)
     setReceiptPrefill({
-      description: intake.extractedName ?? 'Recibo',
+      description: intake.extractedName ?? '',
       amount: intake.extractedAmount != null ? formatMoneyInput(intake.extractedAmount) : '',
-      date: intake.extractedOccurredAt ? toDateInput(intake.extractedOccurredAt) : todayInput(),
+      date: intake.extractedOccurredAt ? toDateInput(intake.extractedOccurredAt) : '',
       categoryId: intake.proposedCategoryId ?? '',
       accountId: intake.selectedBankAccountId ?? '',
     })
@@ -218,6 +220,12 @@ export function EntriesPage() {
       }
       if (intake.status === 'Failed') {
         setOpenError(intake.failureReason ?? 'Não foi possível ler o recibo.')
+        takePendingIntakeId()
+        return
+      }
+      const photoChoice = await askIncompletePhoto(intake)
+      if (photoChoice === 'clearer') {
+        setOpenError(PHOTO_CLEARER)
         takePendingIntakeId()
         return
       }

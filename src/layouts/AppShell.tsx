@@ -394,9 +394,14 @@ export function AppShell() {
               </>
             )}
           </NavLink>
-          <span className={styles.appVersion} data-app-version="" title={`Versão ${__APP_VERSION__}`}>
+          <Link
+            to="/novidades"
+            className={styles.appVersion}
+            data-app-version=""
+            title={`Versão ${__APP_VERSION__}. Ver novidades`}
+          >
             v{__APP_VERSION__}
-          </span>
+          </Link>
         </div>
       </aside>
 
@@ -515,6 +520,15 @@ export function AppShell() {
                 >
                   <Icon name="help" size={20} />
                   Central de ajuda
+                </Link>
+                <Link
+                  to="/novidades"
+                  className={styles.profileMenuItem}
+                  role="menuitem"
+                  onClick={() => setProfileMenuOpen(false)}
+                >
+                  <Icon name="list" size={20} />
+                  Novidades
                 </Link>
                 <Link
                   to="/onboarding?replay=1"

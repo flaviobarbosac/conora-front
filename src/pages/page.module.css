@@ -501,6 +501,33 @@
   padding: 0;
 }
 
+.releaseRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.releaseRow:last-child {
+  border-bottom: 0;
+}
+
+.releaseHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.releaseItems {
+  margin: 0;
+  padding-left: 1.1em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .row {
   display: flex;
   justify-content: space-between;
