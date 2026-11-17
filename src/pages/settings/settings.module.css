@@ -29,3 +29,34 @@
   min-width: 0;
   box-sizing: border-box;
 }
+
+.accordion summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-2);
+  cursor: pointer;
+}
+
+.accordion summary strong {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.accordion summary span {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+}
+
+.accordionBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-2);
+}
+
+.accordion:not([open]) > .accordionBody {
+  display: none;
+}

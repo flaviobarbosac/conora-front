@@ -38,6 +38,8 @@ const EXTRA_PATHS = [
   { path: '/console/saude', label: 'Console · Saúde' },
   { path: '/console/feedback', label: 'Console · Feedback' },
   { path: '/console/jornada-tipos', label: 'Console · Tipos de jornada' },
+  { path: '/console/acesso', label: 'Console · Acesso' },
+  { path: '/console/clientes', label: 'Console · Clientes' },
   { path: '/operacao', label: 'Operação' },
 ]
 

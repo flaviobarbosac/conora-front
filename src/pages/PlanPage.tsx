@@ -72,7 +72,7 @@ const FAQ: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: 'Como funciona o plano anual?',
-    a: 'Você paga uma vez e usa por 12 meses, com 16% de desconto em relação a 12 mensalidades: quase 2 meses grátis.',
+    a: 'Você paga uma vez e usa por 12 meses. O anual equivale a 10 meses, com 2 grátis.',
   },
 ]
 
@@ -327,7 +327,7 @@ export function PlanPage() {
                 onClick={() => setYearly(true)}
               >
                 Anual
-                <span className={styles.freeBadge}>16% de desconto</span>
+                <span className={styles.freeBadge}>2 meses grátis</span>
               </button>
             </div>
           </div>
@@ -371,8 +371,13 @@ export function PlanPage() {
                     {offer.yearly ? (
                       <>
                         Cobrança anual{usedStoreLabel ? ` na ${storeName()}` : ''} · equivale a{' '}
-                        {formatMoney(offer.monthlyEquivalent)}/mês ·{' '}
-                        <span className={styles.save}>economize {formatMoney(savings)}</span>
+                        {formatMoney(offer.monthlyEquivalent)}/mês
+                        {savings > 0 ? (
+                          <>
+                            {' '}
+                            · <span className={styles.save}>economize {formatMoney(savings)}</span>
+                          </>
+                        ) : null}
                       </>
                     ) : (
                       `Cobrança mensal${usedStoreLabel ? ` na ${storeName()}` : ''}`

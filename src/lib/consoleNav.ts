@@ -6,6 +6,8 @@ export type ConsoleSectionId =
   | 'feedback'
   | 'abandonamento'
   | 'jornada-tipos'
+  | 'acesso'
+  | 'clientes'
 
 export type ConsoleNavItem = {
   id: ConsoleSectionId
@@ -57,5 +59,17 @@ export const CONSOLE_NAV: ReadonlyArray<ConsoleNavItem> = [
     to: '/console/jornada-tipos',
     label: 'Tipos de jornada',
     purpose: 'Seis jornadas pré-definidas (J0–J5) lado a lado.',
+  },
+  {
+    id: 'acesso',
+    to: '/console/acesso',
+    label: 'Acesso',
+    purpose: 'Conceder prazo ou estender a degustação de um usuário.',
+  },
+  {
+    id: 'clientes',
+    to: '/console/clientes',
+    label: 'Clientes',
+    purpose: 'Meses que os clientes compartilharam e a entrada na conta deles.',
   },
 ]

@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core'
+import { clearSharedMonth, readSharedClient } from '../lib/consultantSession'
 import { markKnownAccount } from '../lib/deviceIdentity'
 
 const ACCESS_KEY = 'conora.accessToken'
@@ -80,6 +81,7 @@ export function persistSession(auth: AuthResponse): void {
 }
 
 export function clearSession(): void {
+  clearSharedMonth()
   sessionStorage.removeItem(ACCESS_KEY)
   localStorage.removeItem(ACCESS_KEY)
   localStorage.removeItem(REFRESH_KEY)
@@ -158,6 +160,11 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   // Lets the API point e-mail links (validation, password reset) back to the app.
   if (Capacitor.isNativePlatform()) {
     headers.set('X-Conora-Client', Capacitor.getPlatform())
+  }
+  const shared = readSharedClient()
+  if (shared) {
+    headers.set('X-Conora-Shared-Client', shared.clientId)
+    headers.set('X-Conora-Month', shared.competenceYm)
   }
   if (options.body !== undefined) {
     headers.set('Content-Type', 'application/json')
