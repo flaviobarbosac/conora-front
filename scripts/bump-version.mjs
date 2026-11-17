@@ -7,6 +7,10 @@ const pkgPath = join(root, 'package.json')
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
 
 const parts = String(pkg.version).split('.').map(Number)
+if (parts.length === 2 && parts.every((n) => Number.isFinite(n))) {
+  console.log(`Version ${pkg.version} has no patch segment; leaving it unchanged.`)
+  process.exit(0)
+}
 if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
   console.error(`Invalid version in package.json: ${pkg.version}`)
   process.exit(1)
