@@ -36,7 +36,7 @@ export function LegalConsentPanel({
           <p>
             A cobrança é feita pela Google Play ou pela App Store, conforme a loja da sua conta. O valor
             exibido no app espelha o catálogo vigente (Individual R$&nbsp;29,90, Duo R$&nbsp;39,90, Família
-            R$&nbsp;49,90 mensais; anual R$&nbsp;299,90, R$&nbsp;399,90 e R$&nbsp;499,90).
+            R$&nbsp;49,90 mensais; anual R$&nbsp;299, R$&nbsp;399 e R$&nbsp;499).
           </p>
           <p>
             É proibido usar o Conora para fins ilícitos, tentar acessar dados de outros clientes ou

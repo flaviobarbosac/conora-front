@@ -15,7 +15,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       'A foto do boleto ou do cupom vira lançamento quando aparecem o CNPJ, quem recebeu, a data e o valor. Se faltar algo, você completa na hora ou manda uma foto mais nítida.',
       'O WhatsApp abre com a mensagem pronta. Você envia e o número fica ligado a esta conta. O código vale uma vez.',
       'São 7 dias com o Conora inteiro. Duo e Família entram quando você assina.',
-      'Individual por 29,90 ao mês ou 299,90 ao ano. Duo por 39,90 ou 399,90. Família por 49,90 ou 499,90. No anual, dois meses saem de graça.',
+      'Individual por 29,90 ao mês ou 299 ao ano. Duo por 39,90 ou 399. Família por 49,90 ou 499. No anual, dois meses saem de graça.',
       'O que muda em cada versão fica neste histórico: no menu do perfil, em Configurações e no número da versão.',
     ],
   },

@@ -13,7 +13,7 @@ describe('release notes', () => {
     expect(text).toContain('código vale uma vez')
     expect(text).toContain('7 dias')
     expect(text).toContain('29,90')
-    expect(text).toContain('499,90')
+    expect(text).toContain('499')
     expect(text).toContain('menu do perfil')
   })
 })
