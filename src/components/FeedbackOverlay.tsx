@@ -23,6 +23,7 @@ const EXTRA_PATHS = [
   { path: '/configuracoes', label: 'Configurações' },
   { path: '/plano', label: 'Plano' },
   { path: '/ajuda', label: 'Central de ajuda' },
+  { path: '/novidades', label: 'Novidades' },
   { path: '/relatorios', label: 'Relatórios' },
   { path: '/onboarding', label: 'Onboarding' },
   { path: '/lancamentos', label: 'Lançamentos' },

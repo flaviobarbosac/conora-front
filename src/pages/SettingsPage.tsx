@@ -318,6 +318,10 @@ export function SettingsPage() {
         </summary>
         <div className={settingsStyles.accordionBody}>
         <div className={styles.accountLinks}>
+          <Link to="/novidades" className={styles.accountLink}>
+            <strong>Novidades</strong>
+            <span>O que entrou em cada versão.</span>
+          </Link>
           <Link to="/plano" className={styles.accountLink}>
             <strong>Plano</strong>
             <span>{planSummary(plan.data)}</span>

@@ -25,6 +25,7 @@ import { ApresentacaoPage } from './pages/ApresentacaoPage'
 import { ApresentacaoVariantesPage } from './pages/apresentacao/ApresentacaoVariantesPage'
 import { DiagnosisPage } from './pages/DiagnosisPage'
 import { HelpPage } from './pages/HelpPage'
+import { ReleaseNotesPage } from './pages/ReleaseNotesPage'
 import { HomePage } from './pages/HomePage'
 import { ImportPage } from './pages/ImportPage'
 import { StatementImportPage } from './pages/StatementImportPage'
@@ -194,6 +195,7 @@ export default function App() {
                 <Route path="/plano/contrato" element={<ContractPage />} />
                 <Route path="/operacao" element={<AdminPage />} />
                 <Route path="/ajuda" element={<HelpPage />} />
+                <Route path="/novidades" element={<ReleaseNotesPage />} />
                 <Route path="/perfil" element={<ProfilePage />} />
                 <Route path="/perfil/senha" element={<ChangePasswordPage />} />
                 <Route path="/configuracoes" element={<SettingsPage />} />
