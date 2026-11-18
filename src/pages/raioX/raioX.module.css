@@ -830,6 +830,18 @@
   font-weight: var(--weight-semibold);
 }
 
+.leakageFilterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.leakageFilterRow .leakageFilter {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
 .leakageFilter {
   display: flex;
   align-items: center;

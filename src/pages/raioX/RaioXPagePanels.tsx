@@ -198,45 +198,47 @@ export function RaioXPeriodLeakageControls({
           </button>
         </div>
       </div>
-      <label className={styles.leakageFilter}>
-        <span className={styles.leakageCheck}>
-          <input
-            type="checkbox"
-            checked={leakageOnly}
-            onChange={(event) => setLeakageOnly(event.target.checked)}
-          />
-        </span>
-        <span className={styles.leakageText}>
-          <span className={styles.leakageTitle}>Só vazamento (≥ 100%)</span>
-          <span className={styles.leakageHint}>Filtra a árvore de categorias</span>
-        </span>
-      </label>
-      <label className={styles.leakageFilter}>
-        <span className={styles.leakageCheck}>
-          <input
-            type="checkbox"
-            checked={debtsOnly}
-            onChange={(event) => setDebtsOnly(event.target.checked)}
-          />
-        </span>
-        <span className={styles.leakageText}>
-          <span className={styles.leakageTitle}>Dívidas</span>
-          <span className={styles.leakageHint}>Categorias com dívida em aberto</span>
-        </span>
-      </label>
-      <label className={styles.leakageFilter}>
-        <span className={styles.leakageCheck}>
-          <input
-            type="checkbox"
-            checked={unpostedOnly}
-            onChange={(event) => setUnpostedOnly(event.target.checked)}
-          />
-        </span>
-        <span className={styles.leakageText}>
-          <span className={styles.leakageTitle}>Sem lançamento</span>
-          <span className={styles.leakageHint}>Previsto no período, sem lançamento</span>
-        </span>
-      </label>
+      <div className={styles.leakageFilterRow}>
+        <label className={styles.leakageFilter}>
+          <span className={styles.leakageCheck}>
+            <input
+              type="checkbox"
+              checked={leakageOnly}
+              onChange={(event) => setLeakageOnly(event.target.checked)}
+            />
+          </span>
+          <span className={styles.leakageText}>
+            <span className={styles.leakageTitle}>Só vazamento (≥ 100%)</span>
+            <span className={styles.leakageHint}>Filtra a árvore de categorias</span>
+          </span>
+        </label>
+        <label className={styles.leakageFilter}>
+          <span className={styles.leakageCheck}>
+            <input
+              type="checkbox"
+              checked={debtsOnly}
+              onChange={(event) => setDebtsOnly(event.target.checked)}
+            />
+          </span>
+          <span className={styles.leakageText}>
+            <span className={styles.leakageTitle}>Dívidas</span>
+            <span className={styles.leakageHint}>Categorias com dívida em aberto</span>
+          </span>
+        </label>
+        <label className={styles.leakageFilter}>
+          <span className={styles.leakageCheck}>
+            <input
+              type="checkbox"
+              checked={unpostedOnly}
+              onChange={(event) => setUnpostedOnly(event.target.checked)}
+            />
+          </span>
+          <span className={styles.leakageText}>
+            <span className={styles.leakageTitle}>Sem lançamento</span>
+            <span className={styles.leakageHint}>Previsto no período, sem lançamento</span>
+          </span>
+        </label>
+      </div>
     </div>
   )
 }
