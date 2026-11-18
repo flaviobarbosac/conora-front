@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { accountsApi, familyApi } from '../api/finance'
 import { AccountForm } from '../components/finance/AccountForm'
+import { AddressFields } from '../components/AddressFields'
 import { JornadaDiagnosticoWizard } from '../components/JornadaDiagnosticoWizard'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -21,6 +22,7 @@ import {
   resumeOnboardingStep,
   type OnboardingStep,
 } from '../lib/onboardingFlow'
+import { addressReady, formatCep, type AddressDraft } from '../lib/cep'
 import { isNativeApp } from '../lib/platform'
 import { showSaveToast } from '../lib/saveToast'
 import pageStyles from './pageStyles'
@@ -33,7 +35,7 @@ const WELCOME_VIDEO_ID = 'ljs3zGINCAs'
 type Step = OnboardingStep
 
 const STEPS: { id: Step; title: string; hint: string }[] = [
-  { id: 'profile', title: 'Seus dados', hint: 'Telefone e CEP.' },
+  { id: 'profile', title: 'Seus dados', hint: 'Telefone e endereço completo.' },
   { id: 'account', title: 'Conta bancária', hint: 'Uma conta para receber os lançamentos.' },
   {
     id: 'diagnosis',
@@ -51,10 +53,31 @@ function formatPhone(value: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
-function formatCep(value: string): string {
-  const d = digitsOnly(value).slice(0, 8)
-  if (d.length <= 5) return d
-  return `${d.slice(0, 5)}-${d.slice(5)}`
+const EMPTY_ADDRESS: AddressDraft = {
+  cep: '',
+  logradouro: '',
+  numero: '',
+  bairro: '',
+  municipio: '',
+  uf: '',
+}
+
+function addressFromProfile(data: {
+  cep?: string | null
+  logradouro?: string | null
+  numero?: string | null
+  bairro?: string | null
+  municipio?: string | null
+  uf?: string | null
+}): AddressDraft {
+  return {
+    cep: data.cep ? formatCep(data.cep) : '',
+    logradouro: data.logradouro ?? '',
+    numero: data.numero ?? '',
+    bairro: data.bairro ?? '',
+    municipio: data.municipio ?? '',
+    uf: data.uf ?? '',
+  }
 }
 
 export function OnboardingPage() {
@@ -68,9 +91,9 @@ export function OnboardingPage() {
 
   const [step, setStep] = useState<Step>('profile')
   const [phone, setPhone] = useState('')
-  const [cep, setCep] = useState('')
   const [savedPhone, setSavedPhone] = useState('')
-  const [savedCep, setSavedCep] = useState('')
+  const [address, setAddress] = useState<AddressDraft>(EMPTY_ADDRESS)
+  const [savedAddress, setSavedAddress] = useState<AddressDraft>(EMPTY_ADDRESS)
   const [editAccount, setEditAccount] = useState(false)
   const [hasDiagnostico, setHasDiagnostico] = useState(() =>
     isJornadaDiagnosticoComplete(readJornadaDiagnostico()),
@@ -84,8 +107,9 @@ export function OnboardingPage() {
     if (!profile.data) return
     setPhone(profile.data.phone ? formatPhone(profile.data.phone) : '')
     setSavedPhone(profile.data.phone ? formatPhone(profile.data.phone) : '')
-    setCep(profile.data.cep ? formatCep(profile.data.cep) : '')
-    setSavedCep(profile.data.cep ? formatCep(profile.data.cep) : '')
+    const nextAddress = addressFromProfile(profile.data)
+    setAddress(nextAddress)
+    setSavedAddress(nextAddress)
   }, [profile.data])
 
   useEffect(() => {
@@ -93,7 +117,7 @@ export function OnboardingPage() {
     setStep(
       resumeOnboardingStep({
         phone: profile.data.phone,
-        cep: profile.data.cep,
+        ...profile.data,
         hasAccount,
         hasDiagnostico,
       }),
@@ -101,22 +125,32 @@ export function OnboardingPage() {
   }, [profile.data, hasAccount, hasDiagnostico])
 
   const dirtyProfile =
-    digitsOnly(phone) !== digitsOnly(savedPhone) || digitsOnly(cep) !== digitsOnly(savedCep)
+    digitsOnly(phone) !== digitsOnly(savedPhone) ||
+    JSON.stringify(address) !== JSON.stringify(savedAddress)
   useRegisterDirty('onboarding-profile', dirtyProfile)
 
   async function saveContact(event: FormEvent) {
     event.preventDefault()
+    if (!addressReady(address)) {
+      saveProfile.setError('Informe um CEP válido e complete o endereço.')
+      return
+    }
     if (
       await saveProfile.run(() =>
         familyApi.updateProfile({
           name: profileName,
           phone: digitsOnly(phone),
-          cep: digitsOnly(cep),
+          cep: digitsOnly(address.cep),
+          logradouro: address.logradouro.trim(),
+          numero: address.numero.trim() || 'S/N',
+          bairro: address.bairro.trim(),
+          municipio: address.municipio.trim(),
+          uf: address.uf.trim(),
         }),
       )
     ) {
       setSavedPhone(formatPhone(phone))
-      setSavedCep(formatCep(cep))
+      setSavedAddress(address)
       showSaveToast('Dados salvos.')
       window.dispatchEvent(new Event('conora:profile-changed'))
       profile.reload()
@@ -125,9 +159,14 @@ export function OnboardingPage() {
   }
 
   async function finish() {
-    const gate = canCompleteOnboarding({
+    const gate =     canCompleteOnboarding({
       phone: profile.data?.phone ?? phone,
-      cep: profile.data?.cep ?? cep,
+      cep: profile.data?.cep ?? address.cep,
+      logradouro: profile.data?.logradouro ?? address.logradouro,
+      numero: profile.data?.numero ?? address.numero,
+      bairro: profile.data?.bairro ?? address.bairro,
+      municipio: profile.data?.municipio ?? address.municipio,
+      uf: profile.data?.uf ?? address.uf,
       hasAccount,
       hasDiagnostico,
     })
@@ -137,12 +176,17 @@ export function OnboardingPage() {
       } else if (gate.missing.includes('account')) {
         complete.setError('Cadastre uma conta para receber os lançamentos e tente de novo.')
       } else {
-        complete.setError('Complete telefone e CEP antes de entrar.')
+        complete.setError('Informe um CEP válido e complete o endereço antes de entrar.')
       }
       setStep(
         resumeOnboardingStep({
           phone: profile.data?.phone ?? phone,
-          cep: profile.data?.cep ?? cep,
+          cep: profile.data?.cep ?? address.cep,
+          logradouro: profile.data?.logradouro ?? address.logradouro,
+          numero: profile.data?.numero ?? address.numero,
+          bairro: profile.data?.bairro ?? address.bairro,
+          municipio: profile.data?.municipio ?? address.municipio,
+          uf: profile.data?.uf ?? address.uf,
           hasAccount,
           hasDiagnostico,
         }),
@@ -217,8 +261,9 @@ export function OnboardingPage() {
 
       <ol className={styles.journeyList}>
         {listSteps.map((item, index) => {
+          const addressSaved = addressReady(profile.data ?? {})
           const done =
-            (item.id === 'profile' && Boolean(profile.data?.phone && profile.data?.cep)) ||
+            (item.id === 'profile' && digitsOnly(profile.data?.phone).length >= 10 && addressSaved) ||
             (item.id === 'account' && hasAccount) ||
             (item.id === 'diagnosis' && hasDiagnostico) ||
             (item.id === 'video' && false)
@@ -226,7 +271,18 @@ export function OnboardingPage() {
             item.id === step ? styles.journeyNext : done ? styles.journeyDone : styles.journeyItem
           return (
             <li key={item.id} className={tone}>
-              <button type="button" className={styles.journeyOpen} onClick={() => setStep(item.id)}>
+              <button
+                type="button"
+                className={styles.journeyOpen}
+                onClick={() => {
+                  if (item.id !== 'profile' && !addressSaved) {
+                    saveProfile.setError('Informe um CEP válido e complete o endereço antes de continuar.')
+                    setStep('profile')
+                    return
+                  }
+                  setStep(item.id)
+                }}
+              >
                 <span className={styles.journeyIndex} aria-hidden>
                   {done ? '✓' : index + 1}
                 </span>
@@ -261,15 +317,7 @@ export function OnboardingPage() {
               onChange={(event) => setPhone(formatPhone(event.target.value))}
               hint="Com DDD."
             />
-            <Field
-              label="CEP"
-              name="cep"
-              required
-              inputMode="numeric"
-              autoComplete="postal-code"
-              value={cep}
-              onChange={(event) => setCep(formatCep(event.target.value))}
-            />
+            <AddressFields value={address} onChange={setAddress} />
             <div className={styles.formActions}>
               <Button
                 type="submit"
@@ -277,7 +325,7 @@ export function OnboardingPage() {
                   saveProfile.busy ||
                   !profileName ||
                   digitsOnly(phone).length < 10 ||
-                  digitsOnly(cep).length !== 8
+                  !addressReady(address)
                 }
               >
                 Salvar e continuar
@@ -378,7 +426,7 @@ export function OnboardingPage() {
             <Button variant="secondary" onClick={() => setStep('diagnosis')}>
               Voltar
             </Button>
-            <Button disabled={complete.busy || !hasAccount || !hasDiagnostico} onClick={() => void finish()}>
+            <Button disabled={complete.busy || !hasAccount || !hasDiagnostico || !addressReady(profile.data ?? {})} onClick={() => void finish()}>
               Concluir e entrar
             </Button>
           </div>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { familyApi, planApi } from '../api/finance'
 import { PageHeader } from '../components/PageHeader'
+import { AddressFields } from '../components/AddressFields'
 import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { Field } from '../components/ui/Field'
@@ -9,7 +10,9 @@ import { useAction } from '../hooks/useAction'
 import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { planSummary } from '../lib/planAccess'
+import { addressReady, formatCep, type AddressDraft } from '../lib/cep'
 import { showSaveToast } from '../lib/saveToast'
+import { confirmDestructive } from '../lib/confirm'
 import styles from './pageStyles'
 
 function initialsFrom(name: string, email: string): string {
@@ -34,10 +37,31 @@ function formatPhone(value: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
-function formatCep(value: string): string {
-  const d = digitsOnly(value).slice(0, 8)
-  if (d.length <= 5) return d
-  return `${d.slice(0, 5)}-${d.slice(5)}`
+const EMPTY_ADDRESS: AddressDraft = {
+  cep: '',
+  logradouro: '',
+  numero: '',
+  bairro: '',
+  municipio: '',
+  uf: '',
+}
+
+function addressFromProfile(data: {
+  cep?: string | null
+  logradouro?: string | null
+  numero?: string | null
+  bairro?: string | null
+  municipio?: string | null
+  uf?: string | null
+}): AddressDraft {
+  return {
+    cep: data.cep ? formatCep(data.cep) : '',
+    logradouro: data.logradouro ?? '',
+    numero: data.numero ?? '',
+    bairro: data.bairro ?? '',
+    municipio: data.municipio ?? '',
+    uf: data.uf ?? '',
+  }
 }
 
 export function ProfilePage() {
@@ -49,15 +73,15 @@ export function ProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
-  const [cep, setCep] = useState('')
+  const [address, setAddress] = useState<AddressDraft>(EMPTY_ADDRESS)
   const [savedName, setSavedName] = useState('')
   const [savedPhone, setSavedPhone] = useState('')
-  const [savedCep, setSavedCep] = useState('')
+  const [savedAddress, setSavedAddress] = useState<AddressDraft>(EMPTY_ADDRESS)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const dirty =
     name.trim() !== savedName.trim() ||
     digitsOnly(phone) !== digitsOnly(savedPhone) ||
-    digitsOnly(cep) !== digitsOnly(savedCep)
+    JSON.stringify(address) !== JSON.stringify(savedAddress)
   useRegisterDirty('profile-form', dirty)
 
   useEffect(() => {
@@ -66,8 +90,9 @@ export function ProfilePage() {
       setSavedName(profile.data.name)
       setPhone(profile.data.phone ? formatPhone(profile.data.phone) : '')
       setSavedPhone(profile.data.phone ? formatPhone(profile.data.phone) : '')
-      setCep(profile.data.cep ? formatCep(profile.data.cep) : '')
-      setSavedCep(profile.data.cep ? formatCep(profile.data.cep) : '')
+      const nextAddress = addressFromProfile(profile.data)
+      setAddress(nextAddress)
+      setSavedAddress(nextAddress)
     }
   }, [profile.data])
 
@@ -95,18 +120,27 @@ export function ProfilePage() {
 
   async function onSave(event: FormEvent) {
     event.preventDefault()
+    if (!addressReady(address)) {
+      saveProfile.setError('Informe um CEP válido e complete o endereço.')
+      return
+    }
     if (
       await saveProfile.run(() =>
         familyApi.updateProfile({
           name: name.trim(),
           phone: digitsOnly(phone) || null,
-          cep: digitsOnly(cep) || null,
+          cep: digitsOnly(address.cep),
+          logradouro: address.logradouro.trim(),
+          numero: address.numero.trim() || 'S/N',
+          bairro: address.bairro.trim(),
+          municipio: address.municipio.trim(),
+          uf: address.uf.trim(),
         }),
       )
     ) {
       setSavedName(name.trim())
       setSavedPhone(formatPhone(phone))
-      setSavedCep(formatCep(cep))
+      setSavedAddress(address)
       showSaveToast('Perfil salvo.')
       profile.reload()
       window.dispatchEvent(new Event('conora:profile-changed'))
@@ -116,7 +150,7 @@ export function ProfilePage() {
   function onCancel() {
     setName(savedName)
     setPhone(savedPhone)
-    setCep(savedCep)
+    setAddress(savedAddress)
   }
 
   async function onPickPhoto(file: File | undefined) {
@@ -132,6 +166,7 @@ export function ProfilePage() {
   }
 
   async function onRemovePhoto() {
+    if (!(await confirmDestructive('Remover a foto do perfil?', { title: 'Remover foto' }))) return
     if (!(await photoAction.run(() => familyApi.deletePhoto()))) return
     showSaveToast('Foto removida.')
     profile.reload()
@@ -223,14 +258,7 @@ export function ProfilePage() {
               value={phone}
               onChange={(event) => setPhone(formatPhone(event.target.value))}
             />
-            <Field
-              label="CEP"
-              name="cep"
-              inputMode="numeric"
-              autoComplete="postal-code"
-              value={cep}
-              onChange={(event) => setCep(formatCep(event.target.value))}
-            />
+            <AddressFields value={address} onChange={setAddress} />
             <Button type="button" variant="secondary" onClick={() => navigate('/perfil/senha')}>
               Alterar senha
             </Button>
@@ -238,7 +266,7 @@ export function ProfilePage() {
               <Button type="button" variant="secondary" disabled={!dirty || saveProfile.busy} onClick={onCancel}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={saveProfile.busy || !name.trim() || !dirty}>
+              <Button type="submit" disabled={saveProfile.busy || !name.trim() || !dirty || !addressReady(address)}>
                 Salvar
               </Button>
             </div>

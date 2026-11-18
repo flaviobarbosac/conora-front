@@ -31,11 +31,14 @@ function paint(png: PNG, box: Box) {
   }
 }
 
-function onlyVersionDiffers(actual: Buffer, expected: Buffer, box: Box): boolean {
+function onlyIgnoredDiffers(actual: Buffer, expected: Buffer, boxes: Box[]): boolean {
+  if (boxes.length === 0) return false
   const actualPng = PNG.sync.read(actual)
   const expectedPng = PNG.sync.read(expected)
-  paint(actualPng, box)
-  paint(expectedPng, box)
+  for (const box of boxes) {
+    paint(actualPng, box)
+    paint(expectedPng, box)
+  }
   const result = compare(PNG.sync.write(actualPng), PNG.sync.write(expectedPng), {
     maxDiffPixels: 0,
     threshold: 0.2,
@@ -53,19 +56,24 @@ export async function settleGuardChrome(page: Page) {
   })
 }
 
-// Official exception: the version stamp ([data-app-version]) changes on every
-// release, so a pixel diff that exists only inside that box is not a failure.
-// Geometry drops the same stamp in e2e/guard-rail/geometry.ts.
+// Official exceptions, never a failure when the pixel diff stays inside them:
+// the version stamp ([data-app-version]) and the operator Console shortcut
+// ([data-guard-ignore]). Geometry drops the same nodes in geometry.ts.
 export async function expectGuardScreenshot(page: Page, surface: string, name: string) {
-  const box = await page.locator('[data-app-version]').boundingBox()
+  const ignored = page.locator('[data-app-version], [data-guard-ignore]')
+  const boxes: Box[] = []
+  for (let i = 0; i < await ignored.count(); i++) {
+    const box = await ignored.nth(i).boundingBox()
+    if (box && box.width > 0 && box.height > 0) boxes.push(box)
+  }
   try {
     await expect(page).toHaveScreenshot(name, { fullPage: false })
   } catch (error) {
-    if (!box) throw error
+    if (boxes.length === 0) throw error
     const message = error instanceof Error ? error.message : String(error)
     if (!message.includes('toHaveScreenshot')) throw error
     const expectedPath = path.join(process.cwd(), 'e2e', 'guard-rail', 'baselines', surface, name)
     const actual = await page.screenshot({ fullPage: false, animations: 'disabled', caret: 'hide', scale: 'css' })
-    if (!onlyVersionDiffers(actual, readFileSync(expectedPath), box)) throw error
+    if (!onlyIgnoredDiffers(actual, readFileSync(expectedPath), boxes)) throw error
   }
 }

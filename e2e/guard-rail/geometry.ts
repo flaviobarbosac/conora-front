@@ -3,9 +3,10 @@ import path from 'node:path'
 
 export type Box = { name: string; x: number; y: number; w: number; h: number }
 
-// Official exception: the version stamp (sidebar/footer text vYEAR.x, marked
-// data-app-version) changes on every release. Geometry never compares it.
-// Screenshots mask the same element in e2e/guard-rail/screenshot.ts.
+// Official exceptions, never compared:
+// - the version stamp (sidebar/footer text vYEAR.x, marked data-app-version)
+// - the operator Console shortcut (marked data-guard-ignore)
+// Screenshots mask the same elements in e2e/guard-rail/screenshot.ts.
 const VERSION_STAMP = /^v\d+(?:\.\d+)*$/
 
 export function isVersionStamp(name: string): boolean {
@@ -64,7 +65,7 @@ export function collectGeometry(): Box[] {
     const rect = element.getBoundingClientRect()
     if (rect.width < 1 || rect.height < 1) continue
     if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) continue
-    if (element.closest('[data-app-version]')) continue
+    if (element.closest('[data-app-version], [data-guard-ignore]')) continue
     const label = (element.getAttribute('aria-label') || element.innerText || '').replace(/\s+/g, ' ').trim()
     if (!label || /^v\d+(?:\.\d+)*$/.test(label)) continue
     const base = label.slice(0, 80)

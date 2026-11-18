@@ -1,6 +1,7 @@
 import { Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom'
 import { lazy, useEffect, useState } from 'react'
 import { familyApi } from './api/finance'
+import { getAccessToken } from './api/client'
 import { listenNativeShare } from './share/receiveShare'
 import { listenAppLinks } from './lib/appLinks'
 import { guestAuthPath } from './lib/deviceIdentity'
@@ -15,10 +16,10 @@ import { AppShell } from './layouts/AppShell'
 import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { AdminPage } from './pages/AdminPage'
 import { ConsoleAbandonmentPage } from './pages/ConsoleAbandonmentPage'
-import { ConsoleAccessPage } from './pages/ConsoleAccessPage'
-import { ConsoleClientsPage } from './pages/ConsoleClientsPage'
 import { ConsoleFeedbackPage } from './pages/ConsoleFeedbackPage'
 import { ConsoleJornadaTiposPage } from './pages/ConsoleJornadaTiposPage'
+import { ConsoleMapPage } from './pages/ConsoleMapPage'
+import { ConsoleUsersPage } from './pages/ConsoleUsersPage'
 import { ConsolePage } from './pages/ConsolePage'
 import { FeedbackRespostaPage } from './pages/FeedbackRespostaPage'
 import { ApresentacaoPage } from './pages/ApresentacaoPage'
@@ -95,6 +96,8 @@ function RequireOnboarding() {
   const { session, authReady } = useAuth()
   const [ready, setReady] = useState(false)
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     if (!authReady) {
@@ -104,21 +107,26 @@ function RequireOnboarding() {
     async function check() {
       if (!session) {
         setNeedsOnboarding(false)
+        setProfileError(null)
         setReady(true)
         return
       }
       try {
         const profile = await familyApi.profile()
         if (!cancelled) {
+          setProfileError(null)
           setNeedsOnboarding(!profile.onboardingCompleted)
           setReady(true)
         }
-      } catch {
-        // Do not open the app shell until we know onboard status (avoids skipping onboard on flaky network).
-        if (!cancelled) {
-          setNeedsOnboarding(true)
-          setReady(true)
+      } catch (caught) {
+        if (cancelled) {
+          return
         }
+        const message = caught instanceof Error ? caught.message : ''
+        const expired = !getAccessToken() || /sessão expirada|não autenticado|nao autenticado|não autorizado|unauthorized/i.test(message)
+        setNeedsOnboarding(false)
+        setProfileError(expired ? null : message || 'Não foi possível carregar o perfil.')
+        setReady(true)
       }
     }
     void check()
@@ -131,10 +139,23 @@ function RequireOnboarding() {
       cancelled = true
       window.removeEventListener('conora:profile-changed', onChanged)
     }
-  }, [session, authReady])
+  }, [session, authReady, attempt])
 
   if (!authReady || !ready) {
     return <p>Carregando…</p>
+  }
+  if (!session) {
+    return null
+  }
+  if (profileError) {
+    return (
+      <p>
+        {profileError}{' '}
+        <button type="button" onClick={() => { setReady(false); setAttempt((value) => value + 1) }}>
+          Tentar de novo
+        </button>
+      </p>
+    )
   }
   if (needsOnboarding) {
     return <Navigate to="/onboarding" replace />
@@ -210,8 +231,8 @@ export default function App() {
                     <Route path="feedback" element={<ConsoleFeedbackPage />} />
                     <Route path="abandonamento" element={<ConsoleAbandonmentPage />} />
                     <Route path="jornada-tipos" element={<ConsoleJornadaTiposPage />} />
-                    <Route path="acesso" element={<ConsoleAccessPage />} />
-                    <Route path="clientes" element={<ConsoleClientsPage />} />
+                    <Route path="mapa" element={<ConsoleMapPage />} />
+                    <Route path="usuarios" element={<ConsoleUsersPage />} />
                   </Route>
                 </Route>
                 <Route path="/whatsapp" element={<WhatsAppPage />} />

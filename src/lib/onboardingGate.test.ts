@@ -2,6 +2,14 @@
 import { describe, expect, it } from 'vitest'
 import { canCompleteOnboarding } from './onboardingFlow'
 
+const endereco = {
+  logradouro: 'Rua A',
+  numero: 'S/N',
+  bairro: 'Centro',
+  municipio: 'Vitória',
+  uf: 'ES',
+}
+
 describe('onboarding completion gate', () => {
   it('blocks when phone, cep or account is missing (card is optional)', () => {
     expect(
@@ -14,6 +22,7 @@ describe('onboarding completion gate', () => {
       canCompleteOnboarding({
         phone: '27999999999',
         cep: '29000-000',
+        ...endereco,
         hasAccount: true,
         hasCard: false,
         hasDiagnostico: true,
@@ -25,6 +34,7 @@ describe('onboarding completion gate', () => {
     const afterAccountFail = canCompleteOnboarding({
       phone: '27999999999',
       cep: '29000000',
+      ...endereco,
       hasAccount: false,
       hasCard: false,
     })

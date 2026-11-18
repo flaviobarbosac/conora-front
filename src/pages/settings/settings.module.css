@@ -4,6 +4,13 @@
 .settingsForm {
   align-items: stretch;
   overflow-x: clip;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .settingsForm {
+    grid-template-columns: 1fr;
+  }
 }
 
 .settingsForm .section {
@@ -59,4 +66,33 @@
 
 .accordion:not([open]) > .accordionBody {
   display: none;
+}
+
+.sharePick {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.sharePick > :first-child {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.shareList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shareList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 44px;
 }

@@ -4,9 +4,10 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// Official exception: the version stamp (sidebar/footer text vYEAR.x, marked
-// data-app-version) changes on every release. Playwright and extrato never
-// compare it — geometry drops the box, screenshots mask its pixels.
+// Official exceptions. Playwright and extrato never compare them: geometry
+// drops the box, screenshots mask its pixels.
+// - version stamp (sidebar/footer text vYEAR.x, data-app-version)
+// - operator Console shortcut (data-guard-ignore)
 // See e2e/guard-rail/geometry.ts and e2e/guard-rail/screenshot.ts.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const backend = path.resolve(root, '..', 'Conora-backEnd')

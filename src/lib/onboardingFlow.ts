@@ -1,8 +1,15 @@
+import { addressReady } from './cep'
+
 /** Pure onboard resume / completion rules used by OnboardingPage and tests. */
 
 export type OnboardingResumeInput = {
   phone: string | null | undefined
   cep: string | null | undefined
+  logradouro?: string | null
+  numero?: string | null
+  bairro?: string | null
+  municipio?: string | null
+  uf?: string | null
   hasAccount: boolean
   /** Diagnostic yes/no answers saved for the Raio-X journey. */
   hasDiagnostico?: boolean
@@ -14,8 +21,7 @@ export type OnboardingStep = 'profile' | 'account' | 'diagnosis' | 'video'
 
 export function resumeOnboardingStep(input: OnboardingResumeInput): OnboardingStep {
   const phoneOk = digitsOnly(input.phone).length >= 10
-  const cepOk = digitsOnly(input.cep).length === 8
-  if (!phoneOk || !cepOk) return 'profile'
+  if (!phoneOk || !addressReady(input)) return 'profile'
   if (!input.hasAccount) return 'account'
   if (!input.hasDiagnostico) return 'diagnosis'
   return 'video'
@@ -24,7 +30,7 @@ export function resumeOnboardingStep(input: OnboardingResumeInput): OnboardingSt
 export function canCompleteOnboarding(input: OnboardingResumeInput): { ok: boolean; missing: string[] } {
   const missing: string[] = []
   if (digitsOnly(input.phone).length < 10) missing.push('phone')
-  if (digitsOnly(input.cep).length !== 8) missing.push('cep')
+  if (!addressReady(input)) missing.push('cep')
   if (!input.hasAccount) missing.push('account')
   if (!input.hasDiagnostico) missing.push('diagnostico')
   return { ok: missing.length === 0, missing }
@@ -36,7 +42,7 @@ export const ONBOARDING_WALKTHROUGH: ReadonlyArray<{
   collects: string[]
   persistsIn: string
 }> = [
-  { step: 'profile', collects: ['telefone', 'CEP'], persistsIn: 'perfil' },
+  { step: 'profile', collects: ['telefone', 'CEP', 'logradouro', 'número', 'bairro', 'município', 'UF'], persistsIn: 'perfil' },
   { step: 'account', collects: ['conta bancária'], persistsIn: 'contas' },
   {
     step: 'diagnosis',
