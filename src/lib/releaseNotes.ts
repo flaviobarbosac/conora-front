@@ -7,6 +7,13 @@ export type ReleaseNote = {
 /** Newest first. Add the next published version at the top. */
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    version: '26.106',
+    date: '18/11/2026',
+    items: [
+      'No começo, no passo Vídeo rápido, o vídeo passa no próprio Conora e começa sozinho. Para ver de novo, abra o menu do perfil e toque em Onboarding.',
+    ],
+  },
+  {
     version: '26.105',
     date: '18/11/2026',
     items: [
