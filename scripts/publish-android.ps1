@@ -51,9 +51,9 @@ if ($ahead) {
     $merged = $true
 }
 
-$version = gh api "repos/$Repo/contents/package.json?ref=main" --jq '.content' |
-    ForEach-Object { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(($_ -replace '\s', ''))) } |
-    ConvertFrom-Json | Select-Object -ExpandProperty version
+$encoded = @(gh api "repos/$Repo/contents/package.json?ref=main" --jq '.content') -join ''
+$version = ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(($encoded -replace '\s', ''))) |
+    ConvertFrom-Json).version
 
 if ($merged) {
     $Track = 'production'
