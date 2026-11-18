@@ -269,6 +269,7 @@ export function AppShell() {
     styles.sidebar,
     sidebarCollapsed && !mobileNavOpen ? styles.sidebarCollapsed : '',
     mobileNavOpen ? styles.sidebarMobileOpen : '',
+    chrome.menu ? styles.sidebarConsole : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -415,6 +416,7 @@ export function AppShell() {
             <Link
               to="/console"
               className={styles.settingsLink}
+              data-guard-ignore=""
               title={sidebarCollapsed && !mobileNavOpen ? 'console' : undefined}
             >
               <Icon name="console" size={24} />
