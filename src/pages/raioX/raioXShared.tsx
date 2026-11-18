@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import {
   entryDisplayDescription,
+  gamificationApi,
   type Budget,
   type BudgetYear,
   type Category,
@@ -10,6 +11,7 @@ import {
 } from '../../api/finance'
 import { LIFE_HORIZONS } from '../../lib/lifeHorizon'
 import { Loading } from '../../components/ui/Feedback'
+import { useLoad } from '../../hooks/useLoad'
 import {
   categoryLabel,
 } from '../../lib/categoryLabel'
@@ -656,6 +658,7 @@ export function RaioXSideCards({
   focus,
   onFocus,
   onExpandSection,
+  competenceYm,
 }: {
   budget: Budget
   accounts: Category[]
@@ -668,17 +671,25 @@ export function RaioXSideCards({
   focus: RaioXFocus
   onFocus: (next: RaioXFocus) => void
   onExpandSection: (section: CategorySection, options?: { accountId?: string }) => void
+  competenceYm: string
 }) {
   const bars = buildRaioXPrevistoBars(accounts, byParent, planned, actual)
+  const reserve = useLoad(() => gamificationApi.reserve(competenceYm), [competenceYm])
 
   const assets = sectionTotals(accounts, byParent, planned, actual, 'Asset')
   const liabilities = sectionTotals(accounts, byParent, planned, actual, 'Liability')
   const net = patrimonyNetWorth(assets, liabilities)
   const patrimonyActive = focus === 'patrimony'
 
-  const filteredProjects = projects.filter((project) =>
-    scope === 'Family' ? true : project.scope === 'Personal',
-  )
+  const reserveData = reserve.data
+  const reservePercent = reserveData ? Math.min(100, Math.max(0, reserveData.progressPercent)) : 0
+  const reserveAccount = accounts.find((account) => account.code === 'LIFE_RESERVE')
+  const filteredProjects = projects.filter((project) => {
+    if (reserveAccount && project.categoryId === reserveAccount.id) {
+      return false
+    }
+    return scope === 'Family' ? true : project.scope === 'Personal'
+  })
 
   return (
     <div className={styles.macroGrid}>
@@ -782,6 +793,40 @@ export function RaioXSideCards({
               </Link>
             )
           })}
+          <div aria-label="Reserva de emergência">
+            <div className={styles.macroHeadRow}>
+              <strong>Reserva de emergência</strong>
+            </div>
+            {reserve.loading && !reserveData ? <Loading /> : null}
+            {reserve.error ? <p className={styles.muted}>{reserve.error}</p> : null}
+            {reserveData ? (
+              <>
+                <p className={styles.muted}>
+                  {formatMoney(reserveData.reserveBalance)} · {formatPercentValue(reserveData.monthsCovered)} /{' '}
+                  {reserveData.targetMonths} meses cobertos
+                </p>
+                <ConsumptionBar percent={reservePercent} color="#2F8A78" />
+                <p className={styles.muted}>
+                  Meta: {reserveData.targetMonths} meses de essenciais
+                  {reserveData.monthlyEssentialAverage > 0
+                    ? ` (${formatMoney(reserveData.monthlyEssentialAverage)}/mês)`
+                    : ''}
+                </p>
+                {reserveAccount ? (
+                  <button
+                    type="button"
+                    className={styles.macroBarLink}
+                    onClick={() => onExpandSection('LifeProject', { accountId: reserveAccount.id })}
+                  >
+                    Ver na árvore
+                  </button>
+                ) : null}
+                <Link className={styles.horizonRow} to="/lancamentos?novo=1">
+                  Guardar na reserva
+                </Link>
+              </>
+            ) : null}
+          </div>
         </section>
       </div>
     </div>

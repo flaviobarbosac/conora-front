@@ -330,6 +330,7 @@ export function RaioXPage() {
           scope={scope}
           focus={focus}
           onFocus={toggleFocus}
+          competenceYm={ym}
           onExpandSection={(section, options) => {
             setFocus(null)
             const head = sectionHead(list, section)
