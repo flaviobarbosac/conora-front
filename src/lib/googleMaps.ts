@@ -110,7 +110,7 @@ export function createMarker(
     map,
     position,
     title,
-    label: label ? { text: label.slice(0, 32), color: '#1a1a1a', fontSize: '11px' } : undefined,
+    label: label ? { text: label.slice(0, 64), color: '#1a1a1a', fontSize: '11px' } : undefined,
     icon: {
       path: 0,
       scale: 9,

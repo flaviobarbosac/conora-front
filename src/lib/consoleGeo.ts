@@ -99,11 +99,19 @@ export function coordenadaValida(latitude: number | null | undefined, longitude:
   return !(latitude === 0 && longitude === 0)
 }
 
+export const CORES_PLANO = [
+  ['Gratuito', '#D32F2F'],
+  ['Individual', '#1B8A3E'],
+  ['Duo', '#1565C0'],
+  ['Família', '#7B1FA2'],
+] as const
+
 export function corDoPlano(plano: string | null | undefined): string {
-  if (plano === 'Individual') return '#F5B400'
-  if (plano === 'Duo') return '#1B8A3E'
-  if (plano === 'Família') return '#1565C0'
-  return '#D32F2F'
+  const nome = semAcento(plano ?? '').toLowerCase()
+  if (nome.startsWith('individual')) return CORES_PLANO[1][1]
+  if (nome.startsWith('duo')) return CORES_PLANO[2][1]
+  if (nome.startsWith('familia')) return CORES_PLANO[3][1]
+  return CORES_PLANO[0][1]
 }
 
 export function valorCampo(usuario: ConsoleGeoUser, campo: string): string {
@@ -115,11 +123,18 @@ export function valorCampo(usuario: ConsoleGeoUser, campo: string): string {
 export function textoDoPin(
   usuario: ConsoleGeoUser,
   textoFixo: string | null | undefined,
-  campo: string,
+  campos: readonly string[],
+  campoUnico?: string,
 ): string {
   const fixo = textoFixo?.trim()
   if (fixo) return fixo
-  return valorCampo(usuario, campo) || usuario.nome
+  const nome = campos.includes('nome') ? (valorCampo(usuario, 'nome') || usuario.nome) : ''
+  const municipio = campos.includes('municipio') ? valorCampo(usuario, 'municipio') : ''
+  const uf = campos.includes('uf') ? valorCampo(usuario, 'uf') : ''
+  const local = [municipio, uf].filter(Boolean).join('/')
+  const texto = [nome, local].filter(Boolean).join(' · ')
+  if (texto) return texto
+  return valorCampo(usuario, campoUnico ?? 'nome') || usuario.nome
 }
 
 export function enderecoGeocode(usuario: ConsoleGeoUser): string {
