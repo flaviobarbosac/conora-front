@@ -7,6 +7,15 @@ export type ReleaseNote = {
 /** Newest first. Add the next published version at the top. */
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    version: '26.103',
+    date: '17/11/2026',
+    items: [
+      'Compartilhar um mês para o acompanhamento da análise financeira do consultor.',
+      'Em Configurações, abra Compartilhar mês. Escolha o mês, toque em Adicionar mês e depois em Compartilhar meses. O mês fica na lista. Para tirar, confirme na lixeira.',
+      'Quem acompanha escolhe esse mês e vê o Raio-X, o orçamento e os lançamentos daquele período.',
+    ],
+  },
+  {
     version: '26.100',
     date: '16/11/2026',
     items: [
