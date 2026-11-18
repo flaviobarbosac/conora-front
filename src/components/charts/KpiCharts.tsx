@@ -146,39 +146,99 @@ export type KpiSeries = {
   values: number[]
 }
 
-export function KpiMultiLineChart({ categories, series }: { categories: string[]; series: KpiSeries[] }) {
+function niceTop(raw: number) {
+  if (raw <= 1) return 1
+  const exp = 10 ** Math.floor(Math.log10(raw))
+  const frac = raw / exp
+  const nice = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 5 ? 5 : 10
+  return nice * exp
+}
+
+function tickIndexes(count: number) {
+  if (count <= 1) return [0]
+  const slots = Math.min(count, 6)
+  const indexes = new Set<number>()
+  for (let index = 0; index < slots; index += 1) {
+    indexes.add(Math.round((index * (count - 1)) / (slots - 1)))
+  }
+  return [...indexes]
+}
+
+export function KpiMultiLineChart({
+  categories,
+  series,
+  showLegend = true,
+  showAxes = false,
+}: {
+  categories: string[]
+  series: KpiSeries[]
+  showLegend?: boolean
+  showAxes?: boolean
+}) {
   const width = 640
-  const height = 240
-  const padLeft = 36
-  const padRight = 12
+  const height = showAxes ? 268 : 240
+  const padLeft = showAxes ? 48 : 36
+  const padRight = 16
   const padTop = 16
-  const padBottom = 28
+  const padBottom = showAxes ? 36 : 28
   const plotW = width - padLeft - padRight
   const plotH = height - padTop - padBottom
-  const max = Math.max(1, ...series.flatMap((item) => item.values))
+  const rawMax = Math.max(1, ...series.flatMap((item) => item.values))
+  const top = showAxes ? niceTop(rawMax) : rawMax
+  const yTicks = showAxes
+    ? [...new Set([0, 0.25, 0.5, 0.75, 1].map((part) => Math.round(top * part)))].sort((a, b) => a - b)
+    : []
+  const xTicks = showAxes ? tickIndexes(categories.length) : []
+  const xOf = (index: number) =>
+    padLeft + (categories.length <= 1 ? plotW / 2 : (index / (categories.length - 1)) * plotW)
+  const yOf = (value: number) => padTop + plotH - (value / top) * plotH
 
   return (
     <div className={chart.lineWrap}>
       <svg className={chart.lineSvg} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Gráfico de evolução">
+        {showAxes ? (
+          <>
+            <line className={chart.axis} x1={padLeft} y1={padTop} x2={padLeft} y2={padTop + plotH} />
+            <line className={chart.axis} x1={padLeft} y1={padTop + plotH} x2={padLeft + plotW} y2={padTop + plotH} />
+            {yTicks.map((tick) => (
+              <text key={tick} className={chart.axisLabel} x={padLeft - 6} y={yOf(tick) + 4} textAnchor="end">
+                {tick}
+              </text>
+            ))}
+            {xTicks.map((index) => (
+              <text key={categories[index] ?? index} className={chart.axisLabel} x={xOf(index)} y={height - 8} textAnchor="middle">
+                {categories[index]}
+              </text>
+            ))}
+          </>
+        ) : null}
         {series.map((item) => {
           const path = item.values
-            .map((value, index) => {
-              const x = padLeft + (categories.length <= 1 ? plotW / 2 : (index / (categories.length - 1)) * plotW)
-              const y = padTop + plotH - (value / max) * plotH
-              return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`
-            })
+            .map((value, index) => `${index === 0 ? 'M' : 'L'} ${xOf(index).toFixed(1)} ${yOf(value).toFixed(1)}`)
             .join(' ')
-          return <path key={item.key} d={path} fill="none" stroke={item.color} strokeWidth={2} />
+          const last = item.values.length - 1
+          return (
+            <g key={item.key}>
+              <path d={path} fill="none" stroke={item.color} strokeWidth={2} />
+              {showAxes && last >= 0 ? (
+                <text className={chart.pointLabel} x={xOf(last) + 4} y={yOf(item.values[last]) - 4} fill={item.color}>
+                  {item.values[last]}
+                </text>
+              ) : null}
+            </g>
+          )
         })}
       </svg>
-      <ul className={chart.pieLegend}>
-        {series.map((item) => (
-          <li key={item.key} className={chart.pieLegendItem}>
-            <span className={chart.swatch} style={{ background: item.color }} aria-hidden />
-            <span>{item.label}</span>
-          </li>
-        ))}
-      </ul>
+      {showLegend ? (
+        <ul className={chart.pieLegend}>
+          {series.map((item) => (
+            <li key={item.key} className={chart.pieLegendItem}>
+              <span className={chart.swatch} style={{ background: item.color }} aria-hidden />
+              <span>{item.label}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   )
 }
