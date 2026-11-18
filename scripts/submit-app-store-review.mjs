@@ -85,26 +85,74 @@ async function tryRequest(method, path, body) {
   return text ? JSON.parse(text) : {}
 }
 
-// App Store allows a single editable version. Reuse the one with this version string,
-// else rename the editable one (e.g. a rejected version), else create a new version.
-const editableStates = [
-  'PREPARE_FOR_SUBMISSION',
-  'DEVELOPER_REJECTED',
-  'REJECTED',
-  'METADATA_REJECTED',
-  'INVALID_BINARY',
-  // Still inside a rejected submission (checked below), but it is the app's only version.
-  'READY_FOR_REVIEW',
-]
+// The live app stays READY_FOR_SALE. An update reuses the single open version
+// (prepare, rejected, or already waiting for review) and sets it to this release.
+// Creating another version while one is open is what Apple rejects with 409.
+const closedStates = new Set([
+  'READY_FOR_SALE',
+  'REPLACED_WITH_NEW_VERSION',
+  'REMOVED_FROM_SALE',
+  'DEVELOPER_REMOVED_FROM_SALE',
+  'PREORDER_READY_FOR_SALE',
+])
 const versions = await request(
   'GET',
   `/v1/apps/${appId}/appStoreVersions?filter[platform]=IOS&limit=20`,
 )
-let version = versions.data?.find((v) => v.attributes.versionString === marketingVersion)
-if (!version) {
-  version = versions.data?.find((v) => editableStates.includes(v.attributes.appStoreState))
+for (const item of versions.data ?? []) {
+  console.log(`App Store ${item.attributes.versionString}: ${item.attributes.appStoreState}`)
 }
+const openVersions = (versions.data ?? []).filter((item) => !closedStates.has(item.attributes.appStoreState))
+let version = openVersions.find((item) => item.attributes.versionString === marketingVersion) ?? openVersions[0]
 let versionId = version?.id
+
+async function submissionsIn(state) {
+  const page = await request(
+    'GET',
+    `/v1/reviewSubmissions?filter[app]=${appId}&filter[platform]=IOS&filter[state]=${state}&limit=10`,
+  )
+  return page.data ?? []
+}
+
+if (version && ['WAITING_FOR_REVIEW', 'IN_REVIEW'].includes(version.attributes.appStoreState)) {
+  const queued = [
+    ...(await submissionsIn('WAITING_FOR_REVIEW')),
+    ...(await submissionsIn('IN_REVIEW')),
+  ]
+  for (const submission of queued) {
+    const items = await itemsOf(submission.id)
+    if (!items.some((item) => item.relationships?.appStoreVersion?.data?.id === versionId)) continue
+    if (submission.attributes.state !== 'WAITING_FOR_REVIEW') {
+      console.error(
+        `Version ${version.attributes.versionString} is already in review. ` +
+          'Apple accepts the current update only after this review ends.',
+      )
+      process.exit(1)
+    }
+    console.log(`Canceling the review queued for ${version.attributes.versionString} so ${marketingVersion} can replace it.`)
+    await request('DELETE', `/v1/reviewSubmissions/${submission.id}`)
+  }
+}
+
+if (version && ['PENDING_DEVELOPER_RELEASE', 'PENDING_APPLE_RELEASE'].includes(version.attributes.appStoreState)) {
+  if (version.attributes.versionString !== marketingVersion) {
+    console.error(
+      `Version ${version.attributes.versionString} is already approved and waiting to go live. ` +
+        `Apple blocks ${marketingVersion} until that one is released.`,
+    )
+    process.exit(1)
+  }
+  if (version.attributes.appStoreState === 'PENDING_DEVELOPER_RELEASE') {
+    await request('POST', '/v1/appStoreVersionReleaseRequests', {
+      data: {
+        type: 'appStoreVersionReleaseRequests',
+        relationships: { appStoreVersion: { data: { type: 'appStoreVersions', id: versionId } } },
+      },
+    })
+    console.log(`Released ${marketingVersion}. It was already approved.`)
+    process.exit(0)
+  }
+}
 
 async function itemsOf(submissionId) {
   const page = await request('GET', `/v1/reviewSubmissions/${submissionId}/items?include=appStoreVersion&limit=50`)
@@ -155,11 +203,9 @@ await request('PATCH', `/v1/appStoreVersions/${versionId}/relationships/build`, 
 const whatsNew = process.env.WHATS_NEW || 'Melhorias e correções.'
 const localizations = await tryRequest('GET', `/v1/appStoreVersions/${versionId}/appStoreVersionLocalizations`)
 for (const loc of localizations?.data ?? []) {
-  if (!loc.attributes.whatsNew) {
-    await tryRequest('PATCH', `/v1/appStoreVersionLocalizations/${loc.id}`, {
-      data: { type: 'appStoreVersionLocalizations', id: loc.id, attributes: { whatsNew } },
-    })
-  }
+  await tryRequest('PATCH', `/v1/appStoreVersionLocalizations/${loc.id}`, {
+    data: { type: 'appStoreVersionLocalizations', id: loc.id, attributes: { whatsNew } },
+  })
 }
 
 // Reuse the open draft submission with the most items (it may already hold subscriptions), else create one.

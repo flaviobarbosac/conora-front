@@ -189,4 +189,5 @@ jobs:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           MARKETING_VERSION: ${{ env.MARKETING_VERSION }}
           BUILD_NUMBER: ${{ env.BUILD_NUMBER }}
+          WHATS_NEW: "No começo, no passo Vídeo rápido, o vídeo passa no próprio Conora e começa sozinho. Para ver de novo, abra o menu do perfil e toque em Onboarding."
         run: node scripts/submit-app-store-review.mjs
