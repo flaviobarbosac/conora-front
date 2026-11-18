@@ -42,8 +42,8 @@ const SECTION_INTRO: Record<MetricsSection, { title: string; text: string }> = {
 const SERIES = [
   { key: 'signups', label: 'Novos usuários', color: '#375984', pick: (week: ConsoleWeek) => week.signups },
   { key: 'active', label: 'Usuários ativos', color: '#2f9e44', pick: (week: ConsoleWeek) => week.active },
-  { key: 'budgets', label: 'Orçamentos criados', color: '#f59f00', pick: (week: ConsoleWeek) => week.budgets },
-  { key: 'closes', label: 'Fechamentos', color: '#6aacff', pick: (week: ConsoleWeek) => week.closes },
+  { key: 'budgets', label: 'Lançamentos criados', color: '#f59f00', pick: (week: ConsoleWeek) => week.budgets },
+  { key: 'closes', label: 'Em fechamento', color: '#6aacff', pick: (week: ConsoleWeek) => week.closes },
   { key: 'errors', label: 'Erros', color: '#e03131', pick: (week: ConsoleWeek) => week.errors },
 ]
 
@@ -297,6 +297,18 @@ function MethodTab({ data }: { data: ConsoleKpis }) {
 }
 
 function UsageTab({ data }: { data: ConsoleKpis }) {
+  const [months, setMonths] = useState(3)
+  const [visible, setVisible] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(SERIES.map((item) => [item.key, true])),
+  )
+  const weeks = data.weeks.slice(-months * 4)
+  const series = SERIES.filter((item) => visible[item.key]).map((item) => ({
+    key: item.key,
+    label: item.label,
+    color: item.color,
+    values: weeks.map(item.pick),
+  }))
+
   return (
     <div className={styles.stack}>
       <div className={`${layout.grid3} ${styles.stats}`}>
@@ -309,17 +321,45 @@ function UsageTab({ data }: { data: ConsoleKpis }) {
           <KpiBarChart points={data.features.map((row) => ({ key: row.key, label: row.label, value: row.users }))} />
           <FeatureTable rows={data.features} />
         </Panel>
-        <Panel title="Atividade em 12 semanas" hint="Semana começa na segunda, em UTC. Ativo é quem alterou algum registro naquela semana." wide>
+        <Panel title="Atividade" hint="Semana começa na segunda, em UTC. Ativo é quem alterou algum registro naquela semana. O padrão são 3 meses, 12 semanas." wide>
+          <div className={styles.activityControls}>
+            <label className={styles.monthField}>
+              Meses
+              <input
+                type="number"
+                min={MONTHS_MIN}
+                max={MONTHS_MAX}
+                step={1}
+                value={months}
+                aria-label="Meses a analisar"
+                onChange={(event) => {
+                  const value = Number(event.target.value)
+                  if (!Number.isFinite(value)) return
+                  setMonths(Math.min(MONTHS_MAX, Math.max(MONTHS_MIN, Math.trunc(value))))
+                }}
+              />
+            </label>
+            <div className={styles.seriesChecks}>
+              {SERIES.map((item) => (
+                <label key={item.key}>
+                  <input
+                    type="checkbox"
+                    checked={visible[item.key]}
+                    onChange={() => setVisible((current) => ({ ...current, [item.key]: !current[item.key] }))}
+                  />
+                  <span className={styles.seriesSwatch} style={{ background: item.color }} aria-hidden />
+                  {item.label}
+                </label>
+              ))}
+            </div>
+          </div>
           <KpiMultiLineChart
-            categories={data.weeks.map((week) => weekLabel(week.weekStart))}
-            series={SERIES.map((item) => ({
-              key: item.key,
-              label: item.label,
-              color: item.color,
-              values: data.weeks.map(item.pick),
-            }))}
+            categories={weeks.map((week) => weekLabel(week.weekStart))}
+            series={series}
+            showLegend={false}
+            showAxes
           />
-          <WeekTable rows={data.weeks} />
+          <WeekTable rows={weeks} series={SERIES.filter((item) => visible[item.key])} />
         </Panel>
       </div>
     </div>
@@ -480,25 +520,11 @@ function FeatureTable({ rows }: { rows: ConsoleFeature[] }) {
   )
 }
 
-function WeekTable({ rows }: { rows: ConsoleWeek[] }) {
+function WeekTable({ rows, series }: { rows: ConsoleWeek[]; series: typeof SERIES }) {
   return (
     <SimpleTable
-      headers={[
-        'Semana',
-        { text: 'Novos usuários', hint: 'Cadastros criados na semana.' },
-        { text: 'Ativos', hint: 'Usuários distintos que alteraram algum registro na semana.' },
-        { text: 'Orçamentos', hint: 'Orçamentos criados na semana, não usuários distintos.' },
-        { text: 'Fechamentos', hint: 'Meses fechados na semana.' },
-        { text: 'Erros', hint: 'Falhas de API na semana.' },
-      ]}
-      rows={rows.map((row) => [
-        weekLabel(row.weekStart),
-        count(row.signups),
-        count(row.active),
-        count(row.budgets),
-        count(row.closes),
-        count(row.errors),
-      ])}
+      headers={['Semana', ...series.map((item) => item.label)]}
+      rows={rows.map((row) => [weekLabel(row.weekStart), ...series.map((item) => count(item.pick(row)))])}
     />
   )
 }

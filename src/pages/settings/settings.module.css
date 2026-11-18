@@ -37,6 +37,11 @@
   box-sizing: border-box;
 }
 
+.settingsForm :global(input).shortNumber {
+  width: calc(4ch + 2 * var(--space-4) + 2px);
+  max-width: 100%;
+}
+
 .accordion summary {
   display: flex;
   flex-wrap: wrap;
@@ -76,7 +81,9 @@
 }
 
 .sharePick > :first-child {
-  flex: 1 1 12rem;
+  flex: 0 0 auto;
+  width: 209px;
+  max-width: 100%;
   min-width: 0;
 }
 

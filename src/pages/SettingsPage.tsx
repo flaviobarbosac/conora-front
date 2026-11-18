@@ -246,6 +246,7 @@ export function SettingsPage() {
               description="Receber avisos e convites do sistema."
             />
             <Field
+              className={settingsStyles.shortNumber}
               label="Meta da reserva (meses)"
               name="reserveTargetMonths"
               type="number"
@@ -265,6 +266,7 @@ export function SettingsPage() {
               hint="Padrão: 6 meses de despesas essenciais"
             />
             <Field
+              className={settingsStyles.shortNumber}
               label="Dia de fechamento do mês"
               name="monthCloseDay"
               type="number"
@@ -284,6 +286,7 @@ export function SettingsPage() {
               hint="Dia da competência (1 a 31). Separado do dia de fechamento do cartão."
             />
             <Field
+              className={settingsStyles.shortNumber}
               label="Alerta de atenção do orçamento (%)"
               name="budgetAlertPercent"
               type="number"

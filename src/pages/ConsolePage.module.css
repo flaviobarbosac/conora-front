@@ -39,6 +39,54 @@
   grid-column: 1 / -1;
 }
 
+.activityControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.monthField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.monthField input {
+  box-sizing: border-box;
+  width: 4.5rem;
+  height: var(--field-h);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-2);
+  font-size: var(--text-lg);
+  color: var(--text);
+  background: var(--surface);
+}
+
+.seriesChecks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.seriesChecks label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.seriesSwatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+
 .stats {
   grid-template-columns: 1fr 1fr;
 }

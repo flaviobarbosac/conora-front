@@ -1,5 +1,4 @@
 import { type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { whatsappApi } from '../../api/finance'
 import { Button } from '../../components/ui/Button'
 import { ErrorText, Loading } from '../../components/ui/Feedback'
@@ -20,13 +19,7 @@ async function openConoraWhatsApp() {
   window.open(href, '_blank', 'noopener,noreferrer')
 }
 
-export function WhatsAppSection({
-  showDraftsLink = true,
-  framed = true,
-}: {
-  showDraftsLink?: boolean
-  framed?: boolean
-}) {
+export function WhatsAppSection({ framed = true }: { framed?: boolean }) {
   const link = useLoad(() => whatsappApi.link(), [])
   const action = useAction()
 
@@ -56,9 +49,7 @@ export function WhatsAppSection({
         <div className={styles.row}>
           <span className={styles.rowMain}>
             <strong>{link.data.phoneE164}</strong>
-            <span className={styles.rowSub}>
-              Este WhatsApp já está ligado. As mensagens chegam como rascunho para você confirmar.
-            </span>
+            <span className={styles.rowSub}>Este WhatsApp já está ligado.</span>
           </span>
           <Button variant="ghost" disabled={action.busy} onClick={() => void unlink()}>
             Desvincular
@@ -75,12 +66,6 @@ export function WhatsAppSection({
           Abrir WhatsApp
         </Button>
       </div>
-      {showDraftsLink ? (
-        <Link to="/whatsapp" className={styles.accountLink}>
-          <strong>Rascunhos</strong>
-          <span>Confirme ou descarte o que chegou por mensagem.</span>
-        </Link>
-      ) : null}
     </>
   )
 

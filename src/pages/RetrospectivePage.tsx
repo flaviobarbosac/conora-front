@@ -45,7 +45,7 @@ export function RetrospectivePage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        secondary
+        kicker="Cadastros"
         title="Retrospectiva anual"
         actions={
           <div className={styles.actions}>

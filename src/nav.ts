@@ -21,4 +21,5 @@ export const CADASTROS_ITEMS: ReadonlyArray<NavItem> = [
   { to: '/projetos', label: 'Projetos de vida', short: 'Projetos', icon: 'goal' },
   { to: '/patrimonio', label: 'Patrimônio', short: 'Patrim.', icon: 'wallet' },
   { to: '/membros', label: 'Membros', short: 'Membros', icon: 'user' },
+  { to: '/retrospectiva', label: 'Retrospectiva', short: 'Retrospectiva', icon: 'calendar' },
 ]
