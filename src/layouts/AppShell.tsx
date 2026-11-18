@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { familyApi, gamificationApi } from '../api/finance'
 import { useAuth } from '../auth/AuthProvider'
-import { isConsoleOperator } from '../auth/consoleAccess'
+import { consoleShell } from '../auth/consoleAccess'
 import { AlertsBell } from '../components/AlertsBell'
 import { BrandLockup } from '../components/BrandLockup'
 import { FeedbackOverlay } from '../components/FeedbackOverlay'
@@ -23,7 +23,9 @@ import {
 import { trackJourney } from '../lib/journeyTrack'
 import { PREFERENCES_CHANGED, readSidebarCollapsed, writeSidebarCollapsed } from '../lib/preferences'
 import { applyIanMaturity, maturityAgeFromAchievements } from '../lib/speakPt'
+import { CONSOLE_NAV } from '../lib/consoleNav'
 import { CADASTROS_ITEMS, NAV_ITEMS } from '../nav'
+import { readSharedClient } from '../lib/consultantSession'
 import { ALL_THEMES, type ThemeId } from '../theme/themes'
 import { useTheme } from '../theme/ThemeProvider'
 import styles from './AppShell.module.css'
@@ -43,8 +45,11 @@ export function AppShell() {
   const exportOnly = Boolean(plan?.exportOnlyUntil && new Date(plan.exportOnlyUntil).getTime() > Date.now())
   const { theme, setTheme } = useTheme()
   const { pathname } = useLocation()
-  const email = session?.email || 'conta'
-  const profile = useLoad(() => familyApi.profile(), [session?.email])
+  const sessionEmail = session?.email || 'conta'
+  const chrome = consoleShell(sessionEmail, pathname)
+  const shared = readSharedClient()
+  const profile = useLoad(() => familyApi.profile(), [session?.email, shared?.clientId, shared?.competenceYm])
+  const email = shared && profile.data?.email ? profile.data.email : sessionEmail
   const displayName = profile.data?.name?.trim() || email
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
 
@@ -309,8 +314,8 @@ export function AppShell() {
             />
           </button>
         </div>
-        <nav className={styles.nav} aria-label="Principal">
-          {NAV_ITEMS.map((item) => (
+        <nav className={styles.nav} aria-label={chrome.menu ? 'Console' : 'Principal'}>
+          {chrome.menu ? null : NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -326,6 +331,7 @@ export function AppShell() {
               )}
             </NavLink>
           ))}
+          {chrome.menu ? null : (
           <div className={styles.cadastros}>
             <button
               type="button"
@@ -366,21 +372,54 @@ export function AppShell() {
               </div>
             ) : null}
           </div>
+          )}
+          {chrome.menu ? (
+            <div className={styles.consoleSection}>
+              <p className={styles.consoleHeading} id="nav-console">
+                Console
+              </p>
+              <div className={styles.consoleItems} role="group" aria-labelledby="nav-console">
+                {CONSOLE_NAV.map((item) => (
+                  <NavLink
+                    key={item.id}
+                    to={item.to}
+                    className={({ isActive }) =>
+                      isActive ? styles.cadastrosLinkActive : styles.cadastrosLink
+                    }
+                    title={sidebarCollapsed && !mobileNavOpen ? item.label : item.purpose}
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <Icon name="console" variant={isActive ? 'duo' : 'linear'} size={20} />
+                        <span className={styles.linkLabel}>{item.label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </nav>
         <div className={styles.sidebarFoot}>
-          {isConsoleOperator(email) ? (
-            <NavLink
-              to="/console/metodo"
-              className={({ isActive }) => (isActive ? styles.settingsLinkActive : styles.settingsLink)}
-              title={sidebarCollapsed && !mobileNavOpen ? 'Console' : undefined}
+          {chrome.exit ? (
+            <Link
+              to="/"
+              className={styles.settingsLink}
+              title={sidebarCollapsed && !mobileNavOpen ? 'sair do console' : undefined}
             >
-              {({ isActive }) => (
-                <>
-                  <Icon name="console" variant={isActive ? 'duo' : 'linear'} size={24} />
-                  <span className={styles.linkLabel}>Console</span>
-                </>
-              )}
-            </NavLink>
+              <Icon name="logout" size={24} />
+              <span className={styles.linkLabel}>sair do console</span>
+            </Link>
+          ) : null}
+          {chrome.entry ? (
+            <Link
+              to="/console"
+              className={styles.settingsLink}
+              title={sidebarCollapsed && !mobileNavOpen ? 'console' : undefined}
+            >
+              <Icon name="console" size={24} />
+              <span className={styles.linkLabel}>Console</span>
+            </Link>
           ) : null}
           <NavLink
             to="/configuracoes"
@@ -584,6 +623,8 @@ export function AppShell() {
       </div>
 
       <nav className={styles.bottomNav} aria-label="Atalhos">
+        {chrome.menu ? null : (
+          <>
         <NavLink to="/" end className={({ isActive }) => (isActive ? styles.bottomLinkActive : styles.bottomLink)}>
           {({ isActive }) => (
             <>
@@ -623,6 +664,8 @@ export function AppShell() {
             </>
           )}
         </NavLink>
+          </>
+        )}
         <button
           type="button"
           className={mobileNavOpen ? styles.bottomLinkActive : styles.bottomLink}

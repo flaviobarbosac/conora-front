@@ -540,6 +540,11 @@ export type FamilyProfile = {
   jornadaDiagnostico?: JornadaDiagnosticoProfile | null
   phone?: string | null
   cep?: string | null
+  logradouro?: string | null
+  numero?: string | null
+  bairro?: string | null
+  municipio?: string | null
+  uf?: string | null
   contractAcknowledgedAt?: string | null
   hasPhoto?: boolean
   photoContentHash?: string | null
@@ -632,6 +637,11 @@ export type UpdateProfileInput = {
   name: string
   phone?: string | null
   cep?: string | null
+  logradouro?: string | null
+  numero?: string | null
+  bairro?: string | null
+  municipio?: string | null
+  uf?: string | null
 }
 
 export type PlanOffer = {
@@ -984,6 +994,62 @@ export type ConsoleKpis = {
   errorsByArea: ConsoleMetric[]
   errorRows: ConsoleErrorRow[]
   months: ConsoleMonth[]
+  trialUsers: number
+  payingUsers: number
+}
+
+export type ConsoleGeoUser = {
+  id: string
+  nome: string
+  nomeFantasia: string | null
+  email: string | null
+  telefone: string | null
+  uf: string | null
+  municipio: string | null
+  bairro: string | null
+  logradouro: string | null
+  numero: string | null
+  cep: string | null
+  categoria: string | null
+  plano: string | null
+  latitude: number | null
+  longitude: number | null
+}
+
+export type ConsoleGeoBairro = { nome: string; quantidade: number }
+
+export type ConsoleGeoMunicipio = {
+  nome: string
+  quantidade: number
+  bairros: ConsoleGeoBairro[]
+}
+
+export type ConsoleGeoEstado = {
+  uf: string
+  nome: string
+  quantidade: number
+  municipios: ConsoleGeoMunicipio[]
+}
+
+export type ConsoleGeoMap = {
+  total: number
+  comCoordenada: number
+  usuarios: ConsoleGeoUser[]
+  estados: ConsoleGeoEstado[]
+}
+
+export type ConsoleGeoConfig = {
+  pinLabelCampo: string
+  pinLabelTexto: string | null
+  mostrarRotulo: boolean
+  camposVisiveis: string[]
+  googleMapsApiKey: string | null
+}
+
+export type ConsoleGeoCoordenada = {
+  usuarioId: string
+  latitude: number
+  longitude: number
 }
 
 export type ConsoleUserAccess = {
@@ -993,6 +1059,11 @@ export type ConsoleUserAccess = {
   trialEndsAtUtc: string | null
   complimentaryIndefinite: boolean
   complimentaryUntilUtc: string | null
+  createdAt: string
+  plan: string
+  inTrial: boolean
+  tastingEndsAt: string
+  sharedMonths: string[]
 }
 
 export type JourneyAbandonmentRow = {

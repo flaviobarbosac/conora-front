@@ -7,6 +7,7 @@ import {
   getRefreshToken,
   persistSession,
   restoreSession,
+  SESSION_EXPIRED_EVENT,
   type AuthResponse,
 } from '../api/client'
 type Session = {
@@ -44,6 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return token ? { email: emailFromAccessToken(token) } : null
   })
   const [authReady, setAuthReady] = useState(() => !needsSessionRestore())
+
+  useEffect(() => {
+    const onExpired = () => setSession(null)
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired)
+  }, [])
 
   useEffect(() => {
     if (authReady) {

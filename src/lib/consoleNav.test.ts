@@ -7,10 +7,9 @@ describe('CONSOLE_NAV', () => {
     const ids = CONSOLE_NAV.map((item) => item.id)
     expect(new Set(ids).size).toBe(9)
     expect(ids).toContain('jornada-tipos')
-    expect(ids).toContain('acesso')
-    expect(ids).toContain('clientes')
-    expect(CONSOLE_NAV.find((item) => item.id === 'acesso')?.to).toBe('/console/acesso')
-    expect(CONSOLE_NAV.find((item) => item.id === 'clientes')?.to).toBe('/console/clientes')
+    expect(ids).toContain('mapa')
+    expect(ids).toContain('usuarios')
+    expect(CONSOLE_NAV.find((item) => item.id === 'usuarios')?.to).toBe('/console/usuarios')
     for (const item of CONSOLE_NAV) {
       expect(item.to.startsWith('/console/')).toBe(true)
       expect(item.label.length).toBeGreaterThan(0)

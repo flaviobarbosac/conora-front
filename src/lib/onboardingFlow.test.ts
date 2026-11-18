@@ -5,12 +5,25 @@ import {
   resumeOnboardingStep,
 } from './onboardingFlow'
 
+const endereco = {
+  logradouro: 'Rua A',
+  numero: 'S/N',
+  bairro: 'Centro',
+  municipio: 'Vitória',
+  uf: 'ES',
+}
+
 describe('onboarding walkthrough (ponta a ponta)', () => {
   it('covers telefone, CEP, conta, diagnóstico e vídeo na ordem', () => {
     const collected = ONBOARDING_WALKTHROUGH.flatMap((s) => s.collects)
     expect(collected).toEqual([
       'telefone',
       'CEP',
+      'logradouro',
+      'número',
+      'bairro',
+      'município',
+      'UF',
       'conta bancária',
       'renda fixa',
       'parcela de dívida',
@@ -28,13 +41,14 @@ describe('onboarding walkthrough (ponta a ponta)', () => {
 
   it('resumes mid-flow without locking the user out after account failure', () => {
     expect(
-      resumeOnboardingStep({ phone: '27999999999', cep: '29000000', hasAccount: false }),
+      resumeOnboardingStep({ phone: '27999999999', cep: '29000000', ...endereco, hasAccount: false }),
     ).toBe('account')
 
     expect(
       resumeOnboardingStep({
         phone: '27999999999',
         cep: '29000000',
+        ...endereco,
         hasAccount: true,
         hasDiagnostico: false,
       }),
@@ -44,6 +58,7 @@ describe('onboarding walkthrough (ponta a ponta)', () => {
       resumeOnboardingStep({
         phone: '27999999999',
         cep: '29000000',
+        ...endereco,
         hasAccount: true,
         hasDiagnostico: true,
       }),
@@ -64,6 +79,7 @@ describe('onboarding walkthrough (ponta a ponta)', () => {
       canCompleteOnboarding({
         phone: '27999999999',
         cep: '29000-000',
+        ...endereco,
         hasAccount: true,
         hasDiagnostico: false,
       }).ok,
@@ -73,6 +89,7 @@ describe('onboarding walkthrough (ponta a ponta)', () => {
       canCompleteOnboarding({
         phone: '27999999999',
         cep: '29000-000',
+        ...endereco,
         hasAccount: true,
         hasDiagnostico: true,
       }).ok,
@@ -80,10 +97,23 @@ describe('onboarding walkthrough (ponta a ponta)', () => {
   })
 
   it('simulates the full happy path step by step', () => {
-    let state = { phone: '', cep: '', hasAccount: false, hasDiagnostico: false }
+    let state = {
+      phone: '',
+      cep: '',
+      logradouro: '',
+      numero: '',
+      bairro: '',
+      municipio: '',
+      uf: '',
+      hasAccount: false,
+      hasDiagnostico: false,
+    }
     expect(resumeOnboardingStep(state)).toBe('profile')
 
     state = { ...state, phone: '27988887777', cep: '29100000' }
+    expect(resumeOnboardingStep(state)).toBe('profile')
+
+    state = { ...state, ...endereco, municipio: 'Serra' }
     expect(resumeOnboardingStep(state)).toBe('account')
     expect(canCompleteOnboarding(state).ok).toBe(false)
 

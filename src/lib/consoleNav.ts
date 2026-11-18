@@ -6,8 +6,8 @@ export type ConsoleSectionId =
   | 'feedback'
   | 'abandonamento'
   | 'jornada-tipos'
-  | 'acesso'
-  | 'clientes'
+  | 'mapa'
+  | 'usuarios'
 
 export type ConsoleNavItem = {
   id: ConsoleSectionId
@@ -21,7 +21,7 @@ export const CONSOLE_NAV: ReadonlyArray<ConsoleNavItem> = [
   {
     id: 'metodo',
     to: '/console/metodo',
-    label: 'Método',
+    label: 'Método raio-X',
     purpose: 'Quem está no caminho do orçamento e do teto.',
   },
   {
@@ -61,15 +61,15 @@ export const CONSOLE_NAV: ReadonlyArray<ConsoleNavItem> = [
     purpose: 'Seis jornadas pré-definidas (J0–J5) lado a lado.',
   },
   {
-    id: 'acesso',
-    to: '/console/acesso',
-    label: 'Acesso',
-    purpose: 'Conceder prazo ou estender a degustação de um usuário.',
+    id: 'mapa',
+    to: '/console/mapa',
+    label: 'Mapa de usuários',
+    purpose: 'Mapa com um pin por usuário.',
   },
   {
-    id: 'clientes',
-    to: '/console/clientes',
-    label: 'Clientes',
-    purpose: 'Meses que os clientes compartilharam e a entrada na conta deles.',
+    id: 'usuarios',
+    to: '/console/usuarios',
+    label: 'Usuários',
+    purpose: 'Quem tem cadastro, do mais recente ao mais antigo.',
   },
 ]

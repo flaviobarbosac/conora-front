@@ -43,7 +43,7 @@ export function getRefreshToken(): string | null {
   return localStorage.getItem(REFRESH_KEY)
 }
 
-function accessTokenClaims(token: string | null): { email?: string; sub?: string } {
+function accessTokenClaims(token: string | null): { email?: string; sub?: string; exp?: number } {
   if (!token) {
     return {}
   }
@@ -89,6 +89,37 @@ export function clearSession(): void {
   localStorage.removeItem(LEGACY_REFRESH_KEY)
 }
 
+export const SESSION_EXPIRED_EVENT = 'conora:session-expired'
+
+function notifySessionExpired(): void {
+  clearSession()
+  window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+}
+
+function accessTokenExpired(token: string | null): boolean {
+  const exp = accessTokenClaims(token).exp
+  if (typeof exp !== 'number') {
+    return false
+  }
+  return exp * 1000 <= Date.now() + 5000
+}
+
+async function sessionRejected(response: Response): Promise<boolean> {
+  if (response.status === 401) {
+    return true
+  }
+  if (response.status !== 403) {
+    return false
+  }
+  try {
+    const payload = (await response.clone().json()) as { title?: string; detail?: string }
+    const text = `${payload.detail ?? ''} ${payload.title ?? ''}`
+    return /não autenticado|nao autenticado/i.test(text)
+  } catch {
+    return false
+  }
+}
+
 type RequestOptions = {
   method?: string
   body?: unknown
@@ -119,6 +150,7 @@ async function refreshAccessToken(): Promise<boolean> {
   refreshInFlight = (async () => {
     const refreshToken = getRefreshToken()
     if (!refreshToken) {
+      notifySessionExpired()
       return false
     }
 
@@ -129,7 +161,7 @@ async function refreshAccessToken(): Promise<boolean> {
     })
 
     if (!response.ok) {
-      clearSession()
+      notifySessionExpired()
       return false
     }
 
@@ -185,8 +217,15 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     })
   }
 
+  if (options.auth !== false && accessTokenExpired(getAccessToken())) {
+    const refreshed = await refreshAccessToken()
+    if (!refreshed) {
+      throw new Error('Sessão expirada.')
+    }
+  }
+
   let response = await send()
-  if (response.status === 401 && options.auth !== false) {
+  if (options.auth !== false && (await sessionRejected(response))) {
     const refreshed = await refreshAccessToken()
     if (refreshed) {
       response = await send()
@@ -216,8 +255,11 @@ export async function apiFormData<T>(path: string, form: FormData, method = 'POS
   }
 
   let response = await send()
-  if (response.status === 401 && (await refreshAccessToken())) {
-    response = await send()
+  if (await sessionRejected(response)) {
+    const refreshed = await refreshAccessToken()
+    if (refreshed) {
+      response = await send()
+    }
   }
 
   if (!response.ok) {
@@ -240,8 +282,11 @@ export async function apiGetBlob(path: string): Promise<Blob | null> {
 
   try {
     let response = await send()
-    if (response.status === 401 && (await refreshAccessToken())) {
-      response = await send()
+    if (await sessionRejected(response)) {
+      const refreshed = await refreshAccessToken()
+      if (refreshed) {
+        response = await send()
+      }
     }
     if (response.status === 404 || !response.ok) {
       return null
@@ -265,8 +310,11 @@ export async function apiPostBlob(path: string, body: unknown, signal?: AbortSig
 
   try {
     let response = await send()
-    if (response.status === 401 && (await refreshAccessToken())) {
-      response = await send()
+    if (await sessionRejected(response)) {
+      const refreshed = await refreshAccessToken()
+      if (refreshed) {
+        response = await send()
+      }
     }
     if (response.status === 204 || !response.ok) {
       return null
@@ -288,8 +336,11 @@ export async function apiBlob(path: string): Promise<{ blob: Blob; fileName: str
   }
 
   let response = await send()
-  if (response.status === 401 && (await refreshAccessToken())) {
-    response = await send()
+  if (await sessionRejected(response)) {
+    const refreshed = await refreshAccessToken()
+    if (refreshed) {
+      response = await send()
+    }
   }
 
   if (!response.ok) {

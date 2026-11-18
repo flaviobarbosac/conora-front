@@ -17,7 +17,7 @@ import styles from './ConsolePage.module.css'
 const MONTHS_MIN = 1
 const MONTHS_MAX = 24
 
-type MetricsSection = Exclude<ConsoleSectionId, 'feedback' | 'abandonamento' | 'jornada-tipos' | 'acesso' | 'clientes'>
+type MetricsSection = Exclude<ConsoleSectionId, 'feedback' | 'abandonamento' | 'jornada-tipos' | 'mapa' | 'usuarios'>
 type Cell = string | { text: string; hint?: string }
 
 const SECTION_INTRO: Record<MetricsSection, { title: string; text: string }> = {
@@ -31,7 +31,7 @@ const SECTION_INTRO: Record<MetricsSection, { title: string; text: string }> = {
   },
   tendencias: {
     title: 'Tendências',
-    text: 'Como o método evolui mês a mês. Ajuste a janela no controle abaixo.',
+    text: 'tendências do método',
   },
   saude: {
     title: 'Saúde',
@@ -125,6 +125,10 @@ const FEATURE_HINTS: Record<string, string> = {
 const STAT_HINTS = {
   users:
     'Cadastros de usuário ativos. Conta excluída não entra. Não é conta bancária nem conta do plano de contas.',
+  trial:
+    'Ainda na degustação: 7 dias, ou 90 para aluno do curso. Sem plano pago ativo e sem concessão do console. Quem já assinou e o plano venceu não entra.',
+  paying:
+    'Assinatura própria ativa, ainda dentro do prazo pago. Quem só usa o plano de outra pessoa da família não entra.',
   active1: 'Usuários distintos que alteraram algum registro nas últimas 24 horas. Não conta clique.',
   active7: 'Usuários distintos que alteraram algum registro nos últimos 7 dias. Não conta clique.',
   active30: 'Usuários distintos que alteraram algum registro nos últimos 30 dias. Não conta clique.',
@@ -210,16 +214,18 @@ function MethodTab({ data }: { data: ConsoleKpis }) {
     <div className={styles.stack}>
       <div className={`${layout.grid3} ${styles.stats}`}>
         <Stat label="Usuários" value={count(data.accounts)} hint={STAT_HINTS.users} />
+        <Stat label="Em degustação" value={count(data.trialUsers)} note={percent(share(data.trialUsers, data.accounts))} hint={STAT_HINTS.trial} />
+        <Stat label="Pagantes" value={count(data.payingUsers)} note={percent(share(data.payingUsers, data.accounts))} hint={STAT_HINTS.paying} />
         <Stat label="Com orçamento neste mês" value={count(data.withBudget)} note={percent(share(data.withBudget, data.accounts))} hint={STAT_HINTS.withBudget} />
         <Stat label="Sem orçamento neste mês" value={count(data.withoutBudget)} note={percent(share(data.withoutBudget, data.accounts))} hint={STAT_HINTS.withoutBudget} />
         <Stat label="Dentro do teto" value={count(data.budgetWithin)} note={percent(share(data.budgetWithin, data.withBudget))} hint={STAT_HINTS.within} />
       </div>
       <div className={styles.board}>
-        <Panel title="Jornada do método" hint="Percentual dos usuários em cada passo. O passo não exige que os anteriores estejam feitos.">
+        <Panel title="Jornada do método" hint="Percentual de usuários em cada passo do método. Os passos são independentes: alcançar um não exige ter feito os anteriores.">
           <KpiBarChart points={points(data.journey)} format={percent} />
           <MetricTable rows={data.journey} quantity="Usuários" />
         </Panel>
-        <Panel title="Orçamento deste mês" hint="Quem gravou o orçamento da competência atual e quem ainda não gravou.">
+        <Panel title="Orçamento deste mês" hint="Quem gravou o orçamento do mês atual e quem ainda não gravou. O percentual é sobre todos os usuários ativos.">
           <KpiPieChart
             points={[
               { key: 'with', label: 'Com orçamento', value: data.withBudget },
@@ -238,7 +244,7 @@ function MethodTab({ data }: { data: ConsoleKpis }) {
             ]}
           />
         </Panel>
-        <Panel title="Teto do orçamento" hint="Só entra quem tem orçamento neste mês.">
+        <Panel title="Teto do orçamento" hint="O limite do orçamento deste mês, a soma do previsto. Só entra quem já gravou o orçamento. Separa quem está dentro do teto, quem passou e quem deixou o previsto em zero.">
           <KpiPieChart
             points={[
               { key: 'within', label: 'Dentro do teto', value: data.budgetWithin },
@@ -277,11 +283,11 @@ function MethodTab({ data }: { data: ConsoleKpis }) {
             ]}
           />
         </Panel>
-        <Panel title={`Mês anterior (${data.previousCompetenceYm})`} hint="A base muda de linha para linha. O hint de cada indicador diz qual é.">
+        <Panel title={`Mês anterior (${data.previousCompetenceYm})`} hint="O mês anterior, para comparar com este. A base muda de linha para linha: cada indicador calcula o percentual sobre um grupo diferente, e a própria linha diz qual é.">
           <KpiBarChart points={points(data.previousMonth, 'count')} />
           <MetricTable rows={data.previousMonth} quantity="Usuários" />
         </Panel>
-        <Panel title="Conquistas do método" hint="Usuários que alcançaram o marco ao menos uma vez.">
+        <Panel title="Conquistas do método" hint="Metas do método que os usuários já alcançaram ao menos uma vez: fechar um mês dentro do teto, manter três meses seguidos, cobrir a meta da reserva e aportar num projeto.">
           <KpiBarChart points={points(data.achievements)} format={percent} />
           <MetricTable rows={data.achievements} quantity="Usuários" />
         </Panel>

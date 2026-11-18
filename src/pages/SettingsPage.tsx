@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   familyApi,
   lgpdApi,
+  monthsApi,
   planApi,
   type DeleteAccountInput,
   type UserPreferencesInput,
@@ -11,6 +12,7 @@ import { appleSignInAvailable, requestAppleRevocationGrant } from '../auth/apple
 import { useAuth } from '../auth/AuthProvider'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
+import { DeleteIconButton } from '../components/ui/DeleteIconButton'
 import { ErrorText, Loading } from '../components/ui/Feedback'
 import { CheckboxField } from '../components/ui/CheckboxField'
 import { Field } from '../components/ui/Field'
@@ -19,7 +21,7 @@ import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import { usePlanAccess } from '../hooks/usePlanAccess'
 import { confirmDestructive } from '../lib/confirm'
-import { formatDate } from '../lib/format'
+import { formatCompetence, formatDate, todayInput } from '../lib/format'
 import { planSummary } from '../lib/planAccess'
 import { showSaveToast } from '../lib/saveToast'
 import { VOICE_LAUNCH_ENABLED } from '../lib/voiceLaunch'
@@ -66,6 +68,10 @@ export function SettingsPage() {
   const exportOnly = Boolean(exportOnlyUntil && new Date(exportOnlyUntil).getTime() > Date.now())
   const savePrefs = useAction()
   const privacy = useAction()
+  const share = useAction()
+  const savedMonths = useLoad(() => monthsApi.shared(), [])
+  const [shareYm, setShareYm] = useState(() => todayInput().slice(0, 7))
+  const [pending, setPending] = useState<string[]>([])
   const [draft, setDraft] = useState<PrefDraft | null>(null)
   const [saved, setSaved] = useState<PrefDraft | null>(null)
   const dirty = Boolean(draft && saved && JSON.stringify(draft) !== JSON.stringify(saved))
@@ -122,6 +128,59 @@ export function SettingsPage() {
     window.dispatchEvent(new Event('conora:profile-changed'))
   }
 
+  const sharedNow = savedMonths.data ?? []
+  const months = [...new Set([...sharedNow, ...pending])].sort()
+
+  function addShareMonth() {
+    if (!/^\d{4}-\d{2}$/.test(shareYm)) {
+      share.setError('Escolha o mês e o ano.')
+      return
+    }
+    if (shareYm > todayInput().slice(0, 7)) {
+      share.setError('Escolha um mês até o atual.')
+      return
+    }
+    if (months.includes(shareYm)) {
+      share.setError(null)
+      return
+    }
+    setPending((current) => [...current, shareYm])
+    share.setError(null)
+  }
+
+  async function shareMonth(event: FormEvent) {
+    event.preventDefault()
+    if (pending.length === 0) {
+      share.setError('Adicione ao menos um mês.')
+      return
+    }
+    const picked = [...pending]
+    const ok = await share.run(async () => {
+      for (const ym of picked) {
+        await monthsApi.share(ym)
+      }
+    })
+    if (ok) {
+      setPending([])
+      savedMonths.reload()
+      showSaveToast(picked.length === 1 ? 'Mês compartilhado.' : 'Meses compartilhados.')
+    }
+  }
+
+  async function removeShareMonth(ym: string) {
+    const confirmed = await confirmDestructive(
+      `Tirar ${formatCompetence(ym)} dos meses compartilhados?`,
+      { title: 'Tirar mês', confirmLabel: 'Tirar' },
+    )
+    if (!confirmed) return
+    if (sharedNow.includes(ym)) {
+      const ok = await share.run(() => monthsApi.unshare(ym))
+      if (ok) savedMonths.reload()
+      return
+    }
+    setPending((current) => current.filter((item) => item !== ym))
+  }
+
   async function exportData() {
     const ok = await privacy.run(() => lgpdApi.exportData())
     if (ok) {
@@ -157,11 +216,15 @@ export function SettingsPage() {
   return (
     <div className={styles.page}>
       <PageHeader title="Configurações" />
-      <ErrorText message={profile.error ?? plan.error ?? savePrefs.error ?? privacy.error} />
+      <ErrorText message={profile.error ?? plan.error ?? savePrefs.error ?? privacy.error ?? share.error ?? savedMonths.error} />
       {profile.loading && !profile.data ? <Loading /> : null}
 
       {draft ? (
-        <form className={`${styles.form} ${styles.settingsForm}`} onSubmit={(event) => void onSave(event)}>
+        <form
+          id="settings-prefs"
+          className={`${styles.form} ${styles.settingsForm}`}
+          onSubmit={(event) => void onSave(event)}
+        >
           <details className={`${styles.section} ${settingsStyles.accordion}`} id="ritmo">
             <summary>
               <strong>Ritmo</strong>
@@ -289,15 +352,6 @@ export function SettingsPage() {
               </div>
             </details>
           ) : null}
-
-          <div className={styles.formActions}>
-            <Button type="button" variant="secondary" disabled={!dirty || savePrefs.busy} onClick={onCancel}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={!dirty || savePrefs.busy}>
-              Salvar
-            </Button>
-          </div>
         </form>
       ) : null}
 
@@ -355,6 +409,63 @@ export function SettingsPage() {
         </div>
         </div>
       </details>
+
+      <details className={`${styles.section} ${settingsStyles.accordion}`} id="compartilhar-mes">
+        <summary>
+          <strong>Compartilhar mês</strong>
+          <span>Meses para o acompanhamento.</span>
+        </summary>
+        <form className={settingsStyles.accordionBody} onSubmit={(event) => void shareMonth(event)}>
+          <p className={styles.muted}>
+            Ao compartilhar, os administradores do Conora passam a acompanhar somente os meses que você
+            incluir aqui, para análise e assistência no programa raio-X, conforme o combinado com o seu
+            consultor financeiro. Se você não contratou esse acompanhamento, não faça o compartilhamento.
+          </p>
+          <div className={settingsStyles.sharePick}>
+            <Field
+              label="Mês"
+              name="shareYm"
+              type="month"
+              required
+              max={todayInput().slice(0, 7)}
+              value={shareYm}
+              onChange={(event) => setShareYm(event.target.value)}
+            />
+            <Button type="button" variant="secondary" onClick={addShareMonth}>
+              Adicionar mês
+            </Button>
+          </div>
+          {months.length > 0 ? (
+            <ul className={settingsStyles.shareList}>
+              {months.map((ym) => (
+                <li key={ym}>
+                  <span>{formatCompetence(ym)}</span>
+                  <DeleteIconButton
+                    label={`Tirar ${formatCompetence(ym)}`}
+                    onClick={() => void removeShareMonth(ym)}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={styles.muted}>Nenhum mês na lista.</p>
+          )}
+          <div className={styles.formActions}>
+            <Button type="submit" disabled={share.busy || pending.length === 0}>
+              Compartilhar meses
+            </Button>
+          </div>
+        </form>
+      </details>
+
+      <div className={styles.formActions}>
+        <Button type="button" variant="secondary" disabled={!dirty || savePrefs.busy} onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" form="settings-prefs" disabled={!dirty || savePrefs.busy}>
+          Salvar
+        </Button>
+      </div>
     </div>
   )
 }
