@@ -7,6 +7,16 @@ export type ReleaseNote = {
 /** Newest first. Add the next published version at the top. */
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    version: '26.105',
+    date: '18/11/2026',
+    items: [
+      'Abra o menu, toque em Cadastros e depois em Retrospectiva, o último item, abaixo de Membros. Ali está o resumo do ano.',
+      'Em Configurações, abra Compartilhar mês. O campo do mês está menor e continua mostrando o mês e o ano.',
+      'Em Configurações, abra Ritmo. Os campos de meses da reserva, dia de fechamento e alerta de atenção ficaram menores.',
+      'Em Configurações, abra WhatsApp. A lista de rascunhos para confirmar não aparece mais.',
+    ],
+  },
+  {
     version: '26.103',
     date: '17/11/2026',
     items: [
