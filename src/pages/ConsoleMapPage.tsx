@@ -13,6 +13,7 @@ import { useLoad } from '../hooks/useLoad'
 import { useRegisterDirty } from '../hooks/useUnsavedChanges'
 import {
   CAMPOS_PIN,
+  CORES_PLANO,
   CENTRO_BRASIL,
   CENTRO_UF,
   chaveLocal,
@@ -124,7 +125,12 @@ export function ConsoleMapPage() {
     markersRef.current = usuarios.flatMap((usuario) => {
       const ponto = pontoDe(usuario)
       if (!ponto) return []
-      const texto = textoDoPin(usuario, config.pinLabelTexto, config.pinLabelCampo)
+      const texto = textoDoPin(
+        usuario,
+        config.pinLabelTexto,
+        config.camposVisiveis.filter((campo) => campo !== 'categoria' && campo !== 'logradouro'),
+        config.pinLabelCampo,
+      )
       const marker = createMarker(
         map,
         ponto,
@@ -389,6 +395,8 @@ export function ConsoleMapPage() {
         })}
 
         {draft ? (
+          <details className={styles.accordion}>
+          <summary>Aparência do pin</summary>
           <form
             className={styles.config}
             onSubmit={(event) => {
@@ -396,7 +404,14 @@ export function ConsoleMapPage() {
               void salvar()
             }}
           >
-            <h2>Aparência do pin</h2>
+            <ul className={styles.colors}>
+              {CORES_PLANO.map(([nome, cor]) => (
+                <li key={nome}>
+                  <span className={styles.swatch} style={{ background: cor }} />
+                  {nome}
+                </li>
+              ))}
+            </ul>
             <label className={styles.check}>
               Campo do rótulo
               <select
@@ -447,6 +462,7 @@ export function ConsoleMapPage() {
               </Button>
             </div>
           </form>
+          </details>
         ) : null}
       </aside>
     </section>

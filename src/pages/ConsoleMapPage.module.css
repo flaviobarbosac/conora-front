@@ -95,11 +95,43 @@
   margin: 0 4px 6px;
 }
 
-.config {
+.accordion {
   margin-top: 16px;
+}
+
+.accordion summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.config {
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.colors {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.colors li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }
 
 .config h2,
