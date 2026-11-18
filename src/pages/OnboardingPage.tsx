@@ -117,7 +117,12 @@ export function OnboardingPage() {
     setStep(
       resumeOnboardingStep({
         phone: profile.data.phone,
-        ...profile.data,
+        cep: profile.data.cep,
+        logradouro: profile.data.logradouro,
+        numero: profile.data.numero,
+        bairro: profile.data.bairro,
+        municipio: profile.data.municipio,
+        uf: profile.data.uf,
         hasAccount,
         hasDiagnostico,
       }),

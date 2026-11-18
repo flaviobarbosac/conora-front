@@ -1,29 +1,7 @@
 const GOOGLE_SRC = 'https://accounts.google.com/gsi/client'
 
-type GoogleTokenResponse = {
-  access_token?: string
-  error?: string
-}
-
-type GoogleTokenClient = {
-  requestAccessToken: (override?: { prompt?: string }) => void
-}
-
-type GoogleIdentity = {
-  accounts: {
-    oauth2: {
-      initTokenClient: (config: {
-        client_id: string
-        scope: string
-        callback: (response: GoogleTokenResponse) => void
-      }) => GoogleTokenClient
-    }
-  }
-}
-
 declare global {
   interface Window {
-    google?: GoogleIdentity
     Capacitor?: { isNativePlatform?: () => boolean }
   }
 }
@@ -43,7 +21,7 @@ function isNativeApp(): boolean {
 }
 
 function loadScript(): Promise<void> {
-  if (window.google?.accounts.oauth2) {
+  if (window.google?.accounts?.oauth2) {
     return Promise.resolve()
   }
 
@@ -150,7 +128,7 @@ if (!isNativeApp()) {
 }
 
 function openGoogleAccountPicker(clientId: string): Promise<string> {
-  if (!window.google?.accounts.oauth2) {
+  if (!window.google?.accounts?.oauth2) {
     return loadScript().then(() => openGoogleAccountPicker(clientId))
   }
 
@@ -190,7 +168,7 @@ function openGoogleAccountPicker(clientId: string): Promise<string> {
     }) as typeof window.open
 
     const google = window.google
-    if (!google?.accounts.oauth2) {
+    if (!google?.accounts?.oauth2) {
       finish(() => reject(new Error('Google Identity não disponível.')))
       return
     }
