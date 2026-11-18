@@ -3,6 +3,7 @@ import type { Plan, PlanOffer } from '../api/finance'
 import {
   PHASE_LABEL,
   TIER_INFO,
+  TRIAL_DAYS,
   familyInviteLimit,
   graceScreenShown,
   markGraceScreenShown,
@@ -64,6 +65,10 @@ function plan(partial: Partial<Plan>): Plan {
 }
 
 describe('planAccess', () => {
+  it('uses a seven-day standard trial', () => {
+    expect(TRIAL_DAYS).toBe(7)
+  })
+
   it('maps kind to tier', () => {
     expect(tierOfKind('FamilyPlusYearly')).toBe('FamilyPlus')
     expect(tierOfKind('FamilyMonthly')).toBe('Family')

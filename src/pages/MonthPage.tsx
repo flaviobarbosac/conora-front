@@ -43,6 +43,10 @@ export function MonthPage() {
   const status = useLoad(() => monthsApi.get(ym), [ym])
   const gaps = useLoad(() => monthsApi.unpaid(ym), [ym, status.data?.isClosed])
   const summary = useLoad(() => gamificationApi.monthSummary(ym), [ym, justClosed, status.data?.isClosed])
+  const closePreview = useLoad(
+    () => (status.data?.isClosed ? Promise.resolve(null) : monthsApi.closePreviewSummary(ym)),
+    [ym, status.data?.isClosed],
+  )
   const budget = useLoad(() => budgetsApi.get(ym).catch(() => null), [ym])
   const openDebts = useLoad(() => pendingDebtsApi.list(), [ym, justClosed, status.data?.isClosed])
   const action = useAction()
@@ -121,7 +125,7 @@ export function MonthPage() {
         backTo={{ to: '/orcamento', label: '← Orçamento' }}
         actions={<CompetencePicker value={ym} onChange={(value) => { setYm(value); setJustClosed(false); setDebtIds([]) }} />}
       />
-      <ErrorText message={status.error ?? summary.error ?? action.error} />
+      <ErrorText message={status.error ?? summary.error ?? closePreview.error ?? action.error} />
       {status.loading && !data ? <Loading /> : null}
 
       {data ? (
@@ -181,6 +185,15 @@ export function MonthPage() {
           ) : (
             <div className={styles.actions}>
               {blockedReason ? <p className={styles.muted}>{blockedReason}</p> : null}
+
+              {closePreview.data?.summary ? (
+                <div className={styles.closeRitual}>
+                  <h3 className={styles.sectionTitle}>Leitura do mês</h3>
+                  <p className={styles.celebration}>{closePreview.data.summary}</p>
+                </div>
+              ) : closePreview.loading ? (
+                <p className={styles.muted}>Montando a leitura do mês…</p>
+              ) : null}
 
               {closeSummary ? (
                 <div className={styles.closeRitual}>
@@ -301,6 +314,7 @@ export function MonthPage() {
                   ))}
                 </fieldset>
               ) : null}
+
               <Button disabled={action.busy || Boolean(blockedReason)} onClick={() => void close()}>
                 Fechar mês
               </Button>

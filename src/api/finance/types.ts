@@ -909,6 +909,11 @@ export type CloseGap = {
   alreadyRegistered: boolean
 }
 
+export type MonthClosePreviewSummary = {
+  competenceYm: string
+  summary: string
+}
+
 export type PendingDebt = {
   id: string
   competenceYm: string
