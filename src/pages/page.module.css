@@ -2855,11 +2855,15 @@ button.compact {
 }
 
 .welcomeVideo {
-  width: 100%;
-  aspect-ratio: 16 / 9;
+  display: block;
+  width: min(100%, calc(70dvh * 9 / 16));
+  max-height: 70dvh;
+  margin-inline: auto;
+  aspect-ratio: 9 / 16;
   border: 0;
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background: #000;
+  object-fit: contain;
 }
 
 .journeyProgress {

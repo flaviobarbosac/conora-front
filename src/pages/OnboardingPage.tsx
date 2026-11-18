@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { accountsApi, familyApi } from '../api/finance'
 import { AccountForm } from '../components/finance/AccountForm'
@@ -23,14 +23,41 @@ import {
   type OnboardingStep,
 } from '../lib/onboardingFlow'
 import { addressReady, formatCep, type AddressDraft } from '../lib/cep'
-import { isNativeApp } from '../lib/platform'
 import { showSaveToast } from '../lib/saveToast'
 import pageStyles from './pageStyles'
 import onboardingStyles from './onboarding/onboarding.module.css'
 
 const styles = { ...pageStyles, ...onboardingStyles }
 
-const WELCOME_VIDEO_ID = 'ljs3zGINCAs'
+const WELCOME_VIDEO_SRC = `${import.meta.env.BASE_URL}onboarding/welcome.mp4`
+
+function WelcomeVideo() {
+  const ref = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    const video = ref.current
+    if (!video) return
+    video.muted = false
+    void video.play().catch(() => {
+      video.muted = true
+      void video.play().catch(() => undefined)
+    })
+  }, [])
+
+  return (
+    <video
+      ref={ref}
+      className={styles.welcomeVideo}
+      src={WELCOME_VIDEO_SRC}
+      autoPlay
+      controls
+      playsInline
+      preload="auto"
+    >
+      Vídeo de boas-vindas
+    </video>
+  )
+}
 
 type Step = OnboardingStep
 
@@ -402,25 +429,7 @@ export function OnboardingPage() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>Vídeo rápido</h2>
           <div className={styles.closeRitual}>
-            {/* YouTube refuses the embed inside the iOS app (error 153), so native apps open the video outside. */}
-            {isNativeApp() ? (
-              <a
-                className={styles.welcomeVideoLink}
-                href={`https://www.youtube.com/watch?v=${WELCOME_VIDEO_ID}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Assistir ao vídeo no YouTube
-              </a>
-            ) : (
-              <iframe
-                className={styles.welcomeVideo}
-                src={`https://www.youtube.com/embed/${WELCOME_VIDEO_ID}`}
-                title="Vídeo de boas-vindas"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            )}
+            <WelcomeVideo />
           </div>
           <ul className={styles.onboardVideoPoints} aria-label="O que você vai ver no app">
             <li>No Início, o círculo tem três jeitos: foto, voz e WhatsApp (e o lápis para lançar na mão).</li>
