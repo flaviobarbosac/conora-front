@@ -22,6 +22,8 @@ import {
   formatPercentValue,
 } from '../../lib/format'
 import {
+  branchHasOpenDebt,
+  branchHasUnposted,
   buildRaioXPrevistoBars,
   progressPercent,
   progressTone,
@@ -316,6 +318,9 @@ export function RaioXAccountBlock({
   categoryNameById,
   bankNameById,
   leakageOnly,
+  debtsOnly = false,
+  unpostedOnly = false,
+  openDebtIds,
   freeLimited,
   categoryUnlocked,
   onToggle,
@@ -323,6 +328,7 @@ export function RaioXAccountBlock({
   onOpenEntry,
   onOpenActual,
   onUnbudgetedClick,
+  onOpenDebts,
 }: {
   account: Category
   depth: number
@@ -335,6 +341,9 @@ export function RaioXAccountBlock({
   categoryNameById: Map<string, string>
   bankNameById: Map<string, string>
   leakageOnly: boolean
+  debtsOnly?: boolean
+  unpostedOnly?: boolean
+  openDebtIds?: Set<string>
   freeLimited: boolean
   categoryUnlocked: (account: Category) => boolean
   onToggle: (id: string) => void
@@ -342,19 +351,34 @@ export function RaioXAccountBlock({
   onOpenEntry: (entry: Entry) => void
   onOpenActual: (account: Category, launchEntries: Entry[]) => void
   onUnbudgetedClick: (accountId: string) => void
+  onOpenDebts?: (accountId: string) => void
 }) {
   if (!isRaioXVisibleAccount(account)) {
     return null
   }
+  const debtIds = openDebtIds ?? new Set<string>()
+  const hasEntries = (id: string) => (entriesByAccount.get(id)?.length ?? 0) > 0
   if (leakageOnly && !branchHasLeakage(account.id, byParent, planned, actual)) {
+    return null
+  }
+  if (debtsOnly && !branchHasOpenDebt(account.id, byParent, debtIds)) {
+    return null
+  }
+  if (unpostedOnly && !branchHasUnposted(account.id, byParent, planned, hasEntries)) {
     return null
   }
   const children = (byParent.get(account.id) ?? []).filter((child) => {
     if (!isRaioXVisibleAccount(child)) {
       return false
     }
-    if (leakageOnly) {
-      return branchHasLeakage(child.id, byParent, planned, actual)
+    if (leakageOnly && !branchHasLeakage(child.id, byParent, planned, actual)) {
+      return false
+    }
+    if (debtsOnly && !branchHasOpenDebt(child.id, byParent, debtIds)) {
+      return false
+    }
+    if (unpostedOnly && !branchHasUnposted(child.id, byParent, planned, hasEntries)) {
+      return false
     }
     return true
   })
@@ -406,7 +430,22 @@ export function RaioXAccountBlock({
         >
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
-        <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
+        <strong className={styles.raioxAccountName}>
+          {categoryLabel(account)}
+          {debtIds.has(account.id) ? (
+            <button
+              type="button"
+              className={styles.debtMark}
+              aria-label={`Dívidas de ${categoryLabel(account)}`}
+              onClick={(event) => {
+                event.stopPropagation()
+                onOpenDebts?.(account.id)
+              }}
+            >
+              *
+            </button>
+          ) : null}
+        </strong>
         <TotalsCell
           totals={totals}
           onUnbudgetedClick={
@@ -434,6 +473,9 @@ export function RaioXAccountBlock({
               categoryNameById={categoryNameById}
               bankNameById={bankNameById}
               leakageOnly={leakageOnly}
+              debtsOnly={debtsOnly}
+              unpostedOnly={unpostedOnly}
+              openDebtIds={debtIds}
               freeLimited={freeLimited}
               categoryUnlocked={categoryUnlocked}
               onToggle={onToggle}
@@ -441,6 +483,7 @@ export function RaioXAccountBlock({
               onOpenEntry={onOpenEntry}
               onOpenActual={onOpenActual}
               onUnbudgetedClick={onUnbudgetedClick}
+              onOpenDebts={onOpenDebts}
             />
           ))
         : null}

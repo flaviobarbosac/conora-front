@@ -4,6 +4,7 @@ import {
   entriesApi,
   entryDisplayDescription,
   monthsApi,
+  pendingDebtsApi,
   projectsApi,
   receiptsApi,
   type Category,
@@ -40,6 +41,7 @@ import { showSaveToast } from '../lib/saveToast'
 import {
   currentCompetence,
   dateToApi,
+  formatCompetence,
   formatDate,
   formatMoney,
   formatMoneyInput,
@@ -926,8 +928,20 @@ function EntryForm({
   )
   const [lifeProjectId, setLifeProjectId] = useState(() => initial?.lifeProjectId ?? '')
   const projects = useLoad(() => projectsApi.list(), [])
+  const openDebts = useLoad(() => (editing ? Promise.resolve([]) : pendingDebtsApi.list()), [editing])
+  const [askDebt, setAskDebt] = useState(false)
+  const [selectedDebtIds, setSelectedDebtIds] = useState<string[]>([])
+  const categoryDebts = useMemo(
+    () => (openDebts.data ?? []).filter((debt) => debt.categoryId === categoryId),
+    [openDebts.data, categoryId],
+  )
   const amountInputRef = useRef<HTMLInputElement | null>(null)
   const action = useAction()
+
+  useEffect(() => {
+    setAskDebt(false)
+    setSelectedDebtIds([])
+  }, [categoryId, type])
 
   useEffect(() => {
     if (initial) {
@@ -1059,7 +1073,13 @@ function EntryForm({
     }
   }
 
-  async function submit(confirmDuplicate: boolean) {
+  function toggleDebt(id: string) {
+    setSelectedDebtIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    )
+  }
+
+  async function submit(confirmDuplicate: boolean, debtChoice?: 'month' | string[]) {
     const value = parseMoney(amount)
     if (!Number.isFinite(value) || value <= 0) {
       action.setError('Informe um valor maior que zero.')
@@ -1090,6 +1110,12 @@ function EntryForm({
       return
     }
 
+    if (!editing && type === 'Expense' && categoryDebts.length > 0 && !debtChoice) {
+      setAskDebt(true)
+      return
+    }
+    const pendingDebtIds = debtChoice && debtChoice !== 'month' ? debtChoice : undefined
+
     if (editing && initial) {
       const input: EntryUpdateInput = {
         amount: value,
@@ -1119,10 +1145,12 @@ function EntryForm({
             accountId: accountId || undefined,
             categoryId: categoryId || undefined,
             confirmDuplicate,
+            pendingDebtIds,
           }),
         )
       ) {
         showSaveToast('Lançamento salvo.')
+        openDebts.reload()
         onSaved('close')
       }
       return
@@ -1137,18 +1165,31 @@ function EntryForm({
       categoryId: categoryId || undefined,
       lifeProjectId: lifeIncome ? resolvedLifeProjectId : undefined,
       confirmDuplicate,
+      pendingDebtIds,
     }
 
     if (await action.run(() => entriesApi.create(input))) {
       showSaveToast('Lançamento salvo.')
       resetForNextEntry()
+      setAskDebt(false)
+      setSelectedDebtIds([])
+      openDebts.reload()
       onSaved('continue')
     }
   }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
+    if (askDebt) {
+      return
+    }
     await submit(false)
+  }
+
+  function cancelForm() {
+    setAskDebt(false)
+    setSelectedDebtIds([])
+    onCancel()
   }
 
   const looksLikeDuplicate = /duplic/i.test(action.error ?? '')
@@ -1257,14 +1298,67 @@ function EntryForm({
         <div className={styles.formWide}>
           <ErrorText message={action.error} />
         </div>
+        {askDebt ? (
+          <div className={styles.formWide}>
+            {categoryDebts.length === 1 ? (
+              <>
+                <p>Este lançamento é de uma dívida?</p>
+                <div className={styles.formActions}>
+                  <Button type="button" variant="secondary" onClick={() => void submit(false, 'month')}>
+                    Não, mês atual
+                  </Button>
+                  <Button type="button" onClick={() => void submit(false, [categoryDebts[0].id])}>
+                    Sim, é dívida
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p>
+                  Este lançamento é do mês atual ou quita dívidas? Toque nas dívidas na ordem do rateio —
+                  o valor vai preenchendo cada uma até acabar.
+                </p>
+                <div className={styles.formActions}>
+                  <Button type="button" variant="secondary" onClick={() => void submit(false, 'month')}>
+                    Mês atual
+                  </Button>
+                  {categoryDebts.map((debt) => {
+                    const order = selectedDebtIds.indexOf(debt.id)
+                    const selected = order >= 0
+                    return (
+                      <Button
+                        key={debt.id}
+                        type="button"
+                        variant={selected ? 'primary' : 'secondary'}
+                        onClick={() => toggleDebt(debt.id)}
+                      >
+                        {selected ? `${order + 1}. ` : ''}
+                        Dívida {formatCompetence(debt.competenceYm)} · {formatMoney(debt.openAmount)}
+                      </Button>
+                    )
+                  })}
+                  <Button
+                    type="button"
+                    disabled={selectedDebtIds.length === 0 || action.busy}
+                    onClick={() => void submit(false, selectedDebtIds)}
+                  >
+                    Confirmar quitação
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
         <div className={styles.formActions}>
-          <Button type="submit" disabled={action.busy}>
-            Salvar
-          </Button>
-          <Button type="button" variant="secondary" disabled={action.busy} onClick={onCancel}>
+          {!askDebt ? (
+            <Button type="submit" disabled={action.busy}>
+              Salvar
+            </Button>
+          ) : null}
+          <Button type="button" variant="secondary" disabled={action.busy} onClick={cancelForm}>
             Cancelar
           </Button>
-          {looksLikeDuplicate ? (
+          {!askDebt && looksLikeDuplicate ? (
             <Button variant="secondary" disabled={action.busy} onClick={() => void submit(true)}>
               Salvar mesmo assim
             </Button>

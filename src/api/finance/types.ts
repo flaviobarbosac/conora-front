@@ -163,6 +163,7 @@ export type EntryInput = {
   installmentCount?: number
   repeatMonths?: number
   confirmDuplicate?: boolean
+  pendingDebtIds?: string[]
 }
 
 export type EntryUpdateInput = {
@@ -897,6 +898,25 @@ export type MonthStatus = {
   closedAt: string | null
   reopenReason: string | null
   closedByUsuarioId: string | null
+}
+
+export type CloseGap = {
+  categoryId: string
+  categoryName: string
+  plannedAmount: number
+  actualAmount: number
+  openAmount: number
+  alreadyRegistered: boolean
+}
+
+export type PendingDebt = {
+  id: string
+  competenceYm: string
+  categoryId: string
+  categoryName: string
+  originalAmount: number
+  openAmount: number
+  paidAt: string | null
 }
 
 export type SharedMonthClient = {

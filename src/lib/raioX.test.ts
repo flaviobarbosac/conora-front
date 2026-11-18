@@ -18,6 +18,8 @@ import {
   progressPercent,
   progressTone,
   monthBalanceActual,
+  branchHasOpenDebt,
+  branchHasUnposted,
   spendableIncomeBox,
   sumBranch,
   variationPercent,
@@ -627,5 +629,28 @@ describe('aggregateYearMonths', () => {
 
   it('computes saldo do mês without double-counting discounts', () => {
     expect(monthBalanceActual(10_000, 2_000, 1_000, 4_000, 500)).toBe(2_500)
+  })
+
+  it('keeps a debt category and its parent when the debt filter is on', () => {
+    const byParent = new Map<string | null, { id: string }[]>([
+      [null, [{ id: 'root' }]],
+      ['root', [{ id: 'condo' }, { id: 'market' }]],
+    ])
+    const openDebtIds = new Set(['condo'])
+    expect(branchHasOpenDebt('condo', byParent, openDebtIds)).toBe(true)
+    expect(branchHasOpenDebt('root', byParent, openDebtIds)).toBe(true)
+    expect(branchHasOpenDebt('market', byParent, openDebtIds)).toBe(false)
+  })
+
+  it('marks a planned category without entries as unposted', () => {
+    const byParent = new Map<string | null, { id: string }[]>([
+      [null, [{ id: 'root' }]],
+      ['root', [{ id: 'condo' }]],
+    ])
+    const planned = new Map([['condo', 650]])
+    const hasEntries = (id: string) => id === 'other'
+    expect(branchHasUnposted('condo', byParent, planned, hasEntries)).toBe(true)
+    expect(branchHasUnposted('root', byParent, planned, hasEntries)).toBe(true)
+    expect(branchHasUnposted('condo', byParent, planned, () => true)).toBe(false)
   })
 })

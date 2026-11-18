@@ -157,6 +157,7 @@ export default defineConfig(({ mode }) => {
           '/imports',
           '/budgets',
           '/months',
+          '/pending-debts',
           '/life-projects',
           '/patrimony',
           '/dashboard',

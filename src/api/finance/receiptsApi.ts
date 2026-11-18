@@ -36,6 +36,7 @@ export const receiptsApi = {
       occurredAt?: string
       description?: string
       confirmDuplicate?: boolean
+      pendingDebtIds?: string[]
     },
   ) => apiFetch<Entry>(`/receipts/${id}/confirm`, json('POST', body)),
   confirmBudget: (

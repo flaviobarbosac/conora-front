@@ -406,7 +406,7 @@ export function BudgetTreeEditor({
     <section className={styles.section}>
       <div className={styles.budgetSaveBar}>
         <p className={styles.muted}>
-          {canEdit ? 'Edite o previsto e salve.' : 'Orçamento familiar em modo leitura.'}
+          {canEdit ? 'Edite o previsto e salve.' : 'Orçamento em modo leitura.'}
         </p>
         <div className={styles.budgetSaveActions}>
           <Button
