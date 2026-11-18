@@ -63,8 +63,9 @@ export function BudgetPage() {
   } = useBudgetPageController()
 
   const copy = useAction()
-  const canEdit = budget.data?.canEdit !== false
+  const canEditBudget = budget.data?.canEdit !== false
   const monthClosed = Boolean(monthStatus.data?.isClosed)
+  const canEdit = canEditBudget && !monthClosed
   const [boletoBusy, setBoletoBusy] = useState(false)
   const [boletoError, setBoletoError] = useState<string | null>(null)
   const [boletoIntake, setBoletoIntake] = useState<ReceiptIntake | null>(null)
@@ -277,11 +278,10 @@ export function BudgetPage() {
             Copiar mês anterior
           </Button>
           <Button
-            variant="danger"
-            disabled={monthClosed}
+            variant={monthClosed ? 'secondary' : 'danger'}
             onClick={() => navigate(`/mes?competenceYm=${encodeURIComponent(ym)}`)}
           >
-            Fechar mês
+            {monthClosed ? 'Reabrir mês' : 'Fechar mês'}
           </Button>
         </div>
       </div>
@@ -361,7 +361,12 @@ export function BudgetPage() {
             })
         }}
       />
-      {data && !canEdit ? (
+      {data && monthClosed ? (
+        <p className={styles.muted}>
+          Mês fechado. Para alterar o previsto, use Reabrir mês.
+        </p>
+      ) : null}
+      {data && !monthClosed && !canEditBudget ? (
         <p className={styles.muted}>Somente o responsável pelo orçamento familiar pode editar o previsto.</p>
       ) : null}
       {budget.loading && !data ? <Loading /> : null}

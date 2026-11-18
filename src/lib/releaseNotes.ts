@@ -7,6 +7,17 @@ export type ReleaseNote = {
 /** Newest first. Add the next published version at the top. */
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    version: '26.107',
+    date: '18/11/2026',
+    items: [
+      'No menu, abra Raio-X. Em Projetos de vida, abaixo dos prazos, aparece a Reserva de emergência com o saldo e quantos meses de essenciais ela cobre.',
+      'No celular, o Conora pode avisar por notificação quando o mês fecha com pendências ou quando algo precisa da sua atenção.',
+      'No menu, abra o mês. Antes de fechar, a leitura do mês vem em texto simples, no mesmo tom da conversa.',
+      'Em Lançamentos, ao quitar dívidas, um valor pode ser dividido em sequência entre mais de uma dívida.',
+      'No Raio-X, os filtros do mês e do escopo ficam mais claros para você achar o que procura.',
+    ],
+  },
+  {
     version: '26.106',
     date: '18/11/2026',
     items: [

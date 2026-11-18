@@ -21,6 +21,12 @@ export const IAN_AGES = [0, 5, 8, 10, 12, 15, 18, 22, 30] as const
 
 export type IanAge = (typeof IAN_AGES)[number]
 
+/**
+ * Ian's current narrative age in the product chrome (companion label / portrait band).
+ * Fixed at 10 — confirmed 2026-11-18; do not bump without an explicit product decision.
+ */
+export const IAN_CURRENT_AGE: IanAge = 10
+
 /** Voice bands: the voice changes less often than the portrait. */
 export type IanVoiceBand = 'child' | 'preteen' | 'teen' | 'adult'
 

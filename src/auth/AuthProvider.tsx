@@ -74,6 +74,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [authReady])
 
+  useEffect(() => {
+    if (!authReady || !session) {
+      return
+    }
+    void import('../lib/pushNotifications').then(({ ensurePushRegistration }) => {
+      void ensurePushRegistration()
+    })
+  }, [authReady, session])
+
   const applyAuth = useCallback((auth: AuthResponse) => {
     persistSession(auth)
     setSession(sessionFromAuth(auth))
@@ -128,6 +137,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(async () => {
+    try {
+      const { clearPushRegistration } = await import('../lib/pushNotifications')
+      await clearPushRegistration()
+    } catch {
+      // push cleanup must not block logout
+    }
     try {
       await authApi.logout()
     } catch {

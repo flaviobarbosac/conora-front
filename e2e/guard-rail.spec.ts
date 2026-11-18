@@ -154,6 +154,12 @@ for (const screen of screens) {
       await expectMoney(page, budget.monthResult, 'resultado do mês')
       const body = visibleText(await page.locator('body').innerText())
       if (!body.includes(top.name)) throw new Error(`o Raio-X não mostra a conta ${top.name}`)
+      if (!body.includes('Reserva de emergência')) {
+        throw new Error('o Raio-X não mostra a Reserva de emergência em Projetos de vida')
+      }
+      const reserve = page.getByLabel('Reserva de emergência')
+      await expect(reserve).toBeVisible()
+      await reserve.scrollIntoViewIfNeeded()
       if (portrait) {
         const percent = shownPercent(top.actual, top.planned)
         const name = top.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

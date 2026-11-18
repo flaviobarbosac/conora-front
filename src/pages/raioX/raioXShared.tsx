@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import {
   entryDisplayDescription,
+  gamificationApi,
   type Budget,
   type BudgetYear,
   type Category,
@@ -10,6 +11,7 @@ import {
 } from '../../api/finance'
 import { LIFE_HORIZONS } from '../../lib/lifeHorizon'
 import { Loading } from '../../components/ui/Feedback'
+import { useLoad } from '../../hooks/useLoad'
 import {
   categoryLabel,
 } from '../../lib/categoryLabel'
@@ -22,6 +24,8 @@ import {
   formatPercentValue,
 } from '../../lib/format'
 import {
+  branchHasOpenDebt,
+  branchHasUnposted,
   buildRaioXPrevistoBars,
   progressPercent,
   progressTone,
@@ -316,6 +320,9 @@ export function RaioXAccountBlock({
   categoryNameById,
   bankNameById,
   leakageOnly,
+  debtsOnly = false,
+  unpostedOnly = false,
+  openDebtIds,
   freeLimited,
   categoryUnlocked,
   onToggle,
@@ -323,6 +330,7 @@ export function RaioXAccountBlock({
   onOpenEntry,
   onOpenActual,
   onUnbudgetedClick,
+  onOpenDebts,
 }: {
   account: Category
   depth: number
@@ -335,6 +343,9 @@ export function RaioXAccountBlock({
   categoryNameById: Map<string, string>
   bankNameById: Map<string, string>
   leakageOnly: boolean
+  debtsOnly?: boolean
+  unpostedOnly?: boolean
+  openDebtIds?: Set<string>
   freeLimited: boolean
   categoryUnlocked: (account: Category) => boolean
   onToggle: (id: string) => void
@@ -342,19 +353,34 @@ export function RaioXAccountBlock({
   onOpenEntry: (entry: Entry) => void
   onOpenActual: (account: Category, launchEntries: Entry[]) => void
   onUnbudgetedClick: (accountId: string) => void
+  onOpenDebts?: (accountId: string) => void
 }) {
   if (!isRaioXVisibleAccount(account)) {
     return null
   }
+  const debtIds = openDebtIds ?? new Set<string>()
+  const hasEntries = (id: string) => (entriesByAccount.get(id)?.length ?? 0) > 0
   if (leakageOnly && !branchHasLeakage(account.id, byParent, planned, actual)) {
+    return null
+  }
+  if (debtsOnly && !branchHasOpenDebt(account.id, byParent, debtIds)) {
+    return null
+  }
+  if (unpostedOnly && !branchHasUnposted(account.id, byParent, planned, hasEntries)) {
     return null
   }
   const children = (byParent.get(account.id) ?? []).filter((child) => {
     if (!isRaioXVisibleAccount(child)) {
       return false
     }
-    if (leakageOnly) {
-      return branchHasLeakage(child.id, byParent, planned, actual)
+    if (leakageOnly && !branchHasLeakage(child.id, byParent, planned, actual)) {
+      return false
+    }
+    if (debtsOnly && !branchHasOpenDebt(child.id, byParent, debtIds)) {
+      return false
+    }
+    if (unpostedOnly && !branchHasUnposted(child.id, byParent, planned, hasEntries)) {
+      return false
     }
     return true
   })
@@ -406,7 +432,22 @@ export function RaioXAccountBlock({
         >
           {expandable ? (expanded ? '−' : '+') : ''}
         </span>
-        <strong className={styles.raioxAccountName}>{categoryLabel(account)}</strong>
+        <strong className={styles.raioxAccountName}>
+          {categoryLabel(account)}
+          {debtIds.has(account.id) ? (
+            <button
+              type="button"
+              className={styles.debtMark}
+              aria-label={`Dívidas de ${categoryLabel(account)}`}
+              onClick={(event) => {
+                event.stopPropagation()
+                onOpenDebts?.(account.id)
+              }}
+            >
+              *
+            </button>
+          ) : null}
+        </strong>
         <TotalsCell
           totals={totals}
           onUnbudgetedClick={
@@ -434,6 +475,9 @@ export function RaioXAccountBlock({
               categoryNameById={categoryNameById}
               bankNameById={bankNameById}
               leakageOnly={leakageOnly}
+              debtsOnly={debtsOnly}
+              unpostedOnly={unpostedOnly}
+              openDebtIds={debtIds}
               freeLimited={freeLimited}
               categoryUnlocked={categoryUnlocked}
               onToggle={onToggle}
@@ -441,6 +485,7 @@ export function RaioXAccountBlock({
               onOpenEntry={onOpenEntry}
               onOpenActual={onOpenActual}
               onUnbudgetedClick={onUnbudgetedClick}
+              onOpenDebts={onOpenDebts}
             />
           ))
         : null}
@@ -613,6 +658,7 @@ export function RaioXSideCards({
   focus,
   onFocus,
   onExpandSection,
+  competenceYm,
 }: {
   budget: Budget
   accounts: Category[]
@@ -625,17 +671,25 @@ export function RaioXSideCards({
   focus: RaioXFocus
   onFocus: (next: RaioXFocus) => void
   onExpandSection: (section: CategorySection, options?: { accountId?: string }) => void
+  competenceYm: string
 }) {
   const bars = buildRaioXPrevistoBars(accounts, byParent, planned, actual)
+  const reserve = useLoad(() => gamificationApi.reserve(competenceYm), [competenceYm])
 
   const assets = sectionTotals(accounts, byParent, planned, actual, 'Asset')
   const liabilities = sectionTotals(accounts, byParent, planned, actual, 'Liability')
   const net = patrimonyNetWorth(assets, liabilities)
   const patrimonyActive = focus === 'patrimony'
 
-  const filteredProjects = projects.filter((project) =>
-    scope === 'Family' ? true : project.scope === 'Personal',
-  )
+  const reserveData = reserve.data
+  const reservePercent = reserveData ? Math.min(100, Math.max(0, reserveData.progressPercent)) : 0
+  const reserveAccount = accounts.find((account) => account.code === 'LIFE_RESERVE')
+  const filteredProjects = projects.filter((project) => {
+    if (reserveAccount && project.categoryId === reserveAccount.id) {
+      return false
+    }
+    return scope === 'Family' ? true : project.scope === 'Personal'
+  })
 
   return (
     <div className={styles.macroGrid}>
@@ -739,6 +793,40 @@ export function RaioXSideCards({
               </Link>
             )
           })}
+          <div aria-label="Reserva de emergência">
+            <div className={styles.macroHeadRow}>
+              <strong>Reserva de emergência</strong>
+            </div>
+            {reserve.loading && !reserveData ? <Loading /> : null}
+            {reserve.error ? <p className={styles.muted}>{reserve.error}</p> : null}
+            {reserveData ? (
+              <>
+                <p className={styles.muted}>
+                  {formatMoney(reserveData.reserveBalance)} · {formatPercentValue(reserveData.monthsCovered)} /{' '}
+                  {reserveData.targetMonths} meses cobertos
+                </p>
+                <ConsumptionBar percent={reservePercent} color="#2F8A78" />
+                <p className={styles.muted}>
+                  Meta: {reserveData.targetMonths} meses de essenciais
+                  {reserveData.monthlyEssentialAverage > 0
+                    ? ` (${formatMoney(reserveData.monthlyEssentialAverage)}/mês)`
+                    : ''}
+                </p>
+                {reserveAccount ? (
+                  <button
+                    type="button"
+                    className={styles.macroBarLink}
+                    onClick={() => onExpandSection('LifeProject', { accountId: reserveAccount.id })}
+                  >
+                    Ver na árvore
+                  </button>
+                ) : null}
+                <Link className={styles.horizonRow} to="/lancamentos?novo=1">
+                  Guardar na reserva
+                </Link>
+              </>
+            ) : null}
+          </div>
         </section>
       </div>
     </div>

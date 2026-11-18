@@ -114,13 +114,21 @@ export function RaioXAnchorsNav({
 export function RaioXPeriodLeakageControls({
   months,
   leakageOnly,
+  debtsOnly,
+  unpostedOnly,
   setMonths,
   setLeakageOnly,
+  setDebtsOnly,
+  setUnpostedOnly,
 }: {
   months: number
   leakageOnly: boolean
+  debtsOnly: boolean
+  unpostedOnly: boolean
   setMonths: (value: number | ((current: number) => number)) => void
   setLeakageOnly: (value: boolean) => void
+  setDebtsOnly: (value: boolean) => void
+  setUnpostedOnly: (value: boolean) => void
 }) {
   return (
     <div className={styles.raioxControls} onClick={(event) => event.stopPropagation()}>
@@ -190,19 +198,47 @@ export function RaioXPeriodLeakageControls({
           </button>
         </div>
       </div>
-      <label className={styles.leakageFilter}>
-        <span className={styles.leakageCheck}>
-          <input
-            type="checkbox"
-            checked={leakageOnly}
-            onChange={(event) => setLeakageOnly(event.target.checked)}
-          />
-        </span>
-        <span className={styles.leakageText}>
-          <span className={styles.leakageTitle}>Só vazamento (≥ 100%)</span>
-          <span className={styles.leakageHint}>Filtra a árvore de categorias</span>
-        </span>
-      </label>
+      <div className={styles.leakageFilterRow}>
+        <label className={styles.leakageFilter}>
+          <span className={styles.leakageCheck}>
+            <input
+              type="checkbox"
+              checked={leakageOnly}
+              onChange={(event) => setLeakageOnly(event.target.checked)}
+            />
+          </span>
+          <span className={styles.leakageText}>
+            <span className={styles.leakageTitle}>Só vazamento (≥ 100%)</span>
+            <span className={styles.leakageHint}>Filtra a árvore de categorias</span>
+          </span>
+        </label>
+        <label className={styles.leakageFilter}>
+          <span className={styles.leakageCheck}>
+            <input
+              type="checkbox"
+              checked={debtsOnly}
+              onChange={(event) => setDebtsOnly(event.target.checked)}
+            />
+          </span>
+          <span className={styles.leakageText}>
+            <span className={styles.leakageTitle}>Dívidas</span>
+            <span className={styles.leakageHint}>Categorias com dívida em aberto</span>
+          </span>
+        </label>
+        <label className={styles.leakageFilter}>
+          <span className={styles.leakageCheck}>
+            <input
+              type="checkbox"
+              checked={unpostedOnly}
+              onChange={(event) => setUnpostedOnly(event.target.checked)}
+            />
+          </span>
+          <span className={styles.leakageText}>
+            <span className={styles.leakageTitle}>Sem lançamento</span>
+            <span className={styles.leakageHint}>Previsto no período, sem lançamento</span>
+          </span>
+        </label>
+      </div>
     </div>
   )
 }
@@ -218,6 +254,9 @@ export function RaioXTreeList({
   categoryNameById,
   bankNameById,
   leakageOnly,
+  debtsOnly,
+  unpostedOnly,
+  openDebtIds,
   freeLimited,
   categoryUnlocked,
   onToggle,
@@ -225,6 +264,7 @@ export function RaioXTreeList({
   onOpenEntry,
   onOpenActual,
   onUnbudgetedClick,
+  onOpenDebts,
 }: {
   rootRows: Category[]
   byParent: Map<string | null, Category[]>
@@ -236,6 +276,9 @@ export function RaioXTreeList({
   categoryNameById: Map<string, string>
   bankNameById: Map<string, string>
   leakageOnly: boolean
+  debtsOnly: boolean
+  unpostedOnly: boolean
+  openDebtIds: Set<string>
   freeLimited: boolean
   categoryUnlocked: (account: Category) => boolean
   onToggle: (id: string) => void
@@ -243,6 +286,7 @@ export function RaioXTreeList({
   onOpenEntry: (entry: Entry) => void
   onOpenActual: (account: Category, launchEntries: Entry[]) => void
   onUnbudgetedClick: (accountId: string) => void
+  onOpenDebts: (accountId: string) => void
 }) {
   return (
     <div id="raiox-arvore" className={styles.raioxList}>
@@ -274,6 +318,9 @@ export function RaioXTreeList({
           categoryNameById={categoryNameById}
           bankNameById={bankNameById}
           leakageOnly={leakageOnly}
+          debtsOnly={debtsOnly}
+          unpostedOnly={unpostedOnly}
+          openDebtIds={openDebtIds}
           freeLimited={freeLimited}
           categoryUnlocked={categoryUnlocked}
           onToggle={onToggle}
@@ -281,6 +328,7 @@ export function RaioXTreeList({
           onOpenEntry={onOpenEntry}
           onOpenActual={onOpenActual}
           onUnbudgetedClick={onUnbudgetedClick}
+          onOpenDebts={onOpenDebts}
         />
       ))}
     </div>

@@ -6,7 +6,7 @@ export const PLAN_CHANGED = 'conora:plan-changed'
 
 const GRACE_SHOWN_KEY = 'conora:grace-plans-shown'
 
-export const TRIAL_DAYS = 90
+export const TRIAL_DAYS = 7
 export const READ_ONLY_UNTIL_DAY = 100
 
 export type TierInfo = {

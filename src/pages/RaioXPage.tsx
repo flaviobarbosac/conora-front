@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { entryDisplayDescription, type Category, type Entry } from '../api/finance'
+import { entryDisplayDescription, pendingDebtsApi, type Category, type Entry } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
 import { PageHeader } from '../components/PageHeader'
 import { SharingViewToggle } from '../components/SharingViewToggle'
+import { Button } from '../components/ui/Button'
 import { ErrorText, Loading } from '../components/ui/Feedback'
+import { useLoad } from '../hooks/useLoad'
 import { useRaioXPageController } from '../hooks/useRaioXPageController'
 import { FREE_TIER_CATEGORY_LABEL, isFreeCategoryCode } from '../lib/freeTier'
 import {
@@ -13,6 +16,7 @@ import {
   sumBranch,
   type RaioXFocus,
 } from '../lib/raioX'
+import { formatCompetence, formatMoney } from '../lib/format'
 import { saveRaioXReturn } from '../lib/raioXReturn'
 import pageStyles from './pageStyles'
 import {
@@ -69,6 +73,12 @@ export function RaioXPage() {
     entriesByAccount,
     projects,
   } = useRaioXPageController()
+  const openDebts = useLoad(() => pendingDebtsApi.list(), [])
+  const [debtsOnly, setDebtsOnly] = useState(false)
+  const [unpostedOnly, setUnpostedOnly] = useState(false)
+  const [debtCategoryId, setDebtCategoryId] = useState<string | null>(null)
+  const openDebtIds = new Set((openDebts.data ?? []).map((debt) => debt.categoryId))
+  const listedDebts = (openDebts.data ?? []).filter((debt) => debt.categoryId === debtCategoryId)
 
   function toggle(id: string) {
     setFocus(null)
@@ -272,8 +282,12 @@ export function RaioXPage() {
       <RaioXPeriodLeakageControls
         months={months}
         leakageOnly={leakageOnly}
+        debtsOnly={debtsOnly}
+        unpostedOnly={unpostedOnly}
         setMonths={setMonths}
         setLeakageOnly={setLeakageOnly}
+        setDebtsOnly={setDebtsOnly}
+        setUnpostedOnly={setUnpostedOnly}
       />
       <ErrorText
         message={
@@ -316,6 +330,7 @@ export function RaioXPage() {
           scope={scope}
           focus={focus}
           onFocus={toggleFocus}
+          competenceYm={ym}
           onExpandSection={(section, options) => {
             setFocus(null)
             const head = sectionHead(list, section)
@@ -368,6 +383,9 @@ export function RaioXPage() {
           categoryNameById={categoryNameById}
           bankNameById={bankNameById}
           leakageOnly={leakageOnly}
+          debtsOnly={debtsOnly}
+          unpostedOnly={unpostedOnly}
+          openDebtIds={openDebtIds}
           freeLimited={freeLimited}
           categoryUnlocked={categoryUnlocked}
           onToggle={toggle}
@@ -375,7 +393,41 @@ export function RaioXPage() {
           onOpenEntry={openEntry}
           onOpenActual={openActualForAccount}
           onUnbudgetedClick={openBudgetForAccount}
+          onOpenDebts={setDebtCategoryId}
         />
+      ) : null}
+      {debtCategoryId ? (
+        <div
+          className={styles.sheetOverlay}
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setDebtCategoryId(null)
+            }
+          }}
+        >
+          <div className={styles.sheet} role="dialog" aria-modal="true" aria-label="Dívidas em aberto">
+            <div className={styles.sectionHead}>
+              <h2 className={styles.sectionTitle}>Dívidas em aberto</h2>
+              <Button variant="ghost" onClick={() => setDebtCategoryId(null)}>
+                Fechar
+              </Button>
+            </div>
+            <ul className={styles.budgetResult}>
+              {listedDebts.map((debt) => (
+                <li key={debt.id}>
+                  <span>{formatCompetence(debt.competenceYm)}</span>
+                  <span className={styles.moneyValue}>
+                    {formatMoney(debt.openAmount)}
+                    {debt.openAmount !== debt.originalAmount
+                      ? ` de ${formatMoney(debt.originalAmount)}`
+                      : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       ) : null}
     </div>
   )

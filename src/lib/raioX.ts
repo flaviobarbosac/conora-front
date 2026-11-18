@@ -526,3 +526,29 @@ export function patrimonyRootAmounts(summary: PatrimonySummary): {
 }
 
 export { CASH_FLOW_SECTIONS }
+
+export function branchHasOpenDebt(
+  accountId: string,
+  byParent: Map<string | null, { id: string }[]>,
+  openDebtIds: Set<string>,
+): boolean {
+  if (openDebtIds.has(accountId)) {
+    return true
+  }
+  return (byParent.get(accountId) ?? []).some((child) =>
+    branchHasOpenDebt(child.id, byParent, openDebtIds),
+  )
+}
+
+export function branchHasUnposted(
+  accountId: string,
+  byParent: Map<string | null, { id: string }[]>,
+  planned: Map<string, number>,
+  hasEntries: (id: string) => boolean,
+): boolean {
+  const children = byParent.get(accountId) ?? []
+  if (children.length === 0) {
+    return (planned.get(accountId) ?? 0) > 0.001 && !hasEntries(accountId)
+  }
+  return children.some((child) => branchHasUnposted(child.id, byParent, planned, hasEntries))
+}
