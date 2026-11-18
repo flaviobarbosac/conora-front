@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { IAN_AGES, getIanAge, ianPortrait, setIanMaturity, voiceBandForAge } from './speakPt'
+import { IAN_AGES, IAN_CURRENT_AGE, getIanAge, ianPortrait, setIanMaturity, voiceBandForAge } from './speakPt'
 
 vi.mock('../api/client', () => ({ apiPostBlob: vi.fn() }))
 
@@ -8,6 +8,12 @@ beforeAll(() => {
 })
 
 afterEach(() => setIanMaturity(null))
+
+describe('IAN_CURRENT_AGE', () => {
+  it('keeps Ian fixed at ten years', () => {
+    expect(IAN_CURRENT_AGE).toBe(10)
+  })
+})
 
 describe('voiceBandForAge', () => {
   it('groups the nine portraits into four voices', () => {
