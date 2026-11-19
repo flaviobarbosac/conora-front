@@ -125,7 +125,16 @@ jobs:
 
       - name: Archive and export IPA
         working-directory: mobile/ios/App
+        env:
+          # Meta SDK client token (Meta app 1091193193739341 > Settings > Advanced).
+          # Resolves $(FACEBOOK_CLIENT_TOKEN) in Info.plist; never committed.
+          FACEBOOK_CLIENT_TOKEN: ${{ secrets.META_CLIENT_TOKEN }}
         run: |
+          if [ -z "$FACEBOOK_CLIENT_TOKEN" ]; then
+            echo "Missing GitHub secret META_CLIENT_TOKEN (Meta SDK client token)."
+            echo "Without it the Meta SDK stays off and iOS install campaigns cannot measure installs."
+            exit 1
+          fi
           SCHEME_DIR="App.xcodeproj/xcshareddata/xcschemes"
           mkdir -p "$SCHEME_DIR"
           if [ ! -f "$SCHEME_DIR/App.xcscheme" ]; then
@@ -151,6 +160,7 @@ jobs:
             MARKETING_VERSION="$MARKETING_VERSION" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
+            FACEBOOK_CLIENT_TOKEN="$FACEBOOK_CLIENT_TOKEN" \
             archive
           python3 -c 'open("'"$RUNNER_TEMP"'/ExportOptions.plist","w").write("""<?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
