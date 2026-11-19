@@ -2,7 +2,7 @@
   "name": "@conora/capacitor-meta-sdk",
   "version": "1.0.0",
   "private": true,
-  "description": "Initializes the Meta (Facebook) SDK on iOS so app installs and app events reach Meta Ads (AEM / SKAdNetwork).",
+  "description": "Initializes the Meta (Facebook) SDK on iOS and logs funnel App Events (logEvent) so installs and conversions reach Meta Ads (AEM / SKAdNetwork).",
   "files": [
     "ios/Sources",
     "Package.swift"

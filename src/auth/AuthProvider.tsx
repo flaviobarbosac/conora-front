@@ -10,6 +10,7 @@ import {
   SESSION_EXPIRED_EVENT,
   type AuthResponse,
 } from '../api/client'
+import { logCompleteRegistration } from '../lib/metaEvents'
 type Session = {
   email: string
 }
@@ -98,7 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (name: string, email: string, cpf: string, password: string) => {
-      applyAuth(await authApi.register(name, email, cpf, password))
+      const auth = await authApi.register(name, email, cpf, password)
+      applyAuth(auth)
+      logCompleteRegistration(auth.userId, 'email')
       void import('../lib/journeyTrack').then(({ trackJourney }) => trackJourney('/', 'Register'))
     },
     [applyAuth],
@@ -114,7 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerGoogle = useCallback(
     async (idToken: string) => {
-      applyAuth(await authApi.google(idToken, 'register'))
+      const auth = await authApi.google(idToken, 'register')
+      applyAuth(auth)
+      logCompleteRegistration(auth.userId, 'google')
       void import('../lib/journeyTrack').then(({ trackJourney }) => trackJourney('/', 'Register'))
     },
     [applyAuth],
@@ -130,7 +135,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerApple = useCallback(
     async (identityToken: string, name?: string | null, email?: string | null) => {
-      applyAuth(await authApi.apple(identityToken, name, email, 'register'))
+      const auth = await authApi.apple(identityToken, name, email, 'register')
+      applyAuth(auth)
+      logCompleteRegistration(auth.userId, 'apple')
       void import('../lib/journeyTrack').then(({ trackJourney }) => trackJourney('/', 'Register'))
     },
     [applyAuth],

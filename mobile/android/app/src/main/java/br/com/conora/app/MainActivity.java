@@ -15,6 +15,7 @@ import ee.forgr.capacitor.social.login.SocialLoginPlugin;
 public class MainActivity extends BridgeActivity implements ModifiedMainActivityForSocialLoginPlugin {
   @Override
   public void onCreate(Bundle savedInstanceState) {
+    registerPlugin(ConoraMetaSdkPlugin.class);
     super.onCreate(savedInstanceState);
     lockWebViewZoom();
   }
