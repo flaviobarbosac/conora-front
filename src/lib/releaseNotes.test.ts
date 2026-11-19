@@ -2,16 +2,18 @@ import { describe, expect, it } from 'vitest'
 import { latestRelease, RELEASE_NOTES } from './releaseNotes'
 
 describe('release notes', () => {
-  it('starts with 26.107 and keeps the shared-month note and 26.100', () => {
+  it('starts with 26.108 and keeps the shared-month note and 26.100', () => {
     const current = latestRelease()
     expect(RELEASE_NOTES[0]).toBe(current)
-    expect(current.version).toBe('26.107')
+    expect(current.version).toBe('26.108')
     expect(current.date).toBe('18/11/2026')
     const note = current.items.join(' ')
-    expect(note).toContain('Raio-X')
-    expect(note).toContain('Reserva de emergência')
-    expect(note).toContain('Lançamentos')
+    expect(note).toContain('Aprimoração de layout')
     expect(note.toLowerCase()).not.toContain('console')
+    const previousReserve = RELEASE_NOTES.find((release) => release.version === '26.107')
+    expect(previousReserve?.items.join(' ')).toContain('Raio-X')
+    expect(previousReserve?.items.join(' ')).toContain('Reserva de emergência')
+    expect(previousReserve?.items.join(' ')).toContain('Lançamentos')
     const previousVideo = RELEASE_NOTES.find((release) => release.version === '26.106')
     expect(previousVideo?.items.join(' ')).toContain('Vídeo rápido')
     expect(previousVideo?.items.join(' ')).toContain('Onboarding')
