@@ -7,6 +7,13 @@ export type ReleaseNote = {
 /** Newest first. Add the next published version at the top. */
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    version: '26.108',
+    date: '18/11/2026',
+    items: [
+      'Aprimoração de layout em telas do app.',
+    ],
+  },
+  {
     version: '26.107',
     date: '18/11/2026',
     items: [
