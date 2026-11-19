@@ -38,6 +38,10 @@ Plugin local `mobile/plugins/conora-meta-sdk` (SPM, `FacebookCore` 19.x). Inicia
 - `FacebookClientToken` = `$(FACEBOOK_CLIENT_TOKEN)`, resolvido no build. No CI vem do secret `META_CLIENT_TOKEN` (Meta Developers → app Conora → Configurações → Avançado → Token do cliente). O workflow **iOS TestFlight** falha se o secret estiver vazio.
 - Build local sem o token roda normalmente, só sem medição da Meta.
 
+## Meta SDK (Android)
+
+`com.facebook.android:facebook-core` 19.x em `app/build.gradle`; meta-data no `AndroidManifest.xml`. Mesmo App ID e mesmo secret `META_CLIENT_TOKEN` (lido pelo Gradle via env ou `-PmetaClientToken=`); o workflow **Android Google Play** falha se ele estiver vazio. Sem token o SDK não inicia (`AutoInitEnabled=false`). Atribuição pelo Install Referrer do Google Play: as permissões de ID de publicidade (`AD_ID`, `ACCESS_ADSERVICES_AD_ID`, `_TOPICS`, `_CUSTOM_AUDIENCE`) são removidas no manifest; metadados de tela e amostragem de layout desligados.
+
 ## Share Target
 
 - Android/PWA: câmera → Compartilhar → Conora → confirmar lançamento.
