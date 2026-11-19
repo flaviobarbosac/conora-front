@@ -22,6 +22,7 @@ let package = Package(
         .package(name: "CapgoCapacitorSocialLogin", path: "../../../../node_modules/@capgo/capacitor-social-login"),
         .package(name: "CapgoCapacitorSpeechRecognition", path: "../../../../node_modules/@capgo/capacitor-speech-recognition"),
         .package(name: "CapgoNativePurchases", path: "../../../../node_modules/@capgo/native-purchases"),
+        .package(name: "ConoraCapacitorMetaSdk", path: "../../../plugins/conora-meta-sdk"),
         .package(name: "SendIntent", path: "../../../../node_modules/send-intent")
     ],
     targets: [
@@ -40,6 +41,7 @@ let package = Package(
                 .product(name: "CapgoCapacitorSocialLogin", package: "CapgoCapacitorSocialLogin"),
                 .product(name: "CapgoCapacitorSpeechRecognition", package: "CapgoCapacitorSpeechRecognition"),
                 .product(name: "CapgoNativePurchases", package: "CapgoNativePurchases"),
+                .product(name: "ConoraCapacitorMetaSdk", package: "ConoraCapacitorMetaSdk"),
                 .product(name: "SendIntent", package: "SendIntent")
             ]
         )

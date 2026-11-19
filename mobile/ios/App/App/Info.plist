@@ -102,6 +102,31 @@
 			</array>
 		</dict>
 	</array>
+	<key>FacebookAppID</key>
+	<string>1091193193739341</string>
+	<key>FacebookClientToken</key>
+	<string>$(FACEBOOK_CLIENT_TOKEN)</string>
+	<key>FacebookDisplayName</key>
+	<string>Conora</string>
+	<key>FacebookAutoLogAppEventsEnabled</key>
+	<true/>
+	<key>FacebookAdvertiserIDCollectionEnabled</key>
+	<false/>
+	<key>FBSDKAutoLogMetaDataEnabled</key>
+	<false/>
+	<key>FBSDKAutoLogProductImprovementEnabled</key>
+	<false/>
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>v9wttpbfk9.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>n38lu8286q.skadnetwork</string>
+		</dict>
+	</array>
 	<key>GIDClientID</key>
 	<string>943760588490-gv2tl2clpm3vfa7lajoj1armj9u4ubc5.apps.googleusercontent.com</string>
 </dict>

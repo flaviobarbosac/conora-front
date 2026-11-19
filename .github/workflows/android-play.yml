@@ -133,7 +133,15 @@ jobs:
 
       - name: Build signed AAB
         working-directory: mobile/android
+        env:
+          # Meta SDK client token, read by app/build.gradle; never committed.
+          META_CLIENT_TOKEN: ${{ secrets.META_CLIENT_TOKEN }}
         run: |
+          if [ -z "$META_CLIENT_TOKEN" ]; then
+            echo "Missing GitHub secret META_CLIENT_TOKEN (Meta SDK client token)."
+            echo "Without it the Meta SDK stays off and Android install campaigns cannot measure installs."
+            exit 1
+          fi
           chmod +x gradlew
           ./gradlew bundleRelease --no-daemon -PconoraVersionCode="$VERSION_CODE"
           rm -f keystore.properties

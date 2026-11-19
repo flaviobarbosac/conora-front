@@ -30,6 +30,18 @@ No Xcode: Team, Archive, TestFlight. Incluir o target `ShareExtension` (arquivos
 
 Google Sign-In: plugin `@capgo/capacitor-social-login` (SPM no iOS). `Info.plist` precisa do URL scheme `REVERSED_CLIENT_ID` e `GIDClientID`; o script `scripts/sync-ios-google-auth.mjs` escreve isso a partir de `VITE_GOOGLE_IOS_CLIENT_ID`. O workflow **iOS TestFlight** falha se o secret estiver vazio. Em Google Cloud, o cliente iOS deve ter Bundle ID `br.com.conora.app`. Arquivo `mobile/ios/App/App/GoogleService-Info.plist` entra no target App.
 
+## Meta SDK (iOS)
+
+Plugin local `mobile/plugins/conora-meta-sdk` (SPM, `FacebookCore` 19.x). Inicia o SDK da Meta ao abrir o app para medir instalações de campanhas de app iOS 14+ (AEM/SKAdNetwork). Sem IDFA e sem prompt de rastreamento (ATT); metadados de tela e amostragem de layout desligados no `Info.plist`.
+
+- `FacebookAppID` = 1091193193739341 (app Meta "Conora").
+- `FacebookClientToken` = `$(FACEBOOK_CLIENT_TOKEN)`, resolvido no build. No CI vem do secret `META_CLIENT_TOKEN` (Meta Developers → app Conora → Configurações → Avançado → Token do cliente). O workflow **iOS TestFlight** falha se o secret estiver vazio.
+- Build local sem o token roda normalmente, só sem medição da Meta.
+
+## Meta SDK (Android)
+
+`com.facebook.android:facebook-core` 19.x em `app/build.gradle`; meta-data no `AndroidManifest.xml`. Mesmo App ID e mesmo secret `META_CLIENT_TOKEN` (lido pelo Gradle via env ou `-PmetaClientToken=`); o workflow **Android Google Play** falha se ele estiver vazio. Sem token o SDK não inicia (`AutoInitEnabled=false`). Atribuição pelo Install Referrer do Google Play: as permissões de ID de publicidade (`AD_ID`, `ACCESS_ADSERVICES_AD_ID`, `_TOPICS`, `_CUSTOM_AUDIENCE`) são removidas no manifest; metadados de tela e amostragem de layout desligados.
+
 ## Share Target
 
 - Android/PWA: câmera → Compartilhar → Conora → confirmar lançamento.

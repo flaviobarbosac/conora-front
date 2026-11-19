@@ -1,7 +1,7 @@
 {
   "name": "conora-frontend",
   "private": true,
-  "version": "26.107",
+  "version": "26.108",
   "type": "module",
   "scripts": {
     "dev": "vite --host localhost --port 5175 --strictPort",
@@ -38,6 +38,7 @@
     "@capgo/capacitor-social-login": "^8.7.5",
     "@capgo/capacitor-speech-recognition": "^8.4.5",
     "@capgo/native-purchases": "^8.9.6",
+    "@conora/capacitor-meta-sdk": "file:mobile/plugins/conora-meta-sdk",
     "jsqr": "^1.4.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.8",
