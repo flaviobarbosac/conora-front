@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { budgetsApi, familyApi, gamificationApi, monthsApi, pendingDebtsApi } from '../api/finance'
 import { CompetencePicker } from '../components/CompetencePicker'
@@ -17,6 +17,7 @@ import {
   topLeakages,
   topUnposted,
 } from '../lib/monthClosePreview'
+import { requestAppReview } from '../lib/appReview'
 import { showSaveToast } from '../lib/saveToast'
 import styles from './pageStyles'
 
@@ -52,6 +53,12 @@ export function MonthPage() {
   const action = useAction()
   const data = status.data
   const closeSummary = summary.data
+  const closedWell = justClosed && !!closeSummary && (closeSummary.withinBudget || !!closeSummary.celebrationMessage)
+
+  // A month just closed inside the budget is the best moment to ask for a store review.
+  useEffect(() => {
+    if (closedWell) requestAppReview()
+  }, [closedWell])
   const blockedReason = closeBlockedReason(ym, profile.data?.monthCloseDay)
   const gapRows = gaps.data ?? []
   const { debtTotal, surplusTotal } = useMemo(

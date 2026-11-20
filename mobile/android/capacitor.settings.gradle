@@ -23,6 +23,9 @@ project(':capacitor-share').projectDir = new File('../../node_modules/@capacitor
 include ':capacitor-splash-screen'
 project(':capacitor-splash-screen').projectDir = new File('../../node_modules/@capacitor/splash-screen/android')
 
+include ':capawesome-capacitor-app-review'
+project(':capawesome-capacitor-app-review').projectDir = new File('../../node_modules/@capawesome/capacitor-app-review/android')
+
 include ':capgo-capacitor-social-login'
 project(':capgo-capacitor-social-login').projectDir = new File('../../node_modules/@capgo/capacitor-social-login/android')
 

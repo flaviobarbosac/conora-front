@@ -30,6 +30,7 @@ import {
   storeProducts,
 } from '../lib/storeBilling'
 import styles from './PlanPage.module.css'
+import { requestAppReview } from '../lib/appReview'
 
 const TIERS: ReadonlyArray<PlanTier> = ['Individual', 'Family', 'FamilyPlus']
 const RECOMMENDED: PlanTier = 'FamilyPlus'
@@ -254,7 +255,10 @@ export function PlanPage() {
           title="Assinatura confirmada"
           message="Vivendo bem o presente, planejando um futuro melhor."
           showIan
-          onClose={() => setCelebrateOpen(false)}
+          onClose={() => {
+            setCelebrateOpen(false)
+            requestAppReview()
+          }}
         />
       ) : null}
       {inviteToken ? (
