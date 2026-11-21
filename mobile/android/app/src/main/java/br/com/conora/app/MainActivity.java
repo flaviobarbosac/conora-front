@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import com.facebook.FacebookSdk;
+import com.facebook.appevents.AppEventsLogger;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginHandle;
@@ -16,6 +18,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    startMetaSdk();
     lockWebViewZoom();
   }
 
@@ -48,6 +51,25 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
   @Override
   public void IHaveModifiedTheMainActivityForTheUseWithSocialLoginPlugin() {
     // Required by Capgo SocialLogin (Credential Manager / Google).
+  }
+
+  /**
+   * Starts the Meta SDK so installs and app activations reach Meta Ads.
+   * FacebookInitProvider normally does this; this call keeps it working even if a
+   * dependency removes that provider again. Builds without a client token skip it.
+   */
+  private void startMetaSdk() {
+    try {
+      if (getString(R.string.facebook_client_token).trim().isEmpty()) {
+        return;
+      }
+      if (!FacebookSdk.isInitialized()) {
+        FacebookSdk.sdkInitialize(getApplicationContext());
+      }
+      AppEventsLogger.activateApp(getApplication());
+    } catch (RuntimeException e) {
+      Log.w("ConoraMetaSdk", "Meta SDK not started", e);
+    }
   }
 
   private void lockWebViewZoom() {

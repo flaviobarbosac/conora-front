@@ -80,6 +80,14 @@
         <meta-data android:name="com.facebook.sdk.AdvertiserIDCollectionEnabled" android:value="false" />
         <meta-data android:name="com.facebook.sdk.AutoLogMetaDataEnabled" android:value="false" />
         <meta-data android:name="com.facebook.sdk.AutoLogProductImprovementEnabled" android:value="false" />
+
+        <!-- @capgo/capacitor-social-login removes this provider (its Facebook login is off),
+             which also stopped Meta SDK auto-init. Declare it again so app events are sent. -->
+        <provider
+            android:name="com.facebook.internal.FacebookInitProvider"
+            android:authorities="${applicationId}.FacebookInitProvider"
+            android:exported="false"
+            tools:node="replace" />
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />
