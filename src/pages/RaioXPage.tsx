@@ -59,7 +59,7 @@ export function RaioXPage() {
     monthList,
     budget,
     yearsBudget,
-    previousCash,
+    previousMonth,
     accounts,
     entries,
     planned,
@@ -292,7 +292,7 @@ export function RaioXPage() {
       <ErrorText
         message={
           budget.error ??
-          previousCash.error ??
+          previousMonth.error ??
           accounts.error ??
           entries.error ??
           yearsBudget.error
@@ -301,7 +301,7 @@ export function RaioXPage() {
       {(budget.loading && !data) || loadingRange ? <Loading /> : null}
       {data && !leakageOnly ? (
         <RaioXHero
-          previousMonthBalance={previousCash.data?.balance ?? 0}
+          previousMonthBalance={previousMonth.data?.monthResult ?? 0}
           incomeActual={incomeActual}
           discountActual={discountDisplay}
           discountForSpendable={discountForSpendable}

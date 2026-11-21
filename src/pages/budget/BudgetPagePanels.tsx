@@ -1149,6 +1149,18 @@ function BudgetYearSheet({
                   {formatMoney(plannedAmount)}
                 </p>
               )}
+              {line && line.months.some((month) => Math.abs(month.plannedAmount) > 0.001) ? (
+                <ul className={styles.budgetResult} aria-label="Parcelas do ano">
+                  {line.months
+                    .filter((month) => Math.abs(month.plannedAmount) > 0.001)
+                    .map((month) => (
+                      <li key={month.competenceYm}>
+                        <span>{formatCompetence(month.competenceYm)}</span>
+                        <span className={styles.moneyValue}>{formatMoney(month.plannedAmount)}</span>
+                      </li>
+                    ))}
+                </ul>
+              ) : null}
             </div>
           </div>
         ) : (

@@ -64,7 +64,7 @@ export function useRaioXPageController() {
   const monthList = useMemo(() => monthsEndingAt(ym, months), [ym, months])
   const yearNums = useMemo(() => yearsNeededForMonths(monthList), [monthList])
   const yearKey = yearNums.join(',')
-  const previousYm = useMemo(() => shiftCompetence(ym, -1), [ym])
+  const previousYm = useMemo(() => shiftCompetence(monthList[0], -1), [monthList])
 
   const budget = useLoad(() => budgetsApi.get(ym, scope), [ym, scope])
   const yearsBudget = useLoad(
@@ -74,7 +74,7 @@ export function useRaioXPageController() {
         : Promise.all(yearNums.map((year) => budgetsApi.getYear(year, scope))),
     [months, yearKey, scope],
   )
-  const previousCash = useLoad(() => accountsApi.cashBalanceAtEndOfMonth(previousYm), [previousYm])
+  const previousMonth = useLoad(() => budgetsApi.get(previousYm, scope), [previousYm, scope])
   const accounts = useLoad(() => categoriesApi.list(undefined, false, false), [])
   const entries = useLoad(
     () => entriesApi.list({ competenceYm: ym, take: 500, scope }),
@@ -303,7 +303,7 @@ export function useRaioXPageController() {
     previousYm,
     budget,
     yearsBudget,
-    previousCash,
+    previousMonth,
     accounts,
     entries,
     bankAccounts,
