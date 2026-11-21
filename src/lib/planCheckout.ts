@@ -2,6 +2,7 @@ import type { Product } from '@capgo/native-purchases'
 import { planApi, type PlanOffer } from '../api/finance'
 import { confirmDestructive } from './confirm'
 import { formatMoney } from './format'
+import { logSubscriptionConfirmed } from './metaEvents'
 import { TIER_INFO } from './planAccess'
 import {
   buyInStore,
@@ -23,6 +24,7 @@ export async function purchasePlan(
       if (confirmed.phase !== 'Subscribed') {
         throw new Error('A loja não confirmou este plano como ativo.')
       }
+      logSubscriptionConfirmed(offer)
     } catch (error) {
       if (isStoreCancel(error)) return null
       throw error

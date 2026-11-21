@@ -4,6 +4,7 @@ import { authApi, getAccessToken, type AuthResponse } from '../api/client'
 import { useAuth } from '../auth/AuthProvider'
 import { AuthLayout } from '../layouts/AuthLayout'
 import { AppHandoff, consumeAppLinkRoute, useAppHandoff } from '../lib/appLinks'
+import { logCompleteRegistration } from '../lib/metaEvents'
 import styles from './auth.module.css'
 
 /** One in-flight/completed verify per token (Strict Mode + double deep-link). */
@@ -56,6 +57,8 @@ export function VerifyEmailPage() {
         const auth = await verifyEmailOnce(token)
         if (cancelled) return
         acceptSession(auth)
+        // Production sign-up creates the account here (pre-registration confirmed by e-mail).
+        logCompleteRegistration(auth.userId)
         navigate('/bem-vindo', { replace: true })
       } catch (caught) {
         if (cancelled) return
